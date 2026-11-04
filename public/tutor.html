@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Tutorías ITVER - Módulo del Maestro Tutor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="js/tailwind.config.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,300&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Montserrat', sans-serif; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        @media print { nav, header, footer, button { display: none !important; } }
+    </style>
+    <link rel="stylesheet" href="css/tema.css">
+    <script>
+        // Aplica el modo oscuro antes de pintar (evita parpadeo)
+        try {
+            var a11y = JSON.parse(localStorage.getItem('pit_a11y') || '{}');
+            var oscuro = a11y.oscuro === undefined ? window.matchMedia('(prefers-color-scheme: dark)').matches : a11y.oscuro;
+            if (oscuro) document.documentElement.classList.add('dark');
+        } catch (e) {}
+    </script>
+</head>
+<body data-page="tutor" class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col justify-between">
+
+    <div>
+
+        <div class="bg-white shadow-sm py-3 px-4 md:px-12 border-b border-slate-200">
+            <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
+                <div class="flex items-center space-x-4">
+                    <a href="index.html" class="flex items-center" aria-label="Tecnológico Nacional de México">
+                        <img src="img/logo-tecnm.png" alt="Tecnológico Nacional de México" class="h-14 md:h-16 w-auto">
+                    </a>
+                </div>
+                <div class="flex items-center space-x-3 bg-slate-50 px-4 py-2 rounded-xl border border-slate-200">
+                    <div class="w-9 h-9 bg-tecnmGreen rounded-lg flex items-center justify-center text-white font-bold text-sm shadow"><i class="fa-solid fa-chalkboard-user"></i></div>
+                    <div>
+                        <h1 class="text-xs font-extrabold text-tecnmGreen uppercase">ITVER - Módulo del Maestro Tutor</h1>
+                        <p class="text-[10px] text-slate-600 font-medium">Depto. de Sistemas y Computación (PIT)</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <nav class="bg-tecnmGreen text-white shadow-md sticky top-0 z-40">
+            <div class="pit-nav max-w-7xl mx-auto px-3 md:px-8 flex items-stretch h-14 gap-3">
+                <div class="pit-tabs flex-1 min-w-0 flex items-stretch gap-0.5 overflow-x-auto text-xs md:text-sm font-medium" role="tablist">
+                    <button onclick="switchTab('dashboard')" id="btn-dashboard" title="Mi Grupo" class="nav-btn activo" role="tab" aria-selected="true">
+                        <i class="fa-solid fa-chart-pie"></i> <span>Mi Grupo</span>
+                    </button>
+                    <button onclick="switchTab('agenda')" id="btn-agenda" title="Agenda y Citas" class="nav-btn" role="tab" aria-selected="false">
+                        <i class="fa-solid fa-calendar-check"></i> <span>Agenda y Citas</span>
+                    </button>
+                    <button onclick="switchTab('canalizaciones')" id="btn-canalizaciones" title="Canalizaciones" class="nav-btn" role="tab" aria-selected="false">
+                        <i class="fa-solid fa-share-nodes"></i> <span>Canalizaciones</span>
+                    </button>
+                    <button onclick="switchTab('miperfil')" id="btn-miperfil" title="Mi Perfil y Horario" class="nav-btn" role="tab" aria-selected="false">
+                        <i class="fa-solid fa-id-card"></i> <span>Mi Perfil y Horario</span>
+                    </button>
+                    <button onclick="switchTab('reportes')" id="btn-reportes" title="Informes y Evaluaciones" class="nav-btn" role="tab" aria-selected="false">
+                        <i class="fa-solid fa-file-signature"></i> <span>Informes y Evaluaciones</span>
+                    </button>
+                </div>
+                <div class="pit-user shrink-0 flex items-center gap-3 pl-3 md:pl-4 border-l border-white/20 my-2.5">
+                    <div class="text-right hidden xl:block max-w-[14rem]">
+                        <p class="text-xs font-bold truncate" id="nav-nombre">Profesor Tutor</p>
+                        <p class="text-[10px] text-tecnmSand">Profesor Tutor Asignado</p>
+                    </div>
+                    <div class="shrink-0 w-8 h-8 rounded-full bg-tecnmGold flex items-center justify-center font-bold text-tecnmDark text-xs" id="nav-iniciales">--</div>
+                    <button id="btn-logout" title="Cerrar sesión" class="text-tecnmSand hover:text-white"><i class="fa-solid fa-right-from-bracket"></i></button>
+                </div>
+            </div>
+        </nav>
+    </div>
+
+    <main class="max-w-7xl mx-auto px-4 md:px-12 py-8 w-full flex-grow">
+
+        <!-- TAB 1: DASHBOARD -->
+        <div id="tab-dashboard" class="tab-content active space-y-6">
+            <div class="hero bg-gradient-to-r from-tecnmGreen to-tecnmDark text-white p-6 md:p-8 rounded-2xl shadow-lg relative overflow-hidden">
+                <div class="absolute right-0 bottom-0 opacity-10 translate-x-10 translate-y-10"><i class="fa-solid fa-users text-9xl"></i></div>
+                <div class="relative z-10 max-w-3xl">
+                    <div class="flex items-center space-x-2">
+                        <span class="bg-tecnmGold text-slate-900 text-[10px] font-bold px-2.5 py-1 rounded-full uppercase" id="banner-grupo">Grupo …</span>
+                        <span class="bg-white/15 text-blue-100 text-[10px] px-2.5 py-1 rounded-full font-medium" id="banner-periodo">Ciclo 2026-2</span>
+                    </div>
+                    <h2 class="text-2xl md:text-3xl font-extrabold mt-3">Panel de Control Tutorial Docente</h2>
+                    <p class="text-slate-200 text-xs md:text-sm mt-2 leading-relaxed">
+                        Bienvenido(a), <strong id="banner-nombre">…</strong>. Seguimiento oportuno de <strong id="banner-total">…</strong> de la carrera de Ingeniería en Sistemas Computacionales. Detección temprana de riesgo académico y gestión de asesorías.
+                    </p>
+                    <div class="mt-6 flex flex-wrap gap-3">
+                        <button onclick="switchTab('agenda'); openModalCita();" class="bg-tecnmGold hover:bg-tecnmGoldDark text-slate-900 font-bold px-4 py-2 rounded-xl text-xs shadow transition flex items-center space-x-2">
+                            <i class="fa-solid fa-plus-circle"></i> <span>Programar Cita Grupal/Individual</span>
+                        </button>
+                        <button onclick="switchTab('canalizaciones')" class="bg-white/10 hover:bg-white/20 text-white font-semibold px-4 py-2 rounded-xl text-xs transition border border-white/20">Ver Canalizaciones</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-4">
+                    <div class="kpi-icon w-12 h-12 bg-blue-50 text-tecnmGreen rounded-xl flex items-center justify-center text-xl font-bold"><i class="fa-solid fa-user-group"></i></div>
+                    <div><p class="text-xs text-slate-500 font-medium">Total Tutorados</p><h4 class="text-xl font-extrabold text-slate-800" id="kpi-total-tutorados">…</h4></div>
+                </div>
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-4">
+                    <div class="kpi-icon w-12 h-12 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center text-xl font-bold"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                    <div><p class="text-xs text-slate-500 font-medium">Alumnos en Riesgo (Alto/Crítico)</p><h4 class="text-xl font-extrabold text-amber-600" id="kpi-en-riesgo">…</h4></div>
+                </div>
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-4">
+                    <div class="kpi-icon w-12 h-12 bg-sky-50 text-sky-600 rounded-xl flex items-center justify-center text-xl font-bold"><i class="fa-solid fa-calendar-day"></i></div>
+                    <div><p class="text-xs text-slate-500 font-medium">Citas esta Semana</p><h4 class="text-xl font-extrabold text-slate-800" id="kpi-citas-semana">…</h4></div>
+                </div>
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-4">
+                    <div class="kpi-icon w-12 h-12 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center text-xl font-bold"><i class="fa-solid fa-paper-plane"></i></div>
+                    <div><p class="text-xs text-slate-500 font-medium">Canalizaciones Activas</p><h4 class="text-xl font-extrabold text-slate-800" id="kpi-canalizaciones">…</h4></div>
+                </div>
+            </div>
+
+            <!-- Avisos de la Coordinación (GET /api/avisos) – solo tutores -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-base font-bold text-slate-800 flex items-center space-x-2">
+                        <i class="fa-solid fa-bullhorn text-tecnmBlue"></i> <span>Avisos Importantes de la Coordinación</span>
+                    </h3>
+                    <span id="avisos-contador" class="bg-slate-100 text-slate-600 text-[10px] font-bold px-2.5 py-1 rounded-full">…</span>
+                </div>
+                <div class="space-y-3" id="lista-avisos-tutor"><p class="text-xs text-slate-400 text-center py-4">Cargando avisos…</p></div>
+            </div>
+
+            <div class="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                    <div>
+                        <h3 class="text-base font-bold text-slate-800">Mis Tutorados y Diagnóstico de Riesgo</h3>
+                        <p class="text-xs text-slate-500">Agenda una cita directa o canaliza a comunidades de apoyo (PALPROG, CEPC, CIS, PAPA's).</p>
+                    </div>
+                    <div class="flex items-center space-x-2 w-full md:w-auto">
+                        <input type="search" id="buscar-tutorado" placeholder="Buscar por Nombre o N° Control..." class="text-xs p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-tecnmGreen outline-none w-full md:w-64">
+                        <select id="filter-riesgo" class="text-xs p-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-tecnmGreen outline-none">
+                            <option value="TODOS">Todos los Niveles</option>
+                            <option value="CRÍTICO">Riesgo Crítico</option>
+                            <option value="ALTO">Riesgo Alto</option>
+                            <option value="MEDIO">Riesgo Medio</option>
+                            <option value="BAJO">Sin Riesgo</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs text-slate-700">
+                        <thead class="bg-slate-100 uppercase font-bold text-[10px] text-slate-600">
+                            <tr>
+                                <th class="p-3 rounded-l-lg">N° Control</th>
+                                <th class="p-3">Nombre del Tutorado</th>
+                                <th class="p-3">Semestre</th>
+                                <th class="p-3">Promedio</th>
+                                <th class="p-3">Materias Reprobadas</th>
+                                <th class="p-3">Nivel de Riesgo</th>
+                                <th class="p-3 rounded-r-lg text-center">Acciones Tutoriales</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 font-medium" id="tbody-riesgo"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: AGENDA -->
+        <div id="tab-agenda" class="tab-content space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2 bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200">
+                    <div class="flex justify-between items-center mb-6">
+                        <div>
+                            <h3 class="text-base font-bold text-slate-800">Agenda de Citas del Tutor</h3>
+                            <p class="text-xs text-slate-500">Sesiones individuales y grupales (30 días atrás · 60 días adelante).</p>
+                        </div>
+                        <button onclick="openModalCita()" class="bg-tecnmGreen text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-tecnmDark transition flex items-center space-x-2">
+                            <i class="fa-solid fa-calendar-plus"></i> <span>Nueva Cita</span>
+                        </button>
+                    </div>
+                    <div class="space-y-4" id="lista-agenda"><p class="text-xs text-slate-400 text-center py-6">Cargando agenda…</p></div>
+                </div>
+
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between">
+                    <div>
+                        <h3 class="text-base font-bold text-slate-800 mb-2">Acuerdo / Compromiso de Tutoría</h3>
+                        <p class="text-xs text-slate-500 mb-4">Genera la minuta formal firmada por el tutorado al finalizar una sesión presencial.</p>
+                        <form id="form-acuerdo" onsubmit="event.preventDefault(); window.print();" class="space-y-3">
+                            <div>
+                                <label for="acuerdo-tutorado" class="block text-[11px] font-bold text-slate-700 mb-1">Seleccionar Tutorado</label>
+                                <select id="acuerdo-tutorado" class="w-full text-xs p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-tecnmGreen outline-none bg-white"></select>
+                            </div>
+                            <div>
+                                <label for="acuerdo-texto" class="block text-[11px] font-bold text-slate-700 mb-1">Compromiso Académico Acordado</label>
+                                <textarea id="acuerdo-texto" rows="4" placeholder="Ej. El estudiante se compromete a asistir 3 horas semanales a las asesorías de PALPROG..." class="w-full text-xs p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-tecnmGreen outline-none"></textarea>
+                            </div>
+                            <button type="submit" class="w-full bg-tecnmGreen hover:bg-tecnmDark text-white font-bold py-2.5 rounded-xl text-xs transition shadow flex items-center justify-center space-x-2">
+                                <i class="fa-solid fa-file-contract"></i> <span>Imprimir Minuta</span>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: CANALIZACIONES -->
+        <div id="tab-canalizaciones" class="tab-content space-y-6">
+            <div class="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h3 class="text-base font-bold text-slate-800">Canalización a Programas y Comunidades de Apoyo ITVER</h3>
+                        <p class="text-xs text-slate-500">Gestión de canalizaciones directas a las instancias especializadas del departamento e instituto.</p>
+                    </div>
+                    <span class="bg-tecnmGold/20 text-tecnmDark text-xs px-3 py-1 rounded-full font-bold" id="canal-registrados">…</span>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                    <div class="tarjeta-suave p-4 bg-emerald-50 rounded-xl border border-emerald-200"><span class="text-[10px] font-extrabold text-tecnmGreen uppercase">PALPROG</span><h4 class="text-xs font-bold text-slate-800 mt-1">Asesorías en Lógica y Programación</h4><p class="text-[10px] text-slate-500 mt-1">Reforzamiento en código y algoritmos.</p></div>
+                    <div class="tarjeta-suave p-4 bg-sky-50 rounded-xl border border-sky-200"><span class="text-[10px] font-extrabold text-sky-800 uppercase">CIS</span><h4 class="text-xs font-bold text-slate-800 mt-1">Comunidad de Ing. en Sistemas</h4><p class="text-[10px] text-slate-500 mt-1">Integración y proyectos tecnológicos.</p></div>
+                    <div class="tarjeta-suave p-4 bg-purple-50 rounded-xl border border-purple-200"><span class="text-[10px] font-extrabold text-purple-800 uppercase">CEPC</span><h4 class="text-xs font-bold text-slate-800 mt-1">Programación Competitiva</h4><p class="text-[10px] text-slate-500 mt-1">Entrenamiento de alto rendimiento.</p></div>
+                    <div class="tarjeta-suave p-4 bg-rose-50 rounded-xl border border-rose-200"><span class="text-[10px] font-extrabold text-rose-800 uppercase">PAPA's / Psicología</span><h4 class="text-xs font-bold text-slate-800 mt-1">Asesoría Par a Par & Orientación</h4><p class="text-[10px] text-slate-500 mt-1">Acompañamiento entre estudiantes y salud.</p></div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs text-slate-700">
+                        <thead class="bg-slate-100 uppercase font-bold text-[10px] text-slate-600">
+                            <tr>
+                                <th class="p-3 rounded-l-lg">Tutorado</th>
+                                <th class="p-3">Área de Destino</th>
+                                <th class="p-3">Diagnóstico Inicial</th>
+                                <th class="p-3">Fecha Registro</th>
+                                <th class="p-3 rounded-r-lg">Estatus Seguimiento</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 font-medium" id="tbody-canalizaciones"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB: MI PERFIL Y HORARIO DE ATENCIÓN (GET/PUT /api/tutores/mi-perfil) -->
+        <div id="tab-miperfil" class="tab-content space-y-6">
+            <div class="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-5">
+                    <div>
+                        <h3 class="text-base font-bold text-slate-800">Mi Perfil de Tutor</h3>
+                        <p class="text-xs text-slate-500">Así te ven los tutorados cuando eligen tutor. Solo podrán agendar citas dentro de tus bloques de atención.</p>
+                    </div>
+                    <button type="button" id="btn-panel-tutor-editar" onclick="abrirEditorPerfilTutor()" aria-controls="panel-tutor-editar" aria-expanded="false" class="bg-tecnmGold hover:bg-tecnmGoldDark text-slate-900 font-bold px-4 py-2 rounded-xl text-xs shadow transition"><i class="fa-solid fa-pen mr-1"></i> Editar mi perfil y horario</button>
+                </div>
+                <div id="tutor-persona-card"><p class="text-xs text-slate-400 text-center py-8">Cargando perfil…</p></div>
+
+                <!-- Editor plegable -->
+                <div id="panel-tutor-editar" class="hidden mt-6 pt-6 border-t border-slate-200">
+                    <form id="form-miperfil" onsubmit="guardarPerfilTutor(event)" class="grid grid-cols-1 md:grid-cols-3 gap-5 text-xs">
+                        <div class="space-y-2">
+                            <span class="block font-bold text-slate-700">Fotografía</span>
+                            <div id="tutor-foto-preview" class="w-36 h-44 rounded-xl border-2 border-slate-300 bg-slate-100 overflow-hidden flex items-center justify-center text-slate-400"><i class="fa-solid fa-user-tie text-4xl"></i></div>
+                            <label class="inline-block cursor-pointer bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold px-3 py-1.5 rounded-lg">
+                                <i class="fa-solid fa-camera mr-1"></i> Elegir foto
+                                <input type="file" id="tutor-foto-input" accept="image/jpeg,image/png,image/webp" class="sr-only">
+                            </label>
+                            <button type="button" onclick="quitarFotoTutor()" class="block text-rose-600 font-semibold hover:underline">Quitar foto</button>
+                            <p class="text-[10px] text-slate-400">Se reduce automáticamente antes de guardarse.</p>
+                        </div>
+                        <div class="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div><label for="mp-grado" class="block font-bold text-slate-700 mb-1">Grado académico</label>
+                                <input type="text" id="mp-grado" maxlength="120" placeholder="Ej. Maestría en Tecnologías de la Información" class="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-tecnmGreen outline-none"></div>
+                            <div><label for="mp-especialidad" class="block font-bold text-slate-700 mb-1">Especialidad</label>
+                                <input type="text" id="mp-especialidad" maxlength="120" placeholder="Ej. Desarrollo de software" class="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-tecnmGreen outline-none"></div>
+                            <div><label for="mp-anios" class="block font-bold text-slate-700 mb-1">Años de experiencia docente</label>
+                                <input type="number" id="mp-anios" min="0" max="60" placeholder="Ej. 10" class="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-tecnmGreen outline-none"></div>
+                            <div><label for="mp-frase" class="block font-bold text-slate-700 mb-1">Una frase que te describa</label>
+                                <input type="text" id="mp-frase" maxlength="160" placeholder="Ej. Programar se aprende programando" class="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-tecnmGreen outline-none"></div>
+                            <div class="sm:col-span-2"><label for="mp-presentacion" class="block font-bold text-slate-700 mb-1">Presentación</label>
+                                <textarea id="mp-presentacion" rows="3" maxlength="1500" placeholder="Cuéntales a los tutorados tu formación y cómo trabajas la tutoría…" class="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-tecnmGreen outline-none"></textarea></div>
+                            <div><label for="mp-enfoque" class="block font-bold text-slate-700 mb-1">¿En qué puedo apoyarte? <span class="font-normal text-slate-400">(uno por línea, máx. 6)</span></label>
+                                <textarea id="mp-enfoque" rows="4" placeholder="Planear tu carga académica&#10;Recuperar asignaturas reprobadas" class="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-tecnmGreen outline-none"></textarea></div>
+                            <div><label for="mp-areas" class="block font-bold text-slate-700 mb-1">Áreas de apoyo <span class="font-normal text-slate-400">(etiquetas separadas por coma, máx. 8)</span></label>
+                                <input type="text" id="mp-areas" placeholder="Programación, Retícula, Hábitos de estudio" class="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-tecnmGreen outline-none"></div>
+                        </div>
+                        <div class="md:col-span-3">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="font-bold text-slate-700"><i class="fa-regular fa-clock mr-1"></i> Bloques de horario para atender tutorados</span>
+                                <button type="button" onclick="agregarBloqueHorario()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1.5 rounded-lg font-bold"><i class="fa-solid fa-plus mr-1"></i> Agregar bloque</button>
+                            </div>
+                            <div id="horario-bloques" class="grid grid-cols-1 lg:grid-cols-2 gap-2"></div>
+                            <p class="text-[10px] text-slate-400 mt-1">De lunes a viernes, entre 07:00 y 20:00. Cada cita dura 60 minutos; un bloque de 10:00 a 12:00 ofrece dos citas.</p>
+                        </div>
+                        <div class="md:col-span-3 grid grid-cols-2 gap-2">
+                            <button type="button" onclick="cerrarPanel('panel-tutor-editar')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 rounded-xl">Cancelar</button>
+                            <button type="submit" class="bg-tecnmGreen hover:bg-tecnmDark text-white font-bold py-2.5 rounded-xl shadow">Guardar perfil y horario</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 4: INFORMES Y EVALUACIONES -->
+        <div id="tab-reportes" class="tab-content space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2 bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200">
+                    <div class="flex flex-col md:flex-row md:items-start justify-between gap-3 mb-4">
+                        <div>
+                            <h3 class="text-base font-bold text-slate-800 mb-1">Evaluación del Tutor hacia el Programa de Tutorías (PIT)</h3>
+                            <p class="text-xs text-slate-500">Cuestionario oficial de 11 preguntas · Escala Likert: 1 Siempre · 2 Casi siempre · 3 A veces · 4 Casi nunca · 5 Nunca.</p>
+                        </div>
+                        <span id="eval-progreso" class="shrink-0 bg-slate-100 text-slate-600 text-[11px] font-bold px-3 py-1 rounded-full">0 / 11 respondidas</span>
+                    </div>
+
+                    <!-- Estado: pendiente / enviada -->
+                    <div id="eval-estado" class="mb-4 p-3 rounded-xl border text-xs font-semibold bg-amber-50 border-amber-200 text-amber-800">
+                        <i class="fa-solid fa-hourglass-half mr-1"></i> Cargando estado de tu evaluación…
+                    </div>
+
+                    <button type="button" id="btn-panel-eval-tutor" onclick="alternarPanel('panel-eval-tutor', this)" aria-expanded="false" aria-controls="panel-eval-tutor" class="w-full bg-tecnmGold hover:bg-tecnmGoldDark text-slate-900 font-bold py-2.5 rounded-xl text-xs transition flex items-center justify-center space-x-1"><i class="fa-solid fa-pen-to-square"></i> <span>Responder evaluación</span></button>
+
+                    <div id="panel-eval-tutor" class="hidden mt-5 pt-5 border-t border-slate-200">
+                        <form id="form-likert" novalidate onsubmit="handleLikertSubmit(event)" class="space-y-3 text-xs">
+                            <div id="likert-preguntas" class="space-y-3">
+                                <p class="text-slate-400 text-center py-6">Cargando cuestionario…</p>
+                            </div>
+                            <div>
+                                <label for="eval-comentarios" class="block font-bold text-slate-700 mb-1">Comentarios u observaciones (opcional)</label>
+                                <textarea id="eval-comentarios" rows="3" maxlength="2000" placeholder="Propuestas de mejora para el programa, necesidades de infraestructura, capacitación…" class="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-tecnmGreen outline-none"></textarea>
+                            </div>
+                            <button type="submit" id="eval-boton" class="w-full bg-tecnmGreen hover:bg-tecnmDark text-white font-bold py-3 rounded-xl shadow transition">Enviar Cuestionario Institucional de Evaluación</button>
+                        </form>
+                        <div id="likert-success" class="hidden mt-4 p-3 bg-emerald-50 text-emerald-800 text-xs rounded-xl border border-emerald-200 font-bold text-center"><i class="fa-solid fa-circle-check mr-1"></i> <span></span></div>
+                        <div id="likert-error" class="hidden mt-4 p-3 bg-rose-50 text-rose-700 text-xs rounded-xl border border-rose-200 font-bold text-center" role="alert"><i class="fa-solid fa-circle-exclamation mr-1"></i> <span></span></div>
+                        <button type="button" onclick="cerrarPanel('panel-eval-tutor')" class="mt-4 w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 rounded-xl text-xs transition"><i class="fa-solid fa-chevron-up mr-1"></i> Cerrar evaluación</button>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between">
+                    <div>
+                        <h3 class="text-base font-bold text-slate-800 mb-4">Informes Semestrales PIT</h3>
+                        <div class="space-y-3">
+                            <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs">
+                                <h4 class="font-bold text-slate-800">Reporte Semestral del Tutor</h4>
+                                <p class="text-slate-500 text-[10px] mt-0.5">Suma de tutorías grupales, individuales y canalizaciones del ciclo.</p>
+                            </div>
+                            <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs">
+                                <h4 class="font-bold text-slate-800">Acta de Acreditación / No Acreditación</h4>
+                                <p class="text-slate-500 text-[10px] mt-0.5">Registro de cumplimiento para liberación del crédito complementario.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-6 p-4 bg-tecnmGold/10 rounded-xl text-center border border-tecnmGold/30">
+                        <p class="text-[11px] text-tecnmDark font-semibold">Fecha límite de entrega a la Coordinación: 12 de Diciembre de 2026.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- MODAL AGENDAR CITA -->
+    <div id="modal-cita" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-200">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-sm font-bold text-slate-800">Agendar Cita de Tutoría</h3>
+                <button type="button" onclick="closeModalCita()" class="text-slate-400 hover:text-slate-600" aria-label="Cerrar"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form id="modal-cita-form" onsubmit="handleModalCitaSubmit(event)" class="space-y-3 text-xs">
+                <div>
+                    <label for="modal-cita-tipo" class="block font-bold text-slate-700 mb-1">Tipo de Sesión</label>
+                    <select id="modal-cita-tipo" onchange="alternarTipoCita()" class="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-tecnmGreen outline-none bg-white">
+                        <option value="Individual">Individual</option>
+                        <option value="Grupal">Grupal</option>
+                    </select>
+                </div>
+                <div id="modal-cita-bloque-alumno">
+                    <label class="block font-bold text-slate-700 mb-1">Tutorado</label>
+                    <input type="text" id="modal-cita-alumno" readonly class="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-100 text-slate-700 font-bold">
+                    <select id="modal-cita-select" class="hidden w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-tecnmGreen outline-none bg-white"></select>
+                </div>
+                <div id="modal-cita-bloque-grupo" class="hidden">
+                    <label for="modal-cita-grupo" class="block font-bold text-slate-700 mb-1">Grupo</label>
+                    <input type="text" id="modal-cita-grupo" placeholder="Ej. 4°B ISC" class="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-tecnmGreen outline-none">
+                </div>
+                <div>
+                    <label for="modal-cita-modalidad" class="block font-bold text-slate-700 mb-1">Modalidad</label>
+                    <select id="modal-cita-modalidad" class="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-tecnmGreen outline-none bg-white">
+                        <option value="Presencial">Presencial (Cubículo de Tutorías)</option>
+                        <option value="Línea">En Línea (Microsoft Teams)</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="modal-cita-fecha" class="block font-bold text-slate-700 mb-1">Fecha y Hora</label>
+                    <input type="datetime-local" id="modal-cita-fecha" required step="900" class="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-tecnmGreen outline-none">
+                </div>
+                <div>
+                    <label for="modal-cita-motivo" class="block font-bold text-slate-700 mb-1">Objetivo / Observaciones</label>
+                    <textarea id="modal-cita-motivo" rows="3" maxlength="1000" placeholder="Ingresa los detalles a tratar en la sesión..." class="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-tecnmGreen outline-none"></textarea>
+                </div>
+                <div class="flex space-x-2 pt-2">
+                    <button type="button" onclick="closeModalCita()" class="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 rounded-xl">Cancelar</button>
+                    <button type="submit" class="w-1/2 bg-tecnmGreen hover:bg-tecnmDark text-white font-bold py-2.5 rounded-xl shadow">Guardar Cita</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL CANALIZACIÓN -->
+    <div id="modal-canalizacion" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-200">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-sm font-bold text-slate-800">Nueva Canalización de Tutorado</h3>
+                <button type="button" onclick="closeModalCanalizacion()" class="text-slate-400 hover:text-slate-600" aria-label="Cerrar"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form id="modal-canalizar-form" onsubmit="handleModalCanalizacionSubmit(event)" class="space-y-3 text-xs">
+                <div>
+                    <label for="modal-canalizar-alumno" class="block font-bold text-slate-700 mb-1">Alumno a Canalizar</label>
+                    <input type="text" id="modal-canalizar-alumno" readonly class="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-100 text-slate-700 font-bold">
+                </div>
+                <div>
+                    <label for="modal-canalizar-area" class="block font-bold text-slate-700 mb-1">Área o Comunidad de Destino</label>
+                    <select id="modal-canalizar-area" class="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-tecnmGreen outline-none bg-white">
+                        <option value="PALPROG">PALPROG (Asesorías Lógica de Programación)</option>
+                        <option value="CIS">CIS (Comunidad de Ing. en Sistemas)</option>
+                        <option value="CEPC">CEPC (Programación Competitiva)</option>
+                        <option value="PAPAs">PAPA's (Asesoría Par a Par)</option>
+                        <option value="Psicología/Salud">Orientación / Salud / Psicología</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="modal-canalizar-diagnostico" class="block font-bold text-slate-700 mb-1">Diagnóstico Inicial del Tutor</label>
+                    <textarea id="modal-canalizar-diagnostico" rows="3" minlength="10" maxlength="2000" required placeholder="Describe la problemática académica o personal detectada..." class="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-tecnmGreen outline-none"></textarea>
+                </div>
+                <div class="flex space-x-2 pt-2">
+                    <button type="button" onclick="closeModalCanalizacion()" class="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 rounded-xl">Cancelar</button>
+                    <button type="submit" class="w-1/2 bg-tecnmGold hover:bg-tecnmGoldDark text-slate-900 font-bold py-2.5 rounded-xl shadow">Enviar Canalización</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <footer class="bg-tecnmDark text-white mt-12 border-t-4 border-tecnmGold">
+        <div class="max-w-7xl mx-auto px-4 md:px-12 py-10">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 pb-8 border-b border-white/10">
+                <div>
+                    <h3 class="text-xs font-bold tracking-wider text-tecnmGold uppercase mb-3">Instituto Tecnológico de Veracruz</h3>
+                    <p class="text-xs text-slate-300 leading-relaxed">Calz. Miguel Ángel de Quevedo 2779, Formando Hogar, Ver., C.P. 91897.<br>Departamento de Sistemas y Computación.<br>Programa Institucional de Tutorías (PIT).</p>
+                </div>
+                <div>
+                    <h3 class="text-xs font-bold tracking-wider text-tecnmGold uppercase mb-3">Módulo Docente - Acceso Rápido</h3>
+                    <ul class="space-y-1.5 text-xs text-slate-300">
+                        <li>Manual del Tutor (SNIT)</li>
+                        <li>Cuadernillo de Trabajo del Tutorado</li>
+                        <li>Lineamientos de Operación PIT TecNM</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-xs font-bold tracking-wider text-tecnmGold uppercase mb-3">Coordinación de Tutorías ISC</h3>
+                    <p class="text-xs text-slate-300 mb-2">coordinacion.tutorias@veracruz.tecnm.mx</p>
+                    <p class="text-xs text-slate-300">Edificio U, Departamento de Sistemas</p>
+                </div>
+            </div>
+            <div class="pt-6 text-[10px] text-slate-400"><p>© 2026 Tecnológico Nacional de México - Módulo Docente del Maestro Tutor.</p></div>
+        </div>
+    </footer>
+
+    <script>
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(b => { b.classList.remove('activo'); b.setAttribute('aria-selected', 'false'); });
+            document.getElementById('tab-' + tabId).classList.add('active');
+            const btn = document.getElementById('btn-' + tabId);
+            if (btn) {
+                btn.classList.add('activo');
+                btn.setAttribute('aria-selected', 'true');
+                btn.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+            }
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    </script>
+    <script src="js/app.js"></script>
+</body>
+</html>

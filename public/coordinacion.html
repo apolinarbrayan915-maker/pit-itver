@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coordinación de Tutorías - Depto. de Sistemas y Computación ITVER</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="js/tailwind.config.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,300&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Montserrat', sans-serif; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+    </style>
+    <link rel="stylesheet" href="css/tema.css">
+    <script>
+        // Aplica el modo oscuro antes de pintar (evita parpadeo)
+        try {
+            var a11y = JSON.parse(localStorage.getItem('pit_a11y') || '{}');
+            var oscuro = a11y.oscuro === undefined ? window.matchMedia('(prefers-color-scheme: dark)').matches : a11y.oscuro;
+            if (oscuro) document.documentElement.classList.add('dark');
+        } catch (e) {}
+    </script>
+</head>
+<body data-page="coordinacion" class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col justify-between">
+
+    <div>
+
+        <div class="bg-white shadow-sm py-3 px-4 md:px-12 border-b-2 border-tecnmGold">
+            <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
+                <div class="flex items-center space-x-4">
+                    <a href="index.html" class="flex items-center" aria-label="Tecnológico Nacional de México">
+                        <img src="img/logo-tecnm.png" alt="Tecnológico Nacional de México" class="h-14 md:h-16 w-auto">
+                    </a>
+                </div>
+                <div class="flex items-center space-x-3 bg-slate-50 px-4 py-2 rounded-xl border border-slate-200">
+                    <div class="w-9 h-9 bg-tecnmGold rounded-lg flex items-center justify-center text-slate-900 font-bold text-sm shadow-inner"><i class="fa-solid fa-user-tie"></i></div>
+                    <div>
+                        <h1 class="text-xs font-extrabold text-tecnmGreen uppercase">Coordinación de Tutorías</h1>
+                        <p class="text-[10px] text-slate-600 font-medium">Depto. de Sistemas y Computación - ITVER</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <nav class="bg-tecnmGreen text-white shadow-md sticky top-0 z-40">
+            <div class="pit-nav max-w-7xl mx-auto px-3 md:px-8 flex items-stretch h-14 gap-3">
+                <div class="pit-tabs flex-1 min-w-0 flex items-stretch gap-0.5 overflow-x-auto text-xs md:text-sm font-medium" role="tablist">
+                    <button onclick="switchTab('kpi')" id="btn-kpi" title="Panorama" class="nav-btn activo" role="tab" aria-selected="true">
+                        <i class="fa-solid fa-chart-line"></i> <span>Panorama</span>
+                    </button>
+                    <button onclick="switchTab('asignaciones')" id="btn-asignaciones" title="Tutores" class="nav-btn" role="tab" aria-selected="false">
+                        <i class="fa-solid fa-users-gear"></i> <span>Tutores</span>
+                    </button>
+                    <button onclick="switchTab('riesgo')" id="btn-riesgo" title="Riesgo" class="nav-btn" role="tab" aria-selected="false">
+                        <i class="fa-solid fa-triangle-exclamation"></i> <span>Riesgo</span>
+                    </button>
+                    <button onclick="switchTab('canalizaciones')" id="btn-canalizaciones" title="Canalizaciones" class="nav-btn" role="tab" aria-selected="false">
+                        <i class="fa-solid fa-diagram-project"></i> <span>Canalizaciones</span>
+                    </button>
+                    <button onclick="switchTab('evaluaciones')" id="btn-evaluaciones" title="Evaluaciones" class="nav-btn" role="tab" aria-selected="false">
+                        <i class="fa-solid fa-square-poll-vertical"></i> <span>Evaluaciones</span>
+                    </button>
+                    <button onclick="switchTab('fichas')" id="btn-fichas" title="Fichas" class="nav-btn" role="tab" aria-selected="false">
+                        <i class="fa-solid fa-address-card"></i> <span>Fichas</span>
+                    </button>
+                    <button onclick="switchTab('avisos')" id="btn-avisos" title="Avisos" class="nav-btn" role="tab" aria-selected="false">
+                        <i class="fa-solid fa-bullhorn"></i> <span>Avisos</span>
+                    </button>
+                    <button onclick="switchTab('reportes')" id="btn-reportes" title="Reportes" class="nav-btn" role="tab" aria-selected="false">
+                        <i class="fa-solid fa-file-export"></i> <span>Reportes</span>
+                    </button>
+                </div>
+                <div class="pit-user shrink-0 flex items-center gap-3 pl-3 md:pl-4 border-l border-white/20 my-2.5">
+                    <div class="text-right hidden xl:block max-w-[14rem]">
+                        <p class="text-xs font-bold truncate" id="nav-nombre">Coordinación PIT</p>
+                        <p class="text-[10px] text-tecnmSand">Sesión: Administración ISC</p>
+                    </div>
+                    <div class="shrink-0 w-8 h-8 rounded-full bg-tecnmGold flex items-center justify-center font-bold text-slate-900 text-xs shadow" id="nav-iniciales">CO</div>
+                    <button id="btn-logout" title="Cerrar sesión" class="text-tecnmSand hover:text-white"><i class="fa-solid fa-right-from-bracket"></i></button>
+                </div>
+            </div>
+        </nav>
+    </div>
+
+    <main class="max-w-7xl mx-auto px-4 md:px-12 py-8 w-full flex-grow">
+
+        <!-- TAB 1: DASHBOARD GLOBAL -->
+        <div id="tab-kpi" class="tab-content active space-y-6">
+            <div class="hero bg-gradient-to-r from-tecnmGreen to-tecnmDark text-white p-6 md:p-8 rounded-2xl shadow-lg relative overflow-hidden">
+                <div class="absolute right-0 bottom-0 opacity-10 translate-x-10 translate-y-10"><i class="fa-solid fa-chart-column text-9xl"></i></div>
+                <div class="relative z-10 max-w-3xl">
+                    <div class="flex items-center space-x-2">
+                        <span class="bg-tecnmGold text-slate-900 text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider">Período Activo: 2026-2</span>
+                        <span class="bg-white/15 text-blue-100 text-[10px] px-2.5 py-1 rounded-full font-medium">Ingeniería en Sistemas Computacionales</span>
+                    </div>
+                    <h2 class="text-2xl md:text-3xl font-extrabold mt-3">Panel de Supervisión y Control General del PIT</h2>
+                    <p class="text-slate-200 text-xs md:text-sm mt-2 leading-relaxed">
+                        Control centralizado de la cobertura tutorial, alertas de riesgo académico y estado de las canalizaciones hacia las comunidades de apoyo (PALPROG, CIS, CEPC, PAPA's).
+                    </p>
+                </div>
+            </div>
+
+            <!-- KPIs (GET /api/dashboard/stats) -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-4">
+                    <div class="kpi-icon w-12 h-12 bg-blue-50 text-tecnmGreen rounded-xl flex items-center justify-center text-xl font-bold"><i class="fa-solid fa-graduation-cap"></i></div>
+                    <div>
+                        <p class="text-xs text-slate-500 font-medium">Total Tutorados Atendidos</p>
+                        <h4 class="text-2xl font-extrabold text-slate-800" id="kpi-total-tutorados">…</h4>
+                        <p class="text-[10px] text-emerald-600 font-semibold" id="kpi-total-sub">&nbsp;</p>
+                    </div>
+                </div>
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-4">
+                    <div class="kpi-icon w-12 h-12 bg-sky-50 text-sky-700 rounded-xl flex items-center justify-center text-xl font-bold"><i class="fa-solid fa-chalkboard-user"></i></div>
+                    <div>
+                        <p class="text-xs text-slate-500 font-medium">Tutores Activos</p>
+                        <h4 class="text-2xl font-extrabold text-slate-800" id="kpi-tutores">…</h4>
+                        <p class="text-[10px] text-slate-500 font-medium" id="kpi-tutores-sub">&nbsp;</p>
+                    </div>
+                </div>
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-4">
+                    <div class="kpi-icon w-12 h-12 bg-rose-50 text-rose-600 rounded-xl flex items-center justify-center text-xl font-bold"><i class="fa-solid fa-user-xmark"></i></div>
+                    <div>
+                        <p class="text-xs text-slate-500 font-medium">Tutorados en Riesgo (Alto/Crítico)</p>
+                        <h4 class="text-2xl font-extrabold text-rose-600" id="kpi-en-riesgo">…</h4>
+                        <p class="text-[10px] text-rose-600 font-bold" id="kpi-riesgo-sub">&nbsp;</p>
+                    </div>
+                </div>
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-4">
+                    <div class="kpi-icon w-12 h-12 bg-indigo-50 text-tecnmBlue rounded-xl flex items-center justify-center text-xl font-bold"><i class="fa-solid fa-calendar-week"></i></div>
+                    <div>
+                        <p class="text-xs text-slate-500 font-medium">Citas esta Semana</p>
+                        <h4 class="text-2xl font-extrabold text-slate-800" id="kpi-citas-semana">…</h4>
+                        <p class="text-[10px] text-amber-700 font-semibold" id="kpi-canal-sub">&nbsp;</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                    <div class="flex justify-between items-center mb-4">
+                        <div>
+                            <h3 class="text-sm font-bold text-slate-800">Índice de Reprobación en Materias Críticas</h3>
+                            <p class="text-[11px] text-slate-500">Datos ilustrativos del prototipo · pendiente de integrar el kárdex (SII)</p>
+                        </div>
+                        <span class="text-xs font-bold text-tecnmGreen bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200">ISC - 2026</span>
+                    </div>
+                    <div class="space-y-3 pt-2 text-xs">
+                        <div><div class="flex justify-between font-semibold mb-1"><span>Estructura de Datos</span><span class="text-rose-600 font-bold">54% Reprobación</span></div><div class="w-full bg-slate-100 h-3 rounded-full overflow-hidden"><div class="bg-rose-500 h-full rounded-full" style="width:54%"></div></div></div>
+                        <div><div class="flex justify-between font-semibold mb-1"><span>Matemáticas Discretas</span><span class="text-amber-600 font-bold">38% Reprobación</span></div><div class="w-full bg-slate-100 h-3 rounded-full overflow-hidden"><div class="bg-amber-500 h-full rounded-full" style="width:38%"></div></div></div>
+                        <div><div class="flex justify-between font-semibold mb-1"><span>Programación Orientada a Objetos</span><span class="text-amber-600 font-bold">29% Reprobación</span></div><div class="w-full bg-slate-100 h-3 rounded-full overflow-hidden"><div class="bg-amber-500 h-full rounded-full" style="width:29%"></div></div></div>
+                        <div><div class="flex justify-between font-semibold mb-1"><span>Sistemas Operativos</span><span class="text-emerald-600 font-bold">18% Reprobación</span></div><div class="w-full bg-slate-100 h-3 rounded-full overflow-hidden"><div class="bg-emerald-500 h-full rounded-full" style="width:18%"></div></div></div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                    <div class="flex justify-between items-center mb-4">
+                        <div>
+                            <h3 class="text-sm font-bold text-slate-800">Distribución de Canalizaciones a Comunidades</h3>
+                            <p class="text-[11px] text-slate-500">Atención brindada por las redes de apoyo del departamento</p>
+                        </div>
+                        <span class="text-xs font-bold text-tecnmBlue bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200" id="canal-total">Total: …</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3 pt-2 text-xs">
+                        <div class="tarjeta-suave p-3 bg-emerald-50 rounded-xl border border-emerald-200"><span class="text-[10px] font-extrabold text-tecnmGreen uppercase">PALPROG</span><h4 class="text-lg font-extrabold text-slate-800 mt-1" id="canal-PALPROG">…</h4><p class="text-[10px] text-slate-500">Lógica de Programación</p></div>
+                        <div class="tarjeta-suave p-3 bg-sky-50 rounded-xl border border-sky-200"><span class="text-[10px] font-extrabold text-sky-800 uppercase">CIS</span><h4 class="text-lg font-extrabold text-slate-800 mt-1" id="canal-CIS">…</h4><p class="text-[10px] text-slate-500">Integración Estudiantil</p></div>
+                        <div class="tarjeta-suave p-3 bg-purple-50 rounded-xl border border-purple-200"><span class="text-[10px] font-extrabold text-purple-800 uppercase">CEPC</span><h4 class="text-lg font-extrabold text-slate-800 mt-1" id="canal-CEPC">…</h4><p class="text-[10px] text-slate-500">Programación Competitiva</p></div>
+                        <div class="tarjeta-suave p-3 bg-rose-50 rounded-xl border border-rose-200"><span class="text-[10px] font-extrabold text-rose-800 uppercase">PAPA's / Psicología</span><h4 class="text-lg font-extrabold text-slate-800 mt-1" id="canal-PAPAS-PSICO">…</h4><p class="text-[10px] text-slate-500">Salud Integral y Par a Par</p></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: TUTORES Y ELECCIÓN DE TUTOR (GET /api/asignaciones · PATCH /api/tutores/:id) -->
+        <div id="tab-asignaciones" class="tab-content space-y-6">
+            <div class="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200">
+                <div class="mb-6">
+                    <h3 class="text-base font-bold text-slate-800">Tutores Disponibles y Elección de Tutor</h3>
+                    <p class="text-xs text-slate-500">Los tutorados eligen a su tutor desde su portal. Aquí defines el cupo de cada docente y si está recibiendo tutorados · Periodo <span id="asig-periodo">…</span></p>
+                </div>
+
+                <div id="asig-alerta" class="hidden mb-4 p-3 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 text-xs font-semibold flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <span><i class="fa-solid fa-triangle-exclamation mr-1"></i> <span id="asig-alerta-texto"></span></span>
+                    <button onclick="document.getElementById('asig-ver-grupo').value='__sin'; document.getElementById('asig-ver-grupo').dispatchEvent(new Event('change'))" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded-lg font-bold">Ver quiénes</button>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs text-slate-700">
+                        <thead class="bg-slate-100 uppercase font-bold text-[10px] text-slate-600">
+                            <tr>
+                                <th class="p-3 rounded-l-lg">Docente Tutor</th>
+                                <th class="p-3">Formación / Áreas</th>
+                                <th class="p-3 text-center">Horario</th>
+                                <th class="p-3 text-center">Tutorados</th>
+                                <th class="p-3 text-center">Cupo</th>
+                                <th class="p-3 text-center">Recibe tutorados</th>
+                                <th class="p-3 rounded-r-lg text-center">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 font-medium" id="tbody-asig-tutores"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-3">
+                    <div>
+                        <h3 class="text-base font-bold text-slate-800">Tutorados por Tutor</h3>
+                        <p class="text-xs text-slate-500">Consulta a quién eligió cada tutorado, su perfil y, en casos excepcionales, retíralo de su tutor.</p>
+                    </div>
+                    <select id="asig-ver-grupo" class="text-xs p-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-tecnmGreen outline-none"></select>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs text-slate-700">
+                        <thead class="bg-slate-100 uppercase font-bold text-[10px] text-slate-600">
+                            <tr>
+                                <th class="p-3 rounded-l-lg">N° Control</th>
+                                <th class="p-3">Tutorado</th>
+                                <th class="p-3">Semestre</th>
+                                <th class="p-3">Riesgo</th>
+                                <th class="p-3">Tutor</th>
+                                <th class="p-3">Desde</th>
+                                <th class="p-3 rounded-r-lg text-center">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 font-medium" id="tbody-asig-integrantes"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB: AVISOS DE LA COORDINACIÓN (CRUD /api/avisos) – los ven solo los tutores -->
+        <!-- TAB: FICHAS DE IDENTIFICACIÓN (ANEXO 6) -->
+        <div id="tab-fichas" class="tab-content space-y-6">
+            <div class="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200">
+                <div class="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-5">
+                    <div>
+                        <h3 class="text-base font-bold text-slate-800 mb-1">Fichas de Identificación del Tutorado <span class="text-slate-400 font-semibold">· Anexo 6</span></h3>
+                        <p class="text-xs text-slate-500 max-w-2xl">Los tutorados llenan su ficha en línea desde <strong>Formatos PIT</strong>. Aquí puedes consultarlas, corregir datos, capturar una ficha en papel, pedir correcciones, imprimirlas o exportarlas. Información confidencial: los tutores no tienen acceso.</p>
+                    </div>
+                    <button type="button" id="btn-fichas-csv" onclick="exportarFichasCsv(this)" class="shrink-0 bg-tecnmGreen hover:bg-tecnmDark text-white px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2"><i class="fa-solid fa-file-csv"></i> <span>Exportar CSV (Excel)</span></button>
+                </div>
+                <div id="fichas-resumen" class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-5"></div>
+                <div class="flex flex-col md:flex-row gap-3 mb-4 text-xs">
+                    <div class="relative flex-1">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                        <input type="search" id="fichas-buscar" placeholder="Buscar por nombre o número de control…" class="w-full pl-9 p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-tecnmGreen outline-none">
+                    </div>
+                    <select id="fichas-estado" class="md:w-56 p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-tecnmGreen outline-none bg-white">
+                        <option value="">Todos los estados</option>
+                        <option value="Enviada">Por revisar (enviadas)</option>
+                        <option value="Requiere corrección">Requieren corrección</option>
+                        <option value="Revisada">Revisadas</option>
+                        <option value="Pendiente">Sin ficha (pendientes)</option>
+                    </select>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-500 uppercase text-[10px] tracking-wider">
+                                <th class="p-3 rounded-l-lg">No. Control</th>
+                                <th class="p-3">Tutorado</th>
+                                <th class="p-3 text-center">Sem.</th>
+                                <th class="p-3">Tutor(a)</th>
+                                <th class="p-3">Estado</th>
+                                <th class="p-3">Última actualización</th>
+                                <th class="p-3 rounded-r-lg text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-fichas" class="divide-y divide-slate-100 font-medium"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-avisos" class="tab-content space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                <div class="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-slate-200 self-start">
+                    <h3 class="text-base font-bold text-slate-800 mb-1" id="aviso-form-titulo">Nuevo Aviso</h3>
+                    <p class="text-xs text-slate-500 mb-4">Los avisos publicados aparecen en el panel de los <strong>tutores</strong> (los tutorados no los ven).</p>
+                    <form id="form-aviso" onsubmit="event.preventDefault()" class="space-y-3 text-xs">
+                        <input type="hidden" id="aviso-id">
+                        <div>
+                            <label for="aviso-titulo" class="block font-bold text-slate-700 mb-1">Título</label>
+                            <input type="text" id="aviso-titulo" required minlength="5" maxlength="150" placeholder="Ej. Reunión general de tutores" class="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-tecnmGreen outline-none">
+                        </div>
+                        <div>
+                            <label for="aviso-categoria" class="block font-bold text-slate-700 mb-1">Categoría</label>
+                            <input type="text" id="aviso-categoria" list="aviso-categorias" maxlength="40" placeholder="Coordinación de Tutorías" class="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-tecnmGreen outline-none">
+                            <datalist id="aviso-categorias">
+                                <option value="Coordinación de Tutorías"></option>
+                                <option value="Canalización Académica"></option>
+                                <option value="Reunión"></option>
+                                <option value="Capacitación"></option>
+                                <option value="Fechas de Entrega"></option>
+                            </datalist>
+                        </div>
+                        <div>
+                            <label for="aviso-contenido" class="block font-bold text-slate-700 mb-1">Contenido</label>
+                            <textarea id="aviso-contenido" rows="6" required minlength="10" maxlength="4000" placeholder="Escribe el mensaje para los tutores…" class="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-tecnmGreen outline-none"></textarea>
+                        </div>
+                        <label class="flex items-center gap-2 font-semibold text-slate-700"><input type="checkbox" id="aviso-importante"> Marcar como importante (se muestra primero y resaltado)</label>
+                        <div class="grid grid-cols-2 gap-2 pt-1">
+                            <button type="button" onclick="guardarAviso('Borrador')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 rounded-xl"><i class="fa-regular fa-floppy-disk mr-1"></i> Guardar borrador</button>
+                            <button type="button" onclick="guardarAviso('Publicado')" class="bg-tecnmGreen hover:bg-tecnmDark text-white font-bold py-2.5 rounded-xl shadow"><i class="fa-solid fa-paper-plane mr-1"></i> Publicar</button>
+                        </div>
+                        <button type="button" id="aviso-cancelar" onclick="limpiarFormAviso()" class="hidden w-full text-slate-500 hover:text-slate-700 font-semibold py-1">Cancelar edición</button>
+                    </form>
+                </div>
+
+                <div class="lg:col-span-3 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+                        <h3 class="text-base font-bold text-slate-800">Avisos Registrados</h3>
+                        <select id="aviso-filtro" class="text-xs p-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-tecnmGreen outline-none">
+                            <option value="">Todos</option>
+                            <option value="Publicado">Publicados</option>
+                            <option value="Borrador">Borradores</option>
+                            <option value="Archivado">Archivados</option>
+                        </select>
+                    </div>
+                    <div class="space-y-3" id="lista-avisos-coord"><p class="text-xs text-slate-400 text-center py-6">Cargando…</p></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: SEMÁFORO DE RIESGO (GET /api/tutorados/riesgo) -->
+        <div id="tab-riesgo" class="tab-content space-y-6">
+            <div class="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                    <div>
+                        <h3 class="text-base font-bold text-slate-800">Matriz de Diagnóstico y Semáforo de Riesgo Académico</h3>
+                        <p class="text-xs text-slate-500">Detección anticipada de tutorados con asignaturas reprobadas o rezago reticular · <span id="riesgo-contador">…</span></p>
+                    </div>
+                    <div class="flex items-center space-x-2 w-full md:w-auto">
+                        <input type="search" id="buscar-tutorado" placeholder="Nombre o N° Control…" class="text-xs p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-tecnmGreen outline-none w-full md:w-56">
+                        <select id="filter-riesgo" class="text-xs p-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-tecnmGreen outline-none">
+                            <option value="TODOS">Todos los Niveles</option>
+                            <option value="CRÍTICO">Riesgo Crítico (3+ Reprobadas)</option>
+                            <option value="ALTO">Riesgo Alto (2 Reprobadas)</option>
+                            <option value="MEDIO">Riesgo Medio (1 Reprobada)</option>
+                            <option value="BAJO">Sin Riesgo / Regular</option>
+                            <option value="ALTO,CRÍTICO">Solo alertas (Alto + Crítico)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs text-slate-700" id="table-riesgo">
+                        <thead class="bg-slate-100 uppercase font-bold text-[10px] text-slate-600">
+                            <tr>
+                                <th class="p-3 rounded-l-lg">N° Control</th>
+                                <th class="p-3">Nombre del Tutorado</th>
+                                <th class="p-3">Semestre</th>
+                                <th class="p-3">Materias Reprobadas</th>
+                                <th class="p-3">Avance Reticular</th>
+                                <th class="p-3">Estatus de Riesgo</th>
+                                <th class="p-3">Tutor</th>
+                                <th class="p-3 rounded-r-lg text-center">Acción Inmediata</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 font-medium" id="tbody-riesgo"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 4: CANALIZACIONES -->
+        <div id="tab-canalizaciones" class="tab-content space-y-6">
+            <div class="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h3 class="text-base font-bold text-slate-800">Panel Estratégico de Canalizaciones Institucionales</h3>
+                        <p class="text-xs text-slate-500">Mapeo e integración con redes formales del Departamento de Sistemas (PALPROG, CIS, CEPC, PAPA's).</p>
+                    </div>
+                    <span class="bg-tecnmGreen text-white text-xs px-3 py-1.5 rounded-xl font-bold shadow" id="canal-registrados">…</span>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                    <div class="tarjeta-suave p-4 bg-emerald-50 rounded-2xl border border-emerald-200"><span class="text-[10px] font-extrabold text-tecnmGreen uppercase">PALPROG</span><h4 class="text-xs font-bold text-slate-800 mt-1">Asesoría en Programación</h4><p class="text-[10px] text-slate-500 mt-1">Atención personalizada en algoritmos y lógica.</p><div class="mt-3 text-right"><span class="text-xs font-extrabold text-tecnmGreen" id="canal-activas-PALPROG">…</span></div></div>
+                    <div class="tarjeta-suave p-4 bg-sky-50 rounded-2xl border border-sky-200"><span class="text-[10px] font-extrabold text-sky-800 uppercase">CIS</span><h4 class="text-xs font-bold text-slate-800 mt-1">Comunidad de Sistemas</h4><p class="text-[10px] text-slate-500 mt-1">Integración y hábitos de estudio universitarios.</p><div class="mt-3 text-right"><span class="text-xs font-extrabold text-sky-800" id="canal-activas-CIS">…</span></div></div>
+                    <div class="tarjeta-suave p-4 bg-purple-50 rounded-2xl border border-purple-200"><span class="text-[10px] font-extrabold text-purple-800 uppercase">CEPC</span><h4 class="text-xs font-bold text-slate-800 mt-1">Programación Competitiva</h4><p class="text-[10px] text-slate-500 mt-1">Reforzamiento de alto nivel matemático.</p><div class="mt-3 text-right"><span class="text-xs font-extrabold text-purple-800" id="canal-activas-CEPC">…</span></div></div>
+                    <div class="tarjeta-suave p-4 bg-rose-50 rounded-2xl border border-rose-200"><span class="text-[10px] font-extrabold text-rose-800 uppercase">PAPA's / Psicología</span><h4 class="text-xs font-bold text-slate-800 mt-1">Asesoría Par a Par</h4><p class="text-[10px] text-slate-500 mt-1">Orientación vocacional y contención emocional.</p><div class="mt-3 text-right text-xs font-extrabold text-rose-800">PAPA's: <span id="canal-activas-PAPAs">…</span> · Psic.: <span id="canal-activas-PSICO">…</span></div></div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs text-slate-700">
+                        <thead class="bg-slate-100 uppercase font-bold text-[10px] text-slate-600">
+                            <tr>
+                                <th class="p-3 rounded-l-lg">Tutorado</th>
+                                <th class="p-3">Área</th>
+                                <th class="p-3">Diagnóstico Inicial</th>
+                                <th class="p-3">Tutor</th>
+                                <th class="p-3">Fecha</th>
+                                <th class="p-3 rounded-r-lg">Estatus</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 font-medium" id="tbody-canalizaciones"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB: EVALUACIÓN DEL TUTOR HACIA EL PIT (GET /api/evaluaciones/resumen) -->
+        <div id="tab-evaluaciones" class="tab-content space-y-6">
+            <!-- Selector de instrumento -->
+            <div class="bg-white p-2 rounded-2xl shadow-sm border border-slate-200 flex flex-col sm:flex-row gap-2 text-xs font-bold" role="tablist">
+                <button type="button" id="evalbtn-tutores" onclick="cambiarVistaEvaluacion('tutores')" class="flex-1 px-4 py-2.5 rounded-xl bg-tecnmGreen text-white transition">
+                    <i class="fa-solid fa-chalkboard-user mr-1"></i> Tutores evalúan el Programa (11 ítems)
+                </button>
+                <button type="button" id="evalbtn-alumnos" onclick="cambiarVistaEvaluacion('alumnos')" class="flex-1 px-4 py-2.5 rounded-xl text-slate-600 hover:bg-slate-100 transition">
+                    <i class="fa-solid fa-user-graduate mr-1"></i> Tutorados evalúan a su Tutor (34 ítems) · Confidencial
+                </button>
+            </div>
+
+            <div id="eval-vista-tutores" class="space-y-6">
+            <div class="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+                    <div>
+                        <h3 class="text-base font-bold text-slate-800">Evaluación del Tutor hacia el Programa de Tutorías (PIT)</h3>
+                        <p class="text-xs text-slate-500">Concentrado de las 11 preguntas Likert respondidas por los profesores tutores · 1 = Siempre (más favorable) … 5 = Nunca.</p>
+                    </div>
+                    <select id="eval-periodo" class="text-xs p-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-tecnmGreen outline-none"></select>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                    <div class="tarjeta-suave p-4 bg-emerald-50 rounded-2xl border border-emerald-200">
+                        <span class="text-[10px] font-extrabold text-tecnmGreen uppercase">Participación</span>
+                        <h4 class="text-xl font-extrabold text-slate-800 mt-1" id="eval-participacion">…</h4>
+                        <p class="text-[10px] text-slate-500" id="eval-participacion-sub">&nbsp;</p>
+                    </div>
+                    <div class="tarjeta-suave p-4 bg-sky-50 rounded-2xl border border-sky-200">
+                        <span class="text-[10px] font-extrabold text-sky-800 uppercase">Promedio general</span>
+                        <h4 class="text-xl font-extrabold text-slate-800 mt-1" id="eval-promedio">…</h4>
+                        <p class="text-[10px] text-slate-500" id="eval-promedio-sub">&nbsp;</p>
+                    </div>
+                    <div class="p-4 bg-white rounded-2xl border border-slate-200">
+                        <span class="text-[10px] font-extrabold text-emerald-700 uppercase">Mejor evaluada</span>
+                        <h4 class="text-sm font-extrabold text-slate-800 mt-1" id="eval-mejor">…</h4>
+                        <p class="text-[10px] text-slate-500 leading-snug" id="eval-mejor-sub">&nbsp;</p>
+                    </div>
+                    <div class="tarjeta-suave p-4 bg-rose-50 rounded-2xl border border-rose-200">
+                        <span class="text-[10px] font-extrabold text-rose-800 uppercase">Área de oportunidad</span>
+                        <h4 class="text-sm font-extrabold text-slate-800 mt-1" id="eval-peor">…</h4>
+                        <p class="text-[10px] text-slate-500 leading-snug" id="eval-peor-sub">&nbsp;</p>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-3 mb-3 text-[10px] font-semibold text-slate-600" id="eval-leyenda"></div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs text-slate-700">
+                        <thead class="bg-slate-100 uppercase font-bold text-[10px] text-slate-600">
+                            <tr>
+                                <th class="p-3 rounded-l-lg w-10">#</th>
+                                <th class="p-3">Pregunta</th>
+                                <th class="p-3 w-48">Distribución</th>
+                                <th class="p-3 text-center">Promedio</th>
+                                <th class="p-3 rounded-r-lg text-center">% Favorable</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 font-medium" id="tbody-eval-preguntas"></tbody>
+                    </table>
+                </div>
+                <p class="text-[10px] text-slate-400 mt-2">% Favorable = tutores que respondieron "Siempre" o "Casi siempre".</p>
+            </div>
+
+            <div class="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200">
+                <h3 class="text-base font-bold text-slate-800 mb-1">Estatus por Tutor</h3>
+                <p class="text-xs text-slate-500 mb-4">Consulta las respuestas individuales y los comentarios de cada docente.</p>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs text-slate-700">
+                        <thead class="bg-slate-100 uppercase font-bold text-[10px] text-slate-600">
+                            <tr>
+                                <th class="p-3 rounded-l-lg">Docente Tutor</th>
+                                <th class="p-3">Grupos</th>
+                                <th class="p-3">Estatus</th>
+                                <th class="p-3">Fecha de envío</th>
+                                <th class="p-3 text-center">Promedio</th>
+                                <th class="p-3 rounded-r-lg text-center">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 font-medium" id="tbody-eval-tutores"></tbody>
+                    </table>
+                </div>
+            </div>
+            </div>
+
+            <!-- Vista: tutorados evalúan a su tutor (GET /api/evaluaciones/alumnos/resumen) -->
+            <div id="eval-vista-alumnos" class="space-y-6 hidden">
+                <div class="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+                        <div>
+                            <h3 class="text-base font-bold text-slate-800">Evaluación del Acompañamiento Tutorial por los Tutorados</h3>
+                            <p class="text-xs text-slate-500">Secciones 4 y 5 · 34 ítems Likert · 1 = Siempre (más favorable) … 5 = Nunca.</p>
+                        </div>
+                        <div class="flex gap-2 w-full md:w-auto">
+                            <select id="evalal-filtro-tutor" class="text-xs p-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-tecnmGreen outline-none"><option value="">Todos los tutores</option></select>
+                            <select id="evalal-filtro-periodo" class="text-xs p-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-tecnmGreen outline-none"></select>
+                        </div>
+                    </div>
+                    <div class="mb-6 p-3 rounded-xl border border-sky-200 bg-sky-50 text-sky-900 text-[11px] font-medium">
+                        <i class="fa-solid fa-lock mr-1"></i> Información confidencial: solo la Coordinación de Tutorías puede consultarla. Los tutores no tienen acceso a estas respuestas.
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                        <div class="tarjeta-suave p-4 bg-emerald-50 rounded-2xl border border-emerald-200">
+                            <span class="text-[10px] font-extrabold text-tecnmGreen uppercase">Respuestas recibidas</span>
+                            <h4 class="text-xl font-extrabold text-slate-800 mt-1" id="evalal-kpi-resp">…</h4>
+                            <p class="text-[10px] text-slate-500" id="evalal-kpi-resp-sub">&nbsp;</p>
+                        </div>
+                        <div class="tarjeta-suave p-4 bg-sky-50 rounded-2xl border border-sky-200">
+                            <span class="text-[10px] font-extrabold text-sky-800 uppercase">Promedio general</span>
+                            <h4 class="text-xl font-extrabold text-slate-800 mt-1" id="evalal-kpi-prom">…</h4>
+                            <p class="text-[10px] text-slate-500" id="evalal-kpi-prom-sub">&nbsp;</p>
+                        </div>
+                        <div class="p-4 bg-white rounded-2xl border border-slate-200">
+                            <span class="text-[10px] font-extrabold text-emerald-700 uppercase">Mejor evaluado</span>
+                            <h4 class="text-sm font-extrabold text-slate-800 mt-1" id="evalal-kpi-mejor">…</h4>
+                            <p class="text-[10px] text-slate-500 leading-snug" id="evalal-kpi-mejor-sub">&nbsp;</p>
+                        </div>
+                        <div class="tarjeta-suave p-4 bg-rose-50 rounded-2xl border border-rose-200">
+                            <span class="text-[10px] font-extrabold text-rose-800 uppercase">Área de oportunidad</span>
+                            <h4 class="text-sm font-extrabold text-slate-800 mt-1" id="evalal-kpi-peor">…</h4>
+                            <p class="text-[10px] text-slate-500 leading-snug" id="evalal-kpi-peor-sub">&nbsp;</p>
+                        </div>
+                    </div>
+
+                    <h4 class="text-sm font-bold text-slate-800 mb-2">Resultados por Tutor</h4>
+                    <div class="overflow-x-auto mb-6">
+                        <table class="w-full text-left text-xs text-slate-700">
+                            <thead class="bg-slate-100 uppercase font-bold text-[10px] text-slate-600">
+                                <tr>
+                                    <th class="p-3 rounded-l-lg">Docente Tutor</th>
+                                    <th class="p-3">Grupos</th>
+                                    <th class="p-3 text-center">Respondieron</th>
+                                    <th class="p-3 text-center">Promedio</th>
+                                    <th class="p-3 rounded-r-lg text-center">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100 font-medium" id="tbody-evalal-tutores"></tbody>
+                        </table>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-3 mb-3 text-[10px] font-semibold text-slate-600" id="evalal-leyenda"></div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs text-slate-700">
+                            <thead class="bg-slate-100 uppercase font-bold text-[10px] text-slate-600">
+                                <tr>
+                                    <th class="p-3 rounded-l-lg w-12">Ítem</th>
+                                    <th class="p-3">Enunciado</th>
+                                    <th class="p-3 w-48">Distribución</th>
+                                    <th class="p-3 text-center">Promedio</th>
+                                    <th class="p-3 rounded-r-lg text-center">% Favorable</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100 font-medium" id="tbody-evalal-items"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200">
+                    <h3 class="text-base font-bold text-slate-800 mb-1">Respuestas Individuales</h3>
+                    <p class="text-xs text-slate-500 mb-4" id="evalal-lista-sub">Evaluaciones enviadas por los tutorados en el periodo.</p>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs text-slate-700">
+                            <thead class="bg-slate-100 uppercase font-bold text-[10px] text-slate-600">
+                                <tr>
+                                    <th class="p-3 rounded-l-lg">Tutorado</th>
+                                    <th class="p-3">Grupo</th>
+                                    <th class="p-3">Tutor evaluado</th>
+                                    <th class="p-3">Fecha</th>
+                                    <th class="p-3 text-center">Promedio</th>
+                                    <th class="p-3 rounded-r-lg text-center">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100 font-medium" id="tbody-evalal-respuestas"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 5: REPORTES PIT (prototipo) -->
+        <div id="tab-reportes" class="tab-content space-y-6">
+            <div class="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200">
+                <h3 class="text-base font-bold text-slate-800 mb-1">Centro de Descarga e Informes Oficiales PIT</h3>
+                <p class="text-xs text-slate-500 mb-6">Generación de reportes normativos para entrega a la Dirección Institucional del ITVER (módulo en desarrollo).</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+                    <div class="p-5 bg-slate-50 rounded-2xl border border-slate-200"><div class="w-10 h-10 bg-tecnmGreen/10 text-tecnmGreen rounded-xl flex items-center justify-center text-xl font-bold mb-3"><i class="fa-solid fa-file-invoice"></i></div><h4 class="text-xs font-bold text-slate-800">Informe Semestral del PIT (ISC)</h4><p class="text-[11px] text-slate-500 mt-1">Concentrado estadístico de tutorías grupales, individuales y tasas de deserción abatidas.</p></div>
+                    <div class="p-5 bg-slate-50 rounded-2xl border border-slate-200"><div class="w-10 h-10 bg-tecnmGold/10 text-tecnmBlue rounded-xl flex items-center justify-center text-xl font-bold mb-3"><i class="fa-solid fa-square-poll-vertical"></i></div><h4 class="text-xs font-bold text-slate-800">Evaluación de Tutores (Escala Likert)</h4><p class="text-[11px] text-slate-500 mt-1">Resultados consolidados de las preguntas respondidas por los profesores tutores.</p></div>
+                    <div class="p-5 bg-slate-50 rounded-2xl border border-slate-200"><div class="w-10 h-10 bg-sky-50 text-sky-700 rounded-xl flex items-center justify-center text-xl font-bold mb-3"><i class="fa-solid fa-stamp"></i></div><h4 class="text-xs font-bold text-slate-800">Actas de Acreditación Tutorial</h4><p class="text-[11px] text-slate-500 mt-1">Emisión de actas para liberación del crédito complementario de tutoría.</p></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- MODAL DETALLE DE EVALUACIÓN -->
+    <div id="modal-evaluacion" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true">
+        <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-xl border border-slate-200 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-start mb-4">
+                <div>
+                    <h3 class="text-sm font-bold text-slate-800" id="modal-eval-titulo">Evaluación del tutor</h3>
+                    <p class="text-[11px] text-slate-500" id="modal-eval-sub"></p>
+                </div>
+                <button type="button" onclick="document.getElementById('modal-evaluacion').classList.add('hidden')" class="text-slate-400 hover:text-slate-600" aria-label="Cerrar"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div id="modal-eval-cuerpo" class="space-y-2 text-xs"></div>
+        </div>
+    </div>
+
+    <!-- MODAL CANALIZACIÓN (compartido con el módulo del tutor) -->
+    <div id="modal-canalizacion" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-200">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-sm font-bold text-slate-800">Canalizar Tutorado</h3>
+                <button type="button" onclick="closeModalCanalizacion()" class="text-slate-400 hover:text-slate-600" aria-label="Cerrar"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form id="modal-canalizar-form" onsubmit="handleModalCanalizacionSubmit(event)" class="space-y-3 text-xs">
+                <div>
+                    <label for="modal-canalizar-alumno" class="block font-bold text-slate-700 mb-1">Alumno a Canalizar</label>
+                    <input type="text" id="modal-canalizar-alumno" readonly class="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-100 text-slate-700 font-bold">
+                </div>
+                <div>
+                    <label for="modal-canalizar-area" class="block font-bold text-slate-700 mb-1">Área o Comunidad de Destino</label>
+                    <select id="modal-canalizar-area" class="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-tecnmGreen outline-none bg-white">
+                        <option value="PALPROG">PALPROG (Asesorías Lógica de Programación)</option>
+                        <option value="CIS">CIS (Comunidad de Ing. en Sistemas)</option>
+                        <option value="CEPC">CEPC (Programación Competitiva)</option>
+                        <option value="PAPAs">PAPA's (Asesoría Par a Par)</option>
+                        <option value="Psicología/Salud">Orientación / Salud / Psicología</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="modal-canalizar-diagnostico" class="block font-bold text-slate-700 mb-1">Diagnóstico Inicial</label>
+                    <textarea id="modal-canalizar-diagnostico" rows="3" minlength="10" maxlength="2000" required placeholder="Describe la problemática académica o personal detectada..." class="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-tecnmGreen outline-none"></textarea>
+                    <p class="text-[10px] text-slate-400 mt-1">Quedará registrada a nombre del tutor asignado al alumno.</p>
+                </div>
+                <div class="flex space-x-2 pt-2">
+                    <button type="button" onclick="closeModalCanalizacion()" class="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 rounded-xl">Cancelar</button>
+                    <button type="submit" class="w-1/2 bg-tecnmGold hover:bg-tecnmGoldDark text-slate-900 font-bold py-2.5 rounded-xl shadow">Enviar Canalización</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <footer class="bg-tecnmDark text-white mt-12 border-t-4 border-tecnmGold">
+        <div class="max-w-7xl mx-auto px-4 md:px-12 py-10">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 pb-8 border-b border-white/10">
+                <div>
+                    <h3 class="text-xs font-bold tracking-wider text-tecnmGold uppercase mb-3">Instituto Tecnológico de Veracruz</h3>
+                    <p class="text-xs text-slate-300 leading-relaxed">Calz. Miguel Ángel de Quevedo 2779, Formando Hogar, Ver., C.P. 91897.<br>Departamento de Sistemas y Computación.<br>Coordinación del Programa Institucional de Tutorías.</p>
+                </div>
+                <div>
+                    <h3 class="text-xs font-bold tracking-wider text-tecnmGold uppercase mb-3">Enlaces de Interés TecNM</h3>
+                    <ul class="space-y-1.5 text-xs text-slate-300">
+                        <li><a href="https://www.tecnm.mx" target="_blank" rel="noopener" class="hover:underline">Portal Oficial TecNM</a></li>
+                        <li><a href="https://www.veracruz.tecnm.mx" target="_blank" rel="noopener" class="hover:underline">Sitio Web ITVER</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-xs font-bold tracking-wider text-tecnmGold uppercase mb-3">Contacto de Coordinación</h3>
+                    <p class="text-xs text-slate-300 mb-1">Correo: <strong>coordinacion.tutorias@veracruz.tecnm.mx</strong></p>
+                    <p class="text-xs text-slate-300">Edificio U, Departamento de Sistemas y Computación</p>
+                </div>
+            </div>
+            <div class="pt-6 text-[10px] text-slate-400"><p>© 2026 Tecnológico Nacional de México - Coordinación de Tutorías ITVER.</p></div>
+        </div>
+    </footer>
+
+    <script>
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(b => { b.classList.remove('activo'); b.setAttribute('aria-selected', 'false'); });
+            document.getElementById('tab-' + tabId).classList.add('active');
+            const btn = document.getElementById('btn-' + tabId);
+            if (btn) {
+                btn.classList.add('activo');
+                btn.setAttribute('aria-selected', 'true');
+                btn.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+            }
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    </script>
+    <script src="js/app.js"></script>
+</body>
+</html>
