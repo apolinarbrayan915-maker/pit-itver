@@ -8,6 +8,7 @@ const db = require('../db');
 const config = require('../config');
 const { badRequest, notFound, conflict } = require('../utils/errores');
 const v = require('../utils/validaciones');
+const { diaDeClases } = require('../utils/calendarioEscolar');
 
 const DIAS = ['', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
 const HORA = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -133,6 +134,10 @@ async function disponibilidad(req, res) {
   const tutorId = v.idPositivo(req.params.id, 'id');
   const fecha = String(req.query.fecha || '');
   if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) throw badRequest('Indica la fecha con formato AAAA-MM-DD.');
+  const clases = diaDeClases(fecha);
+  if (!clases.ok) {
+    return res.json({ ok: true, fecha, tiene_horario: true, sin_clases: true, motivo: clases.motivo, bloques: [] });
+  }
 
   const { rows: horario } = await db.query('SELECT count(*)::int AS n FROM tutor_horarios WHERE tutor_id = $1', [tutorId]);
   const { rows } = await db.query(

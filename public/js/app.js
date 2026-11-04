@@ -611,18 +611,37 @@ async function cargarCanalizacionesAlumno() {
 }
 
 /**
- * Calendario de la fecha de la cita: desde mañana y solo de lunes a viernes.
- * Usa flatpickr (public/vendor/flatpickr) para poder deshabilitar sábados y
- * domingos; si no cargara, queda el <input type="date"> nativo y la validación
- * de enviarReservaCita/servidor sigue rechazando fines de semana.
+ * Calendario de la fecha de la cita: desde mañana y solo días con clases según
+ * el Calendario Académico del TecNM (GET /api/calendario-escolar): de lunes a
+ * viernes, dentro de los periodos de clases, sin vacaciones ni días inhábiles.
+ * Usa flatpickr (public/vendor/flatpickr); si no cargara, queda el
+ * <input type="date"> nativo y el servidor sigue rechazando los días sin clases.
  */
 let calendarioCita = null;
-function iniciarCalendarioCita() {
+function esDiaDeClases(ymd, cal) {
+  const dia = new Date(`${ymd}T12:00:00Z`).getUTCDay();
+  if (dia === 0 || dia === 6) return false;
+  if (!cal) return true;
+  const dentro = (r) => ymd >= r.inicio && ymd <= r.fin;
+  if (cal.inhabiles.some((d) => d.fecha === ymd)) return false;
+  if (cal.vacaciones.some(dentro)) return false;
+  return cal.periodos.some(dentro);
+}
+
+async function iniciarCalendarioCita() {
   const input = $('cita-fecha');
   if (!input) return;
   const manana = new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(new Date(Date.now() + 864e5));
   input.min = manana;
   if (!window.flatpickr) return;
+  let cal = null;
+  try {
+    cal = await api('/calendario-escolar');
+  } catch {
+    cal = null; // sin calendario: al menos se bloquean sábados y domingos
+  }
+  const ultimoDia = cal?.periodos?.length ? cal.periodos[cal.periodos.length - 1].fin : null;
+  const ymdLocal = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   calendarioCita = window.flatpickr(input, {
     locale: window.flatpickr.l10ns?.es || 'default',
     dateFormat: 'Y-m-d',
@@ -630,8 +649,8 @@ function iniciarCalendarioCita() {
     altFormat: 'l j \\d\\e F \\d\\e Y',
     altInputClass: input.className,
     minDate: manana,
-    maxDate: new Date(Date.now() + 120 * 864e5),
-    disable: [(d) => d.getDay() === 0 || d.getDay() === 6],
+    maxDate: ultimoDia || new Date(Date.now() + 120 * 864e5),
+    disable: [(d) => !esDiaDeClases(ymdLocal(d), cal)],
     disableMobile: true,
     onChange: () => cargarHorariosCita(),
   });
@@ -1951,6 +1970,11 @@ async function cargarHorariosCita() {
   sel.innerHTML = '<option value="">Cargando horarios…</option>';
   try {
     const r = await api(`/tutores/${tutorId}/disponibilidad`, { query: { fecha } });
+    if (r.sin_clases) {
+      sel.innerHTML = '<option value="">Ese día no hay clases</option>';
+      ayuda.textContent = r.motivo;
+      return;
+    }
     if (!r.tiene_horario) {
       // Tutor sin horario publicado: se ofrecen bloques generales
       sel.innerHTML = ['10:00', '11:00', '13:00', '16:00'].map((h) => `<option value="${h}">${h} h</option>`).join('');

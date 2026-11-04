@@ -5,6 +5,7 @@ const config = require('../config');
 const { badRequest, forbidden, notFound, conflict } = require('../utils/errores');
 const v = require('../utils/validaciones');
 const { dentroDeHorario } = require('./tutores.controller');
+const { diaDeClases } = require('../utils/calendarioEscolar');
 
 // Horario de atención tutorial (hora local del ITVER)
 const HORA_INICIO = 7;   // 07:00
@@ -101,6 +102,7 @@ async function reservar(req, res) {
     const { rows: f } = await client.query(
       `SELECT ts,
               extract(isodow FROM ts AT TIME ZONE $2)::int AS dia,
+              to_char(ts AT TIME ZONE $2, 'YYYY-MM-DD') AS ymd,
               (extract(hour FROM ts AT TIME ZONE $2) * 60
                  + extract(minute FROM ts AT TIME ZONE $2))::int AS minuto,
               ts > now() + make_interval(hours => $3) AS con_anticipacion
@@ -108,7 +110,7 @@ async function reservar(req, res) {
                            ELSE $1::timestamptz END AS ts) x`,
       [fechaTexto, config.tz, ANTICIPACION_MIN_HORAS, esLocal]
     );
-    const { ts, dia, minuto, con_anticipacion: conAnticipacion } = f[0];
+    const { ts, dia, ymd, minuto, con_anticipacion: conAnticipacion } = f[0];
 
     if (!conAnticipacion) {
       throw badRequest(`La cita debe reservarse con al menos ${ANTICIPACION_MIN_HORAS} horas de anticipación.`);
@@ -116,6 +118,9 @@ async function reservar(req, res) {
     if (dia > 5) {
       throw badRequest('Las tutorías se agendan de lunes a viernes.');
     }
+    // Solo días con clases según el Calendario Académico del TecNM
+    const clases = diaDeClases(ymd);
+    if (!clases.ok) throw badRequest(clases.motivo);
     if (minuto < HORA_INICIO * 60 || minuto + duracion > HORA_FIN * 60) {
       throw badRequest(`El horario de tutorías es de ${HORA_INICIO}:00 a ${HORA_FIN}:00 h.`);
     }

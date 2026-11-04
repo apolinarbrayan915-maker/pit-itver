@@ -41,6 +41,11 @@ router.use(verificarToken);
 
 router.get('/auth/me', auth.perfil);
 
+// Calendario Académico del TecNM (días con clases para agendar tutorías)
+router.get('/calendario-escolar', (req, res) => {
+  res.json({ ok: true, ...require('./utils/calendarioEscolar').CALENDARIO });
+});
+
 router.get('/dashboard/stats', requiereRol('coordinador', 'tutor'), dashboard.stats);
 
 router.get('/tutorados/riesgo', requiereRol('coordinador', 'tutor'), tutorados.listarPorRiesgo);
