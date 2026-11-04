@@ -231,3 +231,21 @@ html.dark .ficha-invalido input:not([type=radio]):not([type=checkbox]), html.dar
 .ficha-fijo:focus { outline: none; }
 html.dark .ficha-fijo { background: #111a2c; border-color: #2a3a57; color: #c7d2e2; }
 
+
+/* ---- Calendario de citas (flatpickr) -------------------------------------- */
+.flatpickr-calendar { font-family: inherit; border-radius: 14px; box-shadow: 0 10px 30px rgba(15, 23, 42, .15); }
+.flatpickr-day.selected, .flatpickr-day.selected:hover { background: #18396A; border-color: #18396A; }
+.flatpickr-day.today { border-color: #9DBCE8; }
+.flatpickr-day.flatpickr-disabled, .flatpickr-day.flatpickr-disabled:hover { color: #cbd5e1; text-decoration: line-through; cursor: not-allowed; }
+html.dark .flatpickr-calendar { background: #111b2e; box-shadow: 0 10px 30px rgba(0, 0, 0, .5); }
+html.dark .flatpickr-calendar.arrowTop:after { border-bottom-color: #111b2e; }
+html.dark .flatpickr-calendar.arrowBottom:after { border-top-color: #111b2e; }
+html.dark .flatpickr-months .flatpickr-month, html.dark .flatpickr-current-month .flatpickr-monthDropdown-months,
+html.dark span.flatpickr-weekday, html.dark .flatpickr-weekdays { background: #111b2e; color: #e2e8f0; fill: #e2e8f0; }
+html.dark .flatpickr-months .flatpickr-prev-month svg, html.dark .flatpickr-months .flatpickr-next-month svg { fill: #e2e8f0; }
+html.dark .flatpickr-current-month input.cur-year { color: #e2e8f0; }
+html.dark .flatpickr-day { color: #e2e8f0; }
+html.dark .flatpickr-day:hover { background: #1b2943; border-color: #1b2943; }
+html.dark .flatpickr-day.prevMonthDay, html.dark .flatpickr-day.nextMonthDay { color: #64748b; }
+html.dark .flatpickr-day.flatpickr-disabled, html.dark .flatpickr-day.flatpickr-disabled:hover { color: #475569; background: transparent; border-color: transparent; }
+html.dark .flatpickr-day.selected { background: #9DBCE8; border-color: #9DBCE8; color: #0b1220; }

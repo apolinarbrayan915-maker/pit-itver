@@ -53,7 +53,7 @@ async function miEvaluacion(req, res) {
 
 /**
  * POST /api/evaluaciones/alumno   (alumno)
- * Body: { respuestas: { s4a: 0..5, … }, comentarios? }   (0 = No aplica)
+ * Body: { respuestas: { s4a: 1..5, … }, comentarios? }
  * Evalúa al tutor asignado en el periodo vigente. Se puede actualizar.
  */
 async function guardar(req, res) {
@@ -63,11 +63,11 @@ async function guardar(req, res) {
   PREGUNTAS_ALUMNO.forEach((p) => {
     const crudo = entrada[p.clave];
     const n = crudo === null || crudo === undefined || crudo === '' ? NaN : Number(crudo);
-    if (!Number.isInteger(n) || n < NO_APLICA || n > 5) faltantes.push(p.numero);
+    if (!Number.isInteger(n) || n < 1 || n > 5) faltantes.push(p.numero);
     else respuestas[p.clave] = n;
   });
   if (faltantes.length) {
-    throw badRequest(`Responde todos los ítems (del 1 al 5 o "No aplica"). Faltan: ${faltantes.join(', ')}`);
+    throw badRequest(`Responde todos los ítems con un valor del 1 al 5. Faltan: ${faltantes.join(', ')}`);
   }
   const comentarios = req.body.comentarios
     ? v.texto(req.body.comentarios, 'comentarios', { min: 1, max: 2000 })

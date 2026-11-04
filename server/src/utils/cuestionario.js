@@ -32,8 +32,8 @@ const CLAVES = PREGUNTAS.map((p) => p.clave);
 
 /**
  * Instrumento del TUTORADO: evaluación del acompañamiento tutorial.
- * Una sola lista numerada 1, 2, 3… con la escala Likert (1 = Siempre … 5 = Nunca)
- * más la opción 0 = "No aplica", que no cuenta en los promedios.
+ * Una sola lista numerada 1, 2, 3… con la escala Likert (1 = Siempre … 5 = Nunca).
+ * (Si existieran respuestas antiguas con 0 = "No aplica", no cuentan en los promedios.)
  * Las claves internas (s4a, s5b, …) se conservan del instrumento original para
  * que las respuestas ya guardadas sigan coincidiendo.
  */
@@ -71,9 +71,10 @@ const SECCIONES_ALUMNO = [
   },
 ];
 
-// Escala del tutorado: la Likert de siempre + "No aplica" (valor 0)
+// Escala del tutorado: la misma Likert. 0 = "No aplica" ya no se ofrece, pero se
+// sigue reconociendo al leer respuestas guardadas mientras estuvo disponible.
 const NO_APLICA = 0;
-const ESCALA_ALUMNO = [...ESCALA, { valor: NO_APLICA, etiqueta: 'No aplica' }];
+const ESCALA_ALUMNO = ESCALA;
 
 const PREGUNTAS_ALUMNO = SECCIONES_ALUMNO.flatMap((s) => s.preguntas.map((p) => ({ ...p, seccion: s.id })));
 const CLAVES_ALUMNO = PREGUNTAS_ALUMNO.map((p) => p.clave);

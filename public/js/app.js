@@ -417,7 +417,7 @@ async function enviarReservaCita(event) {
         `¡Cita agendada para el ${fmtFechaHora(cita.fecha_hora)}! Queda pendiente de confirmación por ${cita.tutor_nombre}.`;
       ok.classList.remove('hidden');
       form.reset();
-      llenarFechasHabilesCita();
+      calendarioCita?.clear();
       $('cita-horario').innerHTML = '<option value="">Primero elige una fecha</option>';
       await cargarMisCitas();
       setTimeout(() => ok.classList.add('hidden'), 6000);
@@ -611,30 +611,35 @@ async function cargarCanalizacionesAlumno() {
 }
 
 /**
- * Llena el selector de fecha de la cita solo con días hábiles (lunes a viernes)
- * de las próximas 4 semanas, a partir de mañana (hora de Veracruz).
- * Así el alumno no puede elegir sábados ni domingos.
+ * Calendario de la fecha de la cita: desde mañana y solo de lunes a viernes.
+ * Usa flatpickr (public/vendor/flatpickr) para poder deshabilitar sábados y
+ * domingos; si no cargara, queda el <input type="date"> nativo y la validación
+ * de enviarReservaCita/servidor sigue rechazando fines de semana.
  */
-function llenarFechasHabilesCita() {
-  const sel = $('cita-fecha');
-  if (!sel || sel.tagName !== 'SELECT') return;
-  const ymd = new Intl.DateTimeFormat('en-CA', { timeZone: TZ });
-  const nombre = new Intl.DateTimeFormat('es-MX', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long' });
-  const base = new Date(`${ymd.format(new Date())}T12:00:00Z`);
-  const opciones = ['<option value="">Elige un día (lunes a viernes)</option>'];
-  for (let i = 1; opciones.length <= 20 && i < 40; i++) {
-    const d = new Date(base.getTime() + i * 864e5);
-    const dia = d.getUTCDay();
-    if (dia === 0 || dia === 6) continue;
-    const texto = nombre.format(d);
-    opciones.push(`<option value="${d.toISOString().slice(0, 10)}">${texto.charAt(0).toUpperCase()}${texto.slice(1)}</option>`);
-  }
-  sel.innerHTML = opciones.join('');
+let calendarioCita = null;
+function iniciarCalendarioCita() {
+  const input = $('cita-fecha');
+  if (!input) return;
+  const manana = new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(new Date(Date.now() + 864e5));
+  input.min = manana;
+  if (!window.flatpickr) return;
+  calendarioCita = window.flatpickr(input, {
+    locale: window.flatpickr.l10ns?.es || 'default',
+    dateFormat: 'Y-m-d',
+    altInput: true,
+    altFormat: 'l j \\d\\e F \\d\\e Y',
+    altInputClass: input.className,
+    minDate: manana,
+    maxDate: new Date(Date.now() + 120 * 864e5),
+    disable: [(d) => d.getDay() === 0 || d.getDay() === 6],
+    disableMobile: true,
+    onChange: () => cargarHorariosCita(),
+  });
 }
 
 function iniciarAlumno() {
   if (!requiereSesion('alumno')) return;
-  llenarFechasHabilesCita();
+  iniciarCalendarioCita();
   window.handleCitaSubmit = enviarReservaCita;
   window.handleEvalAlumnoSubmit = enviarEvaluacionAlumno;
   $('cita-fecha')?.addEventListener('change', cargarHorariosCita);
