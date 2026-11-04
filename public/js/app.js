@@ -1938,7 +1938,7 @@ function horarioSemanaHtml(horarios) {
     filas.push(`<tr><th scope="row" class="pr-2 text-right text-[10px] font-semibold text-slate-400 whitespace-nowrap">${String(hora).padStart(2, '0')}:00</th>${celdas}</tr>`);
   }
   const total = horarios.reduce((sum, h) => sum + Math.floor((aMin(h.hora_fin) - aMin(h.hora_inicio)) / 60), 0);
-  return `<table class="w-full table-fixed text-xs" aria-label="Horario semanal de atención">
+  return `<table class="sin-tarjetas w-full table-fixed text-xs" aria-label="Horario semanal de atención">
       <thead><tr><th class="w-12"></th>${DIAS_CORTOS.slice(1).map((d) => `<th class="text-[10px] font-extrabold text-slate-600 pb-1">${d}</th>`).join('')}</tr></thead>
       <tbody>${filas.join('')}</tbody>
     </table>
@@ -3351,6 +3351,33 @@ function guardarA11y(pref) {
   }
 }
 
+/**
+ * En celular las tablas se muestran como tarjetas (CSS .tabla-tarjetas):
+ * cada celda recibe la etiqueta de su columna en data-label.
+ */
+function etiquetarTablas(raiz = document) {
+  raiz.querySelectorAll('main table:not(.sin-tarjetas)').forEach((tabla) => {
+    const encabezados = [...tabla.querySelectorAll('thead th')].map((th) => th.textContent.replace(/\s+/g, ' ').trim());
+    if (!encabezados.length) return;
+    tabla.classList.add('tabla-tarjetas');
+    tabla.querySelectorAll('tbody tr').forEach((tr) => {
+      let col = 0;
+      [...tr.children].forEach((td) => {
+        if (!td.hasAttribute('data-label')) td.setAttribute('data-label', encabezados[col] || '');
+        col += Number(td.getAttribute('colspan') || 1);
+      });
+    });
+  });
+}
+
+function vigilarTablas() {
+  let pendiente = null;
+  const correr = () => { pendiente = null; etiquetarTablas(); };
+  etiquetarTablas();
+  new MutationObserver(() => { if (!pendiente) pendiente = requestAnimationFrame(correr); })
+    .observe(document.body, { childList: true, subtree: true });
+}
+
 function montarBotonesAccesibilidad() {
   if ($('pit-a11y')) return;
   const raiz = document.documentElement;
@@ -3407,6 +3434,7 @@ function vigilarPestanas() {
 document.addEventListener('DOMContentLoaded', () => {
   montarBotonesAccesibilidad();
   vigilarPestanas();
+  vigilarTablas();
   $('btn-logout')?.addEventListener('click', cerrarSesion);
   ({ login: iniciarLogin, alumno: iniciarAlumno, tutor: iniciarTutor, coordinacion: iniciarCoordinacion }[PAGINA] || (() => {}))();
 });

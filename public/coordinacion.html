@@ -27,7 +27,7 @@
 
     <div>
 
-        <div class="bg-white shadow-sm py-3 px-4 md:px-12 border-b-2 border-tecnmGold">
+        <div class="pit-header bg-white shadow-sm py-3 px-4 md:px-12 border-b-2 border-tecnmGold">
             <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
                 <div class="flex items-center space-x-4">
                     <a href="index.html" class="flex items-center" aria-label="Tecnológico Nacional de México">
@@ -46,30 +46,31 @@
 
         <nav class="bg-tecnmGreen text-white shadow-md sticky top-0 z-40">
             <div class="pit-nav max-w-7xl mx-auto px-3 md:px-8 flex items-stretch h-14 gap-3">
+                <a href="index.html" class="pit-logo-movil" aria-label="Tecnológico Nacional de México"><img src="img/logo-tecnm.png" alt=""><span>PIT · ITVER</span></a>
                 <div class="pit-tabs flex-1 min-w-0 flex items-stretch gap-0.5 overflow-x-auto text-xs md:text-sm font-medium" role="tablist">
                     <button onclick="switchTab('kpi')" id="btn-kpi" title="Panorama" class="nav-btn activo" role="tab" aria-selected="true">
-                        <i class="fa-solid fa-chart-line"></i> <span>Panorama</span>
+                        <i class="fa-solid fa-chart-line"></i> <span>Panorama</span><span class="nav-corto">Panorama</span>
                     </button>
                     <button onclick="switchTab('asignaciones')" id="btn-asignaciones" title="Tutores" class="nav-btn" role="tab" aria-selected="false">
-                        <i class="fa-solid fa-users-gear"></i> <span>Tutores</span>
+                        <i class="fa-solid fa-users-gear"></i> <span>Tutores</span><span class="nav-corto">Tutores</span>
                     </button>
                     <button onclick="switchTab('riesgo')" id="btn-riesgo" title="Riesgo" class="nav-btn" role="tab" aria-selected="false">
-                        <i class="fa-solid fa-triangle-exclamation"></i> <span>Riesgo</span>
+                        <i class="fa-solid fa-triangle-exclamation"></i> <span>Riesgo</span><span class="nav-corto">Riesgo</span>
                     </button>
                     <button onclick="switchTab('canalizaciones')" id="btn-canalizaciones" title="Canalizaciones" class="nav-btn" role="tab" aria-selected="false">
-                        <i class="fa-solid fa-diagram-project"></i> <span>Canalizaciones</span>
+                        <i class="fa-solid fa-diagram-project"></i> <span>Canalizaciones</span><span class="nav-corto">Canalizar</span>
                     </button>
                     <button onclick="switchTab('evaluaciones')" id="btn-evaluaciones" title="Evaluaciones" class="nav-btn" role="tab" aria-selected="false">
-                        <i class="fa-solid fa-square-poll-vertical"></i> <span>Evaluaciones</span>
+                        <i class="fa-solid fa-square-poll-vertical"></i> <span>Evaluaciones</span><span class="nav-corto">Evaluar</span>
                     </button>
                     <button onclick="switchTab('fichas')" id="btn-fichas" title="Fichas" class="nav-btn" role="tab" aria-selected="false">
-                        <i class="fa-solid fa-address-card"></i> <span>Fichas</span>
+                        <i class="fa-solid fa-address-card"></i> <span>Fichas</span><span class="nav-corto">Fichas</span>
                     </button>
                     <button onclick="switchTab('avisos')" id="btn-avisos" title="Avisos" class="nav-btn" role="tab" aria-selected="false">
-                        <i class="fa-solid fa-bullhorn"></i> <span>Avisos</span>
+                        <i class="fa-solid fa-bullhorn"></i> <span>Avisos</span><span class="nav-corto">Avisos</span>
                     </button>
                     <button onclick="switchTab('reportes')" id="btn-reportes" title="Reportes" class="nav-btn" role="tab" aria-selected="false">
-                        <i class="fa-solid fa-file-export"></i> <span>Reportes</span>
+                        <i class="fa-solid fa-file-export"></i> <span>Reportes</span><span class="nav-corto">Reportes</span>
                     </button>
                 </div>
                 <div class="pit-user shrink-0 flex items-center gap-3 pl-3 md:pl-4 border-l border-white/20 my-2.5">
@@ -103,7 +104,7 @@
             </div>
 
             <!-- KPIs (GET /api/dashboard/stats) -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="kpi-grid grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
                 <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-4">
                     <div class="kpi-icon w-12 h-12 bg-blue-50 text-tecnmGreen rounded-xl flex items-center justify-center text-xl font-bold"><i class="fa-solid fa-graduation-cap"></i></div>
                     <div>
@@ -375,7 +376,7 @@
                     </div>
                     <span class="bg-tecnmGreen text-white text-xs px-3 py-1.5 rounded-xl font-bold shadow" id="canal-registrados">…</span>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <div class="kpi-grid grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
                     <div class="tarjeta-suave p-4 bg-emerald-50 rounded-2xl border border-emerald-200"><span class="text-[10px] font-extrabold text-tecnmGreen uppercase">PALPROG</span><h4 class="text-xs font-bold text-slate-800 mt-1">Asesoría en Programación</h4><p class="text-[10px] text-slate-500 mt-1">Atención personalizada en algoritmos y lógica.</p><div class="mt-3 text-right"><span class="text-xs font-extrabold text-tecnmGreen" id="canal-activas-PALPROG">…</span></div></div>
                     <div class="tarjeta-suave p-4 bg-sky-50 rounded-2xl border border-sky-200"><span class="text-[10px] font-extrabold text-sky-800 uppercase">CIS</span><h4 class="text-xs font-bold text-slate-800 mt-1">Comunidad de Sistemas</h4><p class="text-[10px] text-slate-500 mt-1">Integración y hábitos de estudio universitarios.</p><div class="mt-3 text-right"><span class="text-xs font-extrabold text-sky-800" id="canal-activas-CIS">…</span></div></div>
                     <div class="tarjeta-suave p-4 bg-purple-50 rounded-2xl border border-purple-200"><span class="text-[10px] font-extrabold text-purple-800 uppercase">CEPC</span><h4 class="text-xs font-bold text-slate-800 mt-1">Programación Competitiva</h4><p class="text-[10px] text-slate-500 mt-1">Reforzamiento de alto nivel matemático.</p><div class="mt-3 text-right"><span class="text-xs font-extrabold text-purple-800" id="canal-activas-CEPC">…</span></div></div>
@@ -421,7 +422,7 @@
                     <select id="eval-periodo" class="text-xs p-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-tecnmGreen outline-none"></select>
                 </div>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <div class="kpi-grid grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6">
                     <div class="tarjeta-suave p-4 bg-emerald-50 rounded-2xl border border-emerald-200">
                         <span class="text-[10px] font-extrabold text-tecnmGreen uppercase">Participación</span>
                         <h4 class="text-xl font-extrabold text-slate-800 mt-1" id="eval-participacion">…</h4>
@@ -500,7 +501,7 @@
                         <i class="fa-solid fa-lock mr-1"></i> Información confidencial: solo la Coordinación de Tutorías puede consultarla. Los tutores no tienen acceso a estas respuestas.
                     </div>
 
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                    <div class="kpi-grid grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6">
                         <div class="tarjeta-suave p-4 bg-emerald-50 rounded-2xl border border-emerald-200">
                             <span class="text-[10px] font-extrabold text-tecnmGreen uppercase">Respuestas recibidas</span>
                             <h4 class="text-xl font-extrabold text-slate-800 mt-1" id="evalal-kpi-resp">…</h4>
@@ -641,7 +642,7 @@
         </div>
     </div>
 
-    <footer class="bg-tecnmDark text-white mt-12 border-t-4 border-tecnmGold">
+    <footer class="pit-footer bg-tecnmDark text-white mt-12 border-t-4 border-tecnmGold">
         <div class="max-w-7xl mx-auto px-4 md:px-12 py-10">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-8 pb-8 border-b border-white/10">
                 <div>

@@ -28,7 +28,7 @@
 
     <div>
 
-        <div class="bg-white shadow-sm py-3 px-4 md:px-12 border-b border-slate-200">
+        <div class="pit-header bg-white shadow-sm py-3 px-4 md:px-12 border-b border-slate-200">
             <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
                 <div class="flex items-center space-x-4">
                     <a href="index.html" class="flex items-center" aria-label="Tecnológico Nacional de México">
@@ -49,24 +49,25 @@
 
         <nav class="bg-tecnmGreen text-white shadow-md sticky top-0 z-50">
             <div class="pit-nav max-w-7xl mx-auto px-3 md:px-8 flex items-stretch h-14 gap-3">
+                <a href="index.html" class="pit-logo-movil" aria-label="Tecnológico Nacional de México"><img src="img/logo-tecnm.png" alt=""><span>PIT · ITVER</span></a>
                 <div class="pit-tabs flex-1 min-w-0 flex items-stretch gap-0.5 overflow-x-auto text-xs md:text-sm font-medium" role="tablist">
                     <button onclick="switchTab('inicio')" id="btn-inicio" title="Inicio" class="nav-btn activo" role="tab" aria-selected="true">
-                        <i class="fa-solid fa-house"></i> <span>Inicio</span>
+                        <i class="fa-solid fa-house"></i> <span>Inicio</span><span class="nav-corto">Inicio</span>
                     </button>
                     <button onclick="switchTab('perfil')" id="btn-perfil" title="Perfil" class="nav-btn" role="tab" aria-selected="false">
-                        <i class="fa-solid fa-user-graduate"></i> <span>Perfil</span>
+                        <i class="fa-solid fa-user-graduate"></i> <span>Perfil</span><span class="nav-corto">Perfil</span>
                     </button>
                     <button onclick="switchTab('tutores')" id="btn-tutores" title="Elegir Tutor" class="nav-btn" role="tab" aria-selected="false">
-                        <i class="fa-solid fa-people-arrows"></i> <span>Elegir Tutor</span>
+                        <i class="fa-solid fa-people-arrows"></i> <span>Elegir Tutor</span><span class="nav-corto">Tutor</span>
                     </button>
                     <button onclick="switchTab('citas')" id="btn-citas" title="Citas y Reservas" class="nav-btn" role="tab" aria-selected="false">
-                        <i class="fa-solid fa-calendar-days"></i> <span>Citas y Reservas</span>
+                        <i class="fa-solid fa-calendar-days"></i> <span>Citas y Reservas</span><span class="nav-corto">Citas</span>
                     </button>
                     <button onclick="switchTab('historial')" id="btn-historial" title="Historial y Riesgo" class="nav-btn" role="tab" aria-selected="false">
-                        <i class="fa-solid fa-chart-line"></i> <span>Historial y Riesgo</span>
+                        <i class="fa-solid fa-chart-line"></i> <span>Historial y Riesgo</span><span class="nav-corto">Avance</span>
                     </button>
                     <button onclick="switchTab('documentos')" id="btn-documentos" title="Formatos PIT" class="nav-btn" role="tab" aria-selected="false">
-                        <i class="fa-solid fa-folder-open"></i> <span>Formatos PIT</span>
+                        <i class="fa-solid fa-folder-open"></i> <span>Formatos PIT</span><span class="nav-corto">Formatos</span>
                     </button>
                 </div>
                 <div class="pit-user shrink-0 flex items-center gap-3 pl-3 md:pl-4 border-l border-white/20 my-2.5">
@@ -100,7 +101,7 @@
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="kpi-grid grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
                 <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-4">
                     <div class="kpi-icon w-12 h-12 bg-blue-50 text-tecnmGreen rounded-xl flex items-center justify-center text-xl font-bold"><i class="fa-solid fa-user-check"></i></div>
                     <div><p class="text-xs text-slate-500 font-medium">Estado Tutoría</p><h4 class="text-lg font-bold text-slate-800" id="kpi-estado">…</h4></div>
@@ -234,7 +235,7 @@
                         <i class="fa-solid fa-circle text-[8px] mr-1 text-emerald-600"></i> <span id="perfil-badge-texto">…</span>
                     </span>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+                <div class="grid grid-cols-3 gap-2 md:gap-6 mt-6 stats-mini">
                     <div class="p-4 bg-slate-50 rounded-xl border border-slate-200"><span class="text-[10px] text-slate-400 font-bold uppercase">Promedio Acumulado</span><h3 class="text-xl font-extrabold text-tecnmGreen mt-1" id="perfil-promedio">…</h3></div>
                     <div class="p-4 bg-slate-50 rounded-xl border border-slate-200"><span class="text-[10px] text-slate-400 font-bold uppercase">Avance Reticular</span><h3 class="text-xl font-extrabold text-slate-800 mt-1" id="perfil-avance">…</h3></div>
                     <div class="p-4 bg-slate-50 rounded-xl border border-slate-200"><span class="text-[10px] text-slate-400 font-bold uppercase">Sesiones PIT Completadas</span><h3 class="text-xl font-extrabold text-tecnmBlue mt-1" id="perfil-sesiones">…</h3></div>
@@ -351,7 +352,7 @@
                     <span class="bg-tecnmGold/20 text-tecnmDark text-xs px-3 py-1 rounded-full font-bold">Semestre Actual: 2026-2</span>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div class="grid grid-cols-3 gap-2 md:gap-4 mb-6 stats-mini">
                     <div class="p-4 bg-slate-50 rounded-xl border border-slate-200">
                         <span class="text-[10px] text-slate-400 font-bold uppercase">Materias Reprobadas</span>
                         <h3 class="text-xl font-extrabold text-slate-800 mt-1" id="hist-reprobadas">…</h3>
@@ -463,7 +464,7 @@
         </div>
     </main>
 
-    <footer class="bg-tecnmDark text-white mt-12 border-t-4 border-tecnmGold">
+    <footer class="pit-footer bg-tecnmDark text-white mt-12 border-t-4 border-tecnmGold">
         <div class="max-w-7xl mx-auto px-4 md:px-12 py-10">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-8 pb-8 border-b border-white/10">
                 <div>

@@ -28,7 +28,7 @@
 
     <div>
 
-        <div class="bg-white shadow-sm py-3 px-4 md:px-12 border-b border-slate-200">
+        <div class="pit-header bg-white shadow-sm py-3 px-4 md:px-12 border-b border-slate-200">
             <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
                 <div class="flex items-center space-x-4">
                     <a href="index.html" class="flex items-center" aria-label="Tecnológico Nacional de México">
@@ -47,21 +47,22 @@
 
         <nav class="bg-tecnmGreen text-white shadow-md sticky top-0 z-40">
             <div class="pit-nav max-w-7xl mx-auto px-3 md:px-8 flex items-stretch h-14 gap-3">
+                <a href="index.html" class="pit-logo-movil" aria-label="Tecnológico Nacional de México"><img src="img/logo-tecnm.png" alt=""><span>PIT · ITVER</span></a>
                 <div class="pit-tabs flex-1 min-w-0 flex items-stretch gap-0.5 overflow-x-auto text-xs md:text-sm font-medium" role="tablist">
                     <button onclick="switchTab('dashboard')" id="btn-dashboard" title="Mi Grupo" class="nav-btn activo" role="tab" aria-selected="true">
-                        <i class="fa-solid fa-chart-pie"></i> <span>Mi Grupo</span>
+                        <i class="fa-solid fa-chart-pie"></i> <span>Mi Grupo</span><span class="nav-corto">Grupo</span>
                     </button>
                     <button onclick="switchTab('agenda')" id="btn-agenda" title="Agenda y Citas" class="nav-btn" role="tab" aria-selected="false">
-                        <i class="fa-solid fa-calendar-check"></i> <span>Agenda y Citas</span>
+                        <i class="fa-solid fa-calendar-check"></i> <span>Agenda y Citas</span><span class="nav-corto">Agenda</span>
                     </button>
                     <button onclick="switchTab('canalizaciones')" id="btn-canalizaciones" title="Canalizaciones" class="nav-btn" role="tab" aria-selected="false">
-                        <i class="fa-solid fa-share-nodes"></i> <span>Canalizaciones</span>
+                        <i class="fa-solid fa-share-nodes"></i> <span>Canalizaciones</span><span class="nav-corto">Canalizar</span>
                     </button>
                     <button onclick="switchTab('miperfil')" id="btn-miperfil" title="Mi Perfil y Horario" class="nav-btn" role="tab" aria-selected="false">
-                        <i class="fa-solid fa-id-card"></i> <span>Mi Perfil y Horario</span>
+                        <i class="fa-solid fa-id-card"></i> <span>Mi Perfil y Horario</span><span class="nav-corto">Mi perfil</span>
                     </button>
                     <button onclick="switchTab('reportes')" id="btn-reportes" title="Informes y Evaluaciones" class="nav-btn" role="tab" aria-selected="false">
-                        <i class="fa-solid fa-file-signature"></i> <span>Informes y Evaluaciones</span>
+                        <i class="fa-solid fa-file-signature"></i> <span>Informes y Evaluaciones</span><span class="nav-corto">Informes</span>
                     </button>
                 </div>
                 <div class="pit-user shrink-0 flex items-center gap-3 pl-3 md:pl-4 border-l border-white/20 my-2.5">
@@ -100,7 +101,7 @@
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="kpi-grid grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
                 <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-4">
                     <div class="kpi-icon w-12 h-12 bg-blue-50 text-tecnmGreen rounded-xl flex items-center justify-center text-xl font-bold"><i class="fa-solid fa-user-group"></i></div>
                     <div><p class="text-xs text-slate-500 font-medium">Total Tutorados</p><h4 class="text-xl font-extrabold text-slate-800" id="kpi-total-tutorados">…</h4></div>
@@ -214,7 +215,7 @@
                     </div>
                     <span class="bg-tecnmGold/20 text-tecnmDark text-xs px-3 py-1 rounded-full font-bold" id="canal-registrados">…</span>
                 </div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                <div class="kpi-grid grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-8">
                     <div class="tarjeta-suave p-4 bg-emerald-50 rounded-xl border border-emerald-200"><span class="text-[10px] font-extrabold text-tecnmGreen uppercase">PALPROG</span><h4 class="text-xs font-bold text-slate-800 mt-1">Asesorías en Lógica y Programación</h4><p class="text-[10px] text-slate-500 mt-1">Reforzamiento en código y algoritmos.</p></div>
                     <div class="tarjeta-suave p-4 bg-sky-50 rounded-xl border border-sky-200"><span class="text-[10px] font-extrabold text-sky-800 uppercase">CIS</span><h4 class="text-xs font-bold text-slate-800 mt-1">Comunidad de Ing. en Sistemas</h4><p class="text-[10px] text-slate-500 mt-1">Integración y proyectos tecnológicos.</p></div>
                     <div class="tarjeta-suave p-4 bg-purple-50 rounded-xl border border-purple-200"><span class="text-[10px] font-extrabold text-purple-800 uppercase">CEPC</span><h4 class="text-xs font-bold text-slate-800 mt-1">Programación Competitiva</h4><p class="text-[10px] text-slate-500 mt-1">Entrenamiento de alto rendimiento.</p></div>
@@ -433,7 +434,7 @@
         </div>
     </div>
 
-    <footer class="bg-tecnmDark text-white mt-12 border-t-4 border-tecnmGold">
+    <footer class="pit-footer bg-tecnmDark text-white mt-12 border-t-4 border-tecnmGold">
         <div class="max-w-7xl mx-auto px-4 md:px-12 py-10">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-8 pb-8 border-b border-white/10">
                 <div>

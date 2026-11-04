@@ -249,3 +249,76 @@ html.dark .flatpickr-day:hover { background: #1b2943; border-color: #1b2943; }
 html.dark .flatpickr-day.prevMonthDay, html.dark .flatpickr-day.nextMonthDay { color: #64748b; }
 html.dark .flatpickr-day.flatpickr-disabled, html.dark .flatpickr-day.flatpickr-disabled:hover { color: #475569; background: transparent; border-color: transparent; }
 html.dark .flatpickr-day.selected { background: #9DBCE8; border-color: #9DBCE8; color: #0b1220; }
+
+
+/* ---------- 5. CELULARES (≤ 767 px) ---------------------------------------- */
+.pit-logo-movil, .nav-corto { display: none; }
+@media (max-width: 767px) {
+  /* Encabezado: el bloque institucional se oculta y queda un logo pequeño en la barra */
+  .pit-header { display: none; }
+  :root nav .pit-nav { height: 3.25rem; padding: 0 .75rem; gap: .5rem; }
+  .pit-logo-movil { display: flex; align-items: center; gap: .5rem; min-width: 0; color: var(--pit-azul); font-weight: 800; font-size: .8rem; letter-spacing: .02em; }
+  .pit-logo-movil img { height: 1.9rem; width: auto; }
+  html.dark .pit-logo-movil { color: #dbe6f6; }
+  html.dark .pit-logo-movil img { filter: brightness(0) invert(.92); }
+  :root nav .pit-user { margin-left: auto; border-left: 0; padding-left: 0; }
+
+  /* Pestañas: barra fija abajo con ícono y nombre corto */
+  :root nav .pit-tabs {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
+    height: calc(3.75rem + env(safe-area-inset-bottom)); padding: 0 .25rem env(safe-area-inset-bottom);
+    background: #fff; border-top: 1px solid var(--pit-borde); box-shadow: 0 -6px 18px -12px rgba(15,23,42,.35);
+    gap: 0; justify-content: space-between; -webkit-mask-image: none !important; mask-image: none !important;
+  }
+  html.dark nav .pit-tabs { background: #0f1a2d; border-top-color: #22324f; }
+  :root nav .nav-btn { flex: 1 0 3.9rem; flex-direction: column; justify-content: center; gap: .2rem; padding: 0 .15rem !important; font-size: .64rem; line-height: 1; }
+  :root nav .nav-btn i { font-size: 1.15rem; opacity: 1; }
+  :root nav .nav-btn span { display: none !important; }
+  :root nav .nav-btn span.nav-corto { display: block !important; }
+  :root nav .nav-btn::after { top: 0; bottom: auto; left: 25%; right: 25%; border-radius: 0 0 3px 3px; }
+  body { padding-bottom: calc(3.75rem + env(safe-area-inset-bottom)); }
+
+  /* Botón de modo oscuro y avisos: arriba de la barra inferior, sin tapar contenido */
+  .pit-a11y { left: auto; right: .75rem; bottom: calc(4.5rem + env(safe-area-inset-bottom)); }
+  .pit-a11y button { width: 2.4rem; height: 2.4rem; font-size: .9rem; }
+  #pit-toasts { left: .75rem; right: .75rem !important; bottom: calc(4.5rem + env(safe-area-inset-bottom)) !important; max-width: none; }
+
+  /* Espaciado más compacto */
+  main { padding-top: 1rem !important; padding-bottom: 1.25rem !important; }
+  main .p-6, main .p-8, main .md\:p-8 { padding: 1.1rem !important; }
+  main .space-y-6 > :not([hidden]) ~ :not([hidden]) { margin-top: 1rem; }
+
+  /* Indicadores: 2 por renglón, sin ícono */
+  .kpi-grid > * { padding: .85rem !important; }
+  .kpi-grid .kpi-icon { display: none !important; }
+  .kpi-grid > * > * { margin-left: 0 !important; }
+  .kpi-grid h4 { font-size: 1rem; line-height: 1.3; }
+  .kpi-grid p { font-size: .68rem; }
+  .stats-mini > * { padding: .7rem !important; }
+  .stats-mini span { font-size: .58rem; line-height: 1.2; display: block; }
+  .stats-mini h3 { font-size: 1.05rem; }
+
+  /* Tablas: cada renglón se vuelve una tarjeta con etiquetas */
+  table.tabla-tarjetas, table.tabla-tarjetas tbody { display: block; width: 100%; }
+  table.tabla-tarjetas thead { display: none; }
+  table.tabla-tarjetas tr { display: grid; grid-template-columns: 1fr 1fr; column-gap: .9rem; border: 1px solid var(--pit-borde); border-radius: .9rem; padding: .55rem .8rem; margin-bottom: .6rem; background: #fff; }
+  table.tabla-tarjetas td { min-width: 0; overflow-wrap: anywhere; }
+  table.tabla-tarjetas td:has(button, input, select, a.btn), table.tabla-tarjetas td[colspan] { grid-column: 1 / -1; }
+  table.tabla-tarjetas td { display: block; padding: .3rem 0 !important; border: 0 !important; text-align: left !important; white-space: normal !important; width: auto !important; }
+  table.tabla-tarjetas td[data-label]:not([data-label=""])::before { content: attr(data-label); display: block; font-size: .6rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: #64748b; margin-bottom: .1rem; }
+  table.tabla-tarjetas td[colspan] { text-align: center !important; }
+  table.tabla-tarjetas td[colspan]::before { display: none !important; }
+  html.dark table.tabla-tarjetas tr { background: #16223a; border-color: #33476a; }
+  html.dark table.tabla-tarjetas td::before { color: #8fa3c0; }
+  .overflow-x-auto:has(> table.tabla-tarjetas) { overflow: visible; }
+
+  /* iPhone hace zoom al escribir en campos con letra menor a 16 px */
+  input:not([type=checkbox]):not([type=radio]), select, textarea { font-size: 16px !important; }
+
+  /* Pie de página corto */
+  .pit-footer { margin-top: 1.5rem !important; }
+  .pit-footer > div { padding-top: 1.25rem !important; padding-bottom: 1.25rem !important; }
+  .pit-footer .grid { gap: 0 !important; padding-bottom: .75rem !important; }
+  .pit-footer .grid > :not(:first-child) { display: none; }
+  .pit-footer p, .pit-footer li, .pit-footer a { font-size: .68rem; }
+}
