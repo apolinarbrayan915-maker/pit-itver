@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Evaluación del acompañamiento tutorial hecha por el TUTORADO (secciones 4 y 5).
+ * Evaluación del acompañamiento tutorial hecha por el TUTORADO (23 ítems + "No aplica").
  * CONFIDENCIAL: el alumno solo ve la suya; la coordinación ve todas;
  * el tutor evaluado NO tiene ningún endpoint de consulta (ver routes.js).
  */
@@ -9,11 +9,16 @@ const db = require('../db');
 const config = require('../config');
 const { badRequest, conflict, notFound } = require('../utils/errores');
 const v = require('../utils/validaciones');
-const { ESCALA, SECCIONES_ALUMNO, PREGUNTAS_ALUMNO, CLAVES_ALUMNO } = require('../utils/cuestionario');
+const {
+  ESCALA, ESCALA_ALUMNO, NO_APLICA, SECCIONES_ALUMNO, PREGUNTAS_ALUMNO, CLAVES_ALUMNO,
+} = require('../utils/cuestionario');
 
 const redondear = (x, d = 2) => (x === null ? null : Math.round(x * 10 ** d) / 10 ** d);
-const promedioDe = (respuestas) =>
-  redondear(CLAVES_ALUMNO.reduce((s, k) => s + Number(respuestas[k]), 0) / CLAVES_ALUMNO.length);
+// Promedio de los ítems vigentes con respuesta 1..5 ("No aplica" = 0 no cuenta)
+const promedioDe = (respuestas) => {
+  const vals = CLAVES_ALUMNO.map((k) => Number(respuestas[k])).filter((n) => n >= 1 && n <= 5);
+  return vals.length ? redondear(vals.reduce((s, n) => s + n, 0) / vals.length) : null;
+};
 const periodoDe = (req) =>
   /^\d{4}-[12]$/.test(req.query.periodo || '') ? req.query.periodo : config.periodoActual;
 
@@ -41,14 +46,14 @@ async function miEvaluacion(req, res) {
     periodo,
     tutor_nombre: asig[0]?.tutor_nombre || null,
     secciones: SECCIONES_ALUMNO,
-    escala: ESCALA,
+    escala: ESCALA_ALUMNO,
     evaluacion: rows[0] ? { ...rows[0], promedio: promedioDe(rows[0].respuestas) } : null,
   });
 }
 
 /**
  * POST /api/evaluaciones/alumno   (alumno)
- * Body: { respuestas: { s4a: 1..5, …, s5r: 1..5 }, comentarios? }
+ * Body: { respuestas: { s4a: 0..5, … }, comentarios? }   (0 = No aplica)
  * Evalúa al tutor asignado en el periodo vigente. Se puede actualizar.
  */
 async function guardar(req, res) {
@@ -56,12 +61,13 @@ async function guardar(req, res) {
   const faltantes = [];
   const respuestas = {};
   PREGUNTAS_ALUMNO.forEach((p) => {
-    const n = Number(entrada[p.clave]);
-    if (!Number.isInteger(n) || n < 1 || n > 5) faltantes.push(p.numero);
+    const crudo = entrada[p.clave];
+    const n = crudo === null || crudo === undefined || crudo === '' ? NaN : Number(crudo);
+    if (!Number.isInteger(n) || n < NO_APLICA || n > 5) faltantes.push(p.numero);
     else respuestas[p.clave] = n;
   });
   if (faltantes.length) {
-    throw badRequest(`Responde todos los ítems con un valor del 1 al 5. Faltan: ${faltantes.join(', ')}`);
+    throw badRequest(`Responde todos los ítems (del 1 al 5 o "No aplica"). Faltan: ${faltantes.join(', ')}`);
   }
   const comentarios = req.body.comentarios
     ? v.texto(req.body.comentarios, 'comentarios', { min: 1, max: 2000 })
@@ -139,7 +145,8 @@ async function resumen(req, res) {
     .filter((t) => t.tutorados > 0 || evals.some((e) => e.tutor_id === t.tutor_id))
     .map((t) => {
       const suyas = evals.filter((e) => e.tutor_id === t.tutor_id);
-      const prom = suyas.length ? suyas.reduce((s, e) => s + promedioDe(e.respuestas), 0) / suyas.length : null;
+      const proms = suyas.map((e) => promedioDe(e.respuestas)).filter((x) => x !== null);
+      const prom = proms.length ? proms.reduce((s, x) => s + x, 0) / proms.length : null;
       return {
         ...t,
         respondidas: suyas.length,
@@ -151,12 +158,15 @@ async function resumen(req, res) {
   // Ítems y lista individual (filtrables por tutor)
   const filtradas = tutorId ? evals.filter((e) => e.tutor_id === tutorId) : evals;
   const items = PREGUNTAS_ALUMNO.map((p) => {
-    const valores = filtradas.map((e) => Number(e.respuestas[p.clave])).filter(Boolean);
+    const crudos = filtradas.map((e) => e.respuestas[p.clave]);
+    const noAplica = crudos.filter((x) => x !== undefined && x !== null && Number(x) === NO_APLICA).length;
+    const valores = crudos.map(Number).filter((n) => n >= 1 && n <= 5);
     const distribucion = Object.fromEntries(ESCALA.map((e) => [e.valor, valores.filter((x) => x === e.valor).length]));
     const n = valores.length;
     return {
       ...p,
       respuestas: n,
+      no_aplica: noAplica,
       promedio: n ? redondear(valores.reduce((s, x) => s + x, 0) / n) : null,
       distribucion,
       pct_favorable: n ? redondear(((distribucion[1] + distribucion[2]) / n) * 100, 1) : null,
@@ -219,7 +229,7 @@ async function detalle(req, res) {
   res.json({
     ok: true,
     secciones: SECCIONES_ALUMNO,
-    escala: ESCALA,
+    escala: ESCALA_ALUMNO,
     evaluacion: { ...rows[0], promedio: promedioDe(rows[0].respuestas) },
   });
 }

@@ -32,67 +32,52 @@ const CLAVES = PREGUNTAS.map((p) => p.clave);
 
 /**
  * Instrumento del TUTORADO: evaluación del acompañamiento tutorial.
- * Secciones 4 y 5 · misma escala Likert (1 = Siempre … 5 = Nunca).
- * Clave interna: s4a…s4p, s5a…s5r  ·  número visible: "4.a", "5.r", etc.
+ * Una sola lista numerada 1, 2, 3… con la escala Likert (1 = Siempre … 5 = Nunca)
+ * más la opción 0 = "No aplica", que no cuenta en los promedios.
+ * Las claves internas (s4a, s5b, …) se conservan del instrumento original para
+ * que las respuestas ya guardadas sigan coincidiendo.
  */
-const reactivos = (seccion, textos) =>
-  textos.map((texto, i) => {
-    const letra = String.fromCharCode(97 + i);
-    return { clave: `s${seccion}${letra}`, numero: `${seccion}.${letra}`, texto };
-  });
+const ITEMS_ALUMNO = [
+  ['s4a', 'El tutor muestra interés en los problemas académicos que afectan el rendimiento.'],
+  ['s4b', 'El tutor muestra disposición a mantener una comunicación permanente.'],
+  ['s4d', 'El tutor posee capacidad para resolver las dudas académicas del tutorado.'],
+  ['s4e', 'El tutor brinda orientación profesional y realiza las acciones pertinentes para resolver dudas.'],
+  ['s4f', 'El tutor conoce la normatividad institucional para aconsejar opciones adecuadas a mis problemas escolares.'],
+  ['s4i', 'El tutor desarrolla estrategias para detectar el alto o bajo rendimiento académico del grupo.'],
+  ['s4k', 'El tutor resalta la importancia de participar en eventos, talleres y congresos profesionales.'],
+  ['s4n', 'El tutor ha contribuido para visualizar las perspectivas laborales en el campo profesional.'],
+  ['s4p', 'Participar en el programa de tutoría ha mejorado mi desempeño académico.'],
+  ['s5b', 'El tutor dio a conocer su horario y el tiempo disponible para el proceso de tutoría.'],
+  ['s5e', 'Contribuye a crear un clima de confianza que motiva a plantear dificultades académicas y personales.'],
+  ['s5f', 'Participar en tutorías ha mejorado mi problemática personal.'],
+  ['s5g', 'Mi integración a la universidad ha mejorado con el programa de tutoría.'],
+  ['s5h', 'Es satisfactorio el programa de tutoría recibido.'],
+  ['s5i', 'El tutor tiene capacidad para canalizarme al área adecuada (pedagógica, psicológica, médica, etc.).'],
+  ['s5j', 'El tutor me motiva a desarrollar estrategias de autoaprendizaje.'],
+  ['s5k', 'El tutor con sus estrategias ha favorecido mi autonomía.'],
+  ['s5l', 'El tutor ha sido un factor positivo en mi capacidad de socializar.'],
+  ['s5m', 'El tutor con su labor ha influido positivamente en mis calificaciones.'],
+  ['s5n', 'El tutor atiende las quejas e inconformidades que le presento.'],
+  ['s5o', 'En caso necesario se cuenta con un espacio digno y privado para la atención individual.'],
+  ['s5p', 'El tutor me orienta para establecer un plan de trabajo acorde a mis necesidades académicas.'],
+  ['s5q', 'El tutor me orienta para mejorar mis hábitos de estudio y técnicas de aprendizaje.'],
+];
 
 const SECCIONES_ALUMNO = [
   {
-    id: 4,
-    titulo: 'Sección 4: Ítems de Rezago y Evaluación del Acompañamiento Tutorial',
-    preguntas: reactivos(4, [
-      'El tutor muestra interés en los problemas académicos que afectan el rendimiento.',
-      'El tutor muestra disposición a mantener una comunicación permanente.',
-      'El tutor proporcionó información en el primer semestre sobre la aprobación de asignaturas.',
-      'El tutor posee capacidad para resolver dudas académicas del alumno.',
-      'El tutor brinda orientación profesional y realiza las acciones pertinentes para resolver dudas.',
-      'El tutor conoce la normatividad institucional para aconsejar opciones adecuadas a mis problemas escolares.',
-      'El tutor lleva a cabo estrategias para la supervisión del desempeño individual.',
-      'El tutor lleva a cabo estrategias para la supervisión del desempeño grupal.',
-      'El tutor desarrolla estrategias para detectar el alto o bajo rendimiento académico del grupo.',
-      'El tutor procura el diálogo con todos los miembros del grupo para la solución de conflictos.',
-      'El tutor resalta la importancia de participar en eventos, talleres y congresos profesionales.',
-      'El tutor ha contribuido a ampliar mis perspectivas académicas.',
-      'El tutor aclara dudas acerca de trámites administrativos (becas, seguro médico, servicio social, etc.).',
-      'El tutor ha contribuido para visualizar las perspectivas laborales en el campo profesional.',
-      'El tutor me ayuda a valorar el sentido profesional de mi carrera.',
-      'Participar en el programa de tutoría ha mejorado mi desempeño académico.',
-    ]),
-  },
-  {
-    id: 5,
-    titulo: 'Sección 5',
-    preguntas: reactivos(5, [
-      'El tutor se presentó en los primeros días del semestre.',
-      'El tutor dio a conocer su horario y el tiempo disponible para el proceso de tutoría.',
-      'Explicó detalladamente el modelo educativo del TecNM en el primer semestre.',
-      'Presentó los formatos e instrumentos de tutoría durante el semestre.',
-      'Contribuye a crear un clima de confianza que motiva a plantear dificultades académicas y personales.',
-      'Participar en tutorías ha mejorado mi problemática personal.',
-      'Mi integración a la universidad ha mejorado con el programa de tutoría.',
-      'Es satisfactorio el programa de tutoría recibido.',
-      'El tutor tiene capacidad para canalizarme al área adecuada (pedagógica, psicológica, médica, etc.).',
-      'El tutor me motiva a desarrollar estrategias de autoaprendizaje.',
-      'El tutor con sus estrategias ha favorecido mi autonomía.',
-      'El tutor ha sido un factor positivo en mi capacidad de socializar.',
-      'El tutor con su labor ha influido positivamente en mis calificaciones.',
-      'El tutor atiende las quejas e inconformidades que le presento.',
-      'En caso necesario se cuenta con un espacio digno y privado para la atención individual.',
-      'El tutor me orienta para establecer un plan de trabajo acorde a mis necesidades académicas.',
-      'El tutor me orienta para mejorar mis hábitos de estudio y técnicas de aprendizaje.',
-      'El tutor atiende y da seguimiento a los casos de baja o deserción en el grupo.',
-    ]),
+    id: 1,
+    titulo: null,
+    preguntas: ITEMS_ALUMNO.map(([clave, texto], i) => ({ clave, numero: String(i + 1), texto })),
   },
 ];
+
+// Escala del tutorado: la Likert de siempre + "No aplica" (valor 0)
+const NO_APLICA = 0;
+const ESCALA_ALUMNO = [...ESCALA, { valor: NO_APLICA, etiqueta: 'No aplica' }];
 
 const PREGUNTAS_ALUMNO = SECCIONES_ALUMNO.flatMap((s) => s.preguntas.map((p) => ({ ...p, seccion: s.id })));
 const CLAVES_ALUMNO = PREGUNTAS_ALUMNO.map((p) => p.clave);
 
 module.exports = {
-  PREGUNTAS, ESCALA, CLAVES, SECCIONES_ALUMNO, PREGUNTAS_ALUMNO, CLAVES_ALUMNO,
+  PREGUNTAS, ESCALA, CLAVES, SECCIONES_ALUMNO, PREGUNTAS_ALUMNO, CLAVES_ALUMNO, ESCALA_ALUMNO, NO_APLICA,
 };

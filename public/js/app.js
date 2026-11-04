@@ -177,6 +177,15 @@ function conBotonOcupado(boton, textoOcupado, fn) {
 function abrirPanel(id) {
   const panel = $(id);
   if (!panel) return;
+  // Paneles del mismo grupo (p. ej. Ficha y Evaluación): solo uno abierto a la vez
+  const grupo = panel.dataset.grupoPanel;
+  if (grupo) {
+    document.querySelectorAll(`[data-grupo-panel="${grupo}"]`).forEach((otro) => {
+      if (otro === panel || otro.classList.contains('hidden')) return;
+      otro.classList.add('hidden');
+      document.querySelectorAll(`[aria-controls="${otro.id}"]`).forEach((b) => b.setAttribute('aria-expanded', 'false'));
+    });
+  }
   panel.classList.remove('hidden');
   document.querySelectorAll(`[aria-controls="${id}"]`).forEach((b) => b.setAttribute('aria-expanded', 'true'));
   setTimeout(() => panel.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
@@ -408,6 +417,7 @@ async function enviarReservaCita(event) {
         `¡Cita agendada para el ${fmtFechaHora(cita.fecha_hora)}! Queda pendiente de confirmación por ${cita.tutor_nombre}.`;
       ok.classList.remove('hidden');
       form.reset();
+      llenarFechasHabilesCita();
       $('cita-horario').innerHTML = '<option value="">Primero elige una fecha</option>';
       await cargarMisCitas();
       setTimeout(() => ok.classList.add('hidden'), 6000);
@@ -518,7 +528,7 @@ async function cargarPerfilAlumno() {
       setText('tutor-cubiculo', t.tutor_cubiculo || 'Depto. de Sistemas');
       setText('perfil-tutor', t.tutor_nombre);
       const input = $('cita-tutor');
-      if (input) input.value = t.tutor_nombre;
+      if (input) input.value = input.defaultValue = t.tutor_nombre; // defaultValue: sobrevive a form.reset()
     } else {
       setText('perfil-tutor', 'Aún no eliges tutor');
       setText('tutor-nombre', 'Aún no eliges tutor');
@@ -526,7 +536,7 @@ async function cargarPerfilAlumno() {
       setText('tutor-correo', '—');
       setText('tutor-cubiculo', '—');
       const input = $('cita-tutor');
-      if (input) input.value = 'Primero elige a tu tutor';
+      if (input) input.value = input.defaultValue = 'Primero elige a tu tutor';
     }
   } catch (err) {
     toast(err.message, 'error');
@@ -600,13 +610,31 @@ async function cargarCanalizacionesAlumno() {
   }
 }
 
+/**
+ * Llena el selector de fecha de la cita solo con días hábiles (lunes a viernes)
+ * de las próximas 4 semanas, a partir de mañana (hora de Veracruz).
+ * Así el alumno no puede elegir sábados ni domingos.
+ */
+function llenarFechasHabilesCita() {
+  const sel = $('cita-fecha');
+  if (!sel || sel.tagName !== 'SELECT') return;
+  const ymd = new Intl.DateTimeFormat('en-CA', { timeZone: TZ });
+  const nombre = new Intl.DateTimeFormat('es-MX', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long' });
+  const base = new Date(`${ymd.format(new Date())}T12:00:00Z`);
+  const opciones = ['<option value="">Elige un día (lunes a viernes)</option>'];
+  for (let i = 1; opciones.length <= 20 && i < 40; i++) {
+    const d = new Date(base.getTime() + i * 864e5);
+    const dia = d.getUTCDay();
+    if (dia === 0 || dia === 6) continue;
+    const texto = nombre.format(d);
+    opciones.push(`<option value="${d.toISOString().slice(0, 10)}">${texto.charAt(0).toUpperCase()}${texto.slice(1)}</option>`);
+  }
+  sel.innerHTML = opciones.join('');
+}
+
 function iniciarAlumno() {
   if (!requiereSesion('alumno')) return;
-  const fecha = $('cita-fecha');
-  if (fecha) {
-    const manana = new Date(Date.now() + 864e5);
-    fecha.min = new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(manana);
-  }
+  llenarFechasHabilesCita();
   window.handleCitaSubmit = enviarReservaCita;
   window.handleEvalAlumnoSubmit = enviarEvaluacionAlumno;
   $('cita-fecha')?.addEventListener('change', cargarHorariosCita);
@@ -945,7 +973,7 @@ async function cargarEvaluacionTutor() {
                 <span class="inline-block px-3 py-1.5 rounded-lg border border-slate-300 bg-white
                   peer-checked:bg-tecnmGreen peer-checked:text-white peer-checked:border-tecnmGreen
                   peer-focus-visible:ring-2 peer-focus-visible:ring-tecnmGold hover:border-tecnmGreen transition">
-                  ${e.valor}: ${escapeHtml(e.etiqueta)}</span>
+                  ${e.valor === 0 ? escapeHtml(e.etiqueta) : `${e.valor}: ${escapeHtml(e.etiqueta)}`}</span>
               </label>`).join('')}
           </div>
         </fieldset>`)
@@ -1123,7 +1151,7 @@ function reactivoLikertHtml(clave, etiqueta, texto, escala, valorActual) {
   return `
     <fieldset data-reactivo="${clave}" data-numero="${escapeHtml(etiqueta)}" class="p-3 bg-slate-50 rounded-xl space-y-2 border border-transparent transition">
       <legend class="sr-only">Ítem ${escapeHtml(etiqueta)}</legend>
-      <p class="font-bold text-slate-800">${escapeHtml(etiqueta)} ${escapeHtml(texto)}</p>
+      <p class="font-bold text-slate-800">${escapeHtml(etiqueta)}${/^\d+$/.test(etiqueta) ? '.' : ''} ${escapeHtml(texto)}</p>
       <div class="flex flex-wrap gap-2 text-slate-600">
         ${escala.map((e) => `
           <label class="cursor-pointer">
@@ -1131,7 +1159,7 @@ function reactivoLikertHtml(clave, etiqueta, texto, escala, valorActual) {
             <span class="inline-block px-3 py-1.5 rounded-lg border border-slate-300 bg-white
               peer-checked:bg-tecnmGreen peer-checked:text-white peer-checked:border-tecnmGreen
               peer-focus-visible:ring-2 peer-focus-visible:ring-tecnmGold hover:border-tecnmGreen transition">
-              ${e.valor}: ${escapeHtml(e.etiqueta)}</span>
+              ${e.valor === 0 ? escapeHtml(e.etiqueta) : `${e.valor}: ${escapeHtml(e.etiqueta)}`}</span>
           </label>`).join('')}
       </div>
     </fieldset>`;
@@ -1194,10 +1222,10 @@ async function cargarEvaluacionAlumno() {
     cont.innerHTML = secciones
       .map((s) => `
         <section class="space-y-3 mb-6">
-          <div class="flex items-center justify-between border-b border-slate-200 pb-2">
+          ${s.titulo ? `<div class="flex items-center justify-between border-b border-slate-200 pb-2">
             <h4 class="text-sm font-extrabold text-tecnmGreen">${escapeHtml(s.titulo)}</h4>
             <span data-seccion-contador class="text-[10px] font-bold text-slate-500"></span>
-          </div>
+          </div>` : ''}
           ${s.preguntas.map((p) => reactivoLikertHtml(p.clave, p.numero, p.texto, escala, evaluacion?.respuestas[p.clave])).join('')}
         </section>`)
       .join('');
@@ -1331,7 +1359,7 @@ async function cargarResumenEvalAlumnos() {
 
     // Ítems agrupados por sección
     tbodyItems.innerHTML = r.secciones
-      .map((s) => `<tr><td colspan="5" class="p-2 pt-4 text-[11px] font-extrabold text-tecnmGreen uppercase">${escapeHtml(s.titulo)}</td></tr>` +
+      .map((s) => (s.titulo ? `<tr><td colspan="5" class="p-2 pt-4 text-[11px] font-extrabold text-tecnmGreen uppercase">${escapeHtml(s.titulo)}</td></tr>` : '') +
         r.items.filter((i) => i.seccion === s.id).map((i) => filaItemLikert(i.numero, i.texto, i)).join(''))
       .join('');
 
@@ -1344,7 +1372,7 @@ async function cargarResumenEvalAlumnos() {
           <td class="p-3">${e.grupo ? chip(e.grupo, 'bg-slate-200 text-slate-700') : '—'}</td>
           <td class="p-3 text-slate-600">${escapeHtml(e.tutor_nombre)}</td>
           <td class="p-3 text-slate-500">${fmtFechaHora(e.fecha_envio)}</td>
-          <td class="p-3 text-center font-extrabold ${colorPromedio(e.promedio)}">${num(e.promedio, 2)}</td>
+          <td class="p-3 text-center font-extrabold ${colorPromedio(e.promedio)}">${e.promedio === null ? '—' : num(e.promedio, 2)}</td>
           <td class="p-3 text-center"><button onclick="verEvaluacionAlumno(${e.id})" class="bg-tecnmGreen text-white px-2.5 py-1 rounded-lg text-[11px] font-bold hover:bg-tecnmDark transition"><i class="fa-solid fa-eye mr-1"></i> Ver respuestas</button>
             ${e.tiene_comentarios ? '<i class="fa-solid fa-comment-dots text-tecnmBlue ml-1" title="Incluye comentarios"></i>' : ''}</td>
         </tr>`).join('')
@@ -1370,14 +1398,18 @@ async function verEvaluacionAlumno(id) {
   try {
     const { secciones, evaluacion: e } = await api(`/evaluaciones/alumnos/${id}`);
     setText('modal-eval-titulo', `${e.alumno_nombre} (${e.no_control}) evalúa a ${e.tutor_nombre}`);
-    setText('modal-eval-sub', `Periodo ${e.periodo} · enviada el ${fmtFechaHora(e.fecha_envio)} · promedio ${num(e.promedio, 2)} (${etiquetaLikert(e.promedio)}) · Confidencial`);
+    setText('modal-eval-sub', `Periodo ${e.periodo} · enviada el ${fmtFechaHora(e.fecha_envio)} · ${e.promedio === null ? 'sin promedio (todo "No aplica")' : `promedio ${num(e.promedio, 2)} (${etiquetaLikert(e.promedio)})`} · Confidencial`);
     cuerpo.innerHTML = secciones
-      .map((s) => `<p class="text-[11px] font-extrabold text-tecnmGreen uppercase pt-2">${escapeHtml(s.titulo)}</p>` +
+      .map((s) => (s.titulo ? `<p class="text-[11px] font-extrabold text-tecnmGreen uppercase pt-2">${escapeHtml(s.titulo)}</p>` : '') +
         s.preguntas.map((p) => {
           const val = e.respuestas[p.clave];
           return `<div class="flex items-start justify-between gap-3 p-3 bg-slate-50 rounded-xl">
             <p class="text-slate-700"><strong class="text-slate-500">${escapeHtml(p.numero)}</strong> ${escapeHtml(p.texto)}</p>
-            <span class="shrink-0 px-2.5 py-1 rounded-lg border text-[11px] font-bold ${COLOR_LIKERT[val].chip}">${val} · ${escapeHtml(etiquetaLikert(val))}</span>
+            ${val === 0
+              ? '<span class="shrink-0 px-2.5 py-1 rounded-lg border text-[11px] font-bold bg-slate-100 text-slate-500 border-slate-200">No aplica</span>'
+              : COLOR_LIKERT[val]
+                ? `<span class="shrink-0 px-2.5 py-1 rounded-lg border text-[11px] font-bold ${COLOR_LIKERT[val].chip}">${val} · ${escapeHtml(etiquetaLikert(val))}</span>`
+                : '<span class="shrink-0 text-[11px] text-slate-400">Sin respuesta</span>'}
           </div>`;
         }).join(''))
       .join('') + `<div class="p-3 rounded-xl border border-slate-200 mt-3">
