@@ -1577,7 +1577,7 @@ async function eliminarAviso(id) {
  *   Alumno: GET/PUT /api/perfil-tutorado/mio · Tutor/Coord: GET /api/perfil-tutorado/:id
  * ============================================================================= */
 let personaActual = null;
-let opcionesPerfil = { familia: ['Padre', 'Madre', 'Hermano(s)', 'Hermana(s)', 'Abuelo(s)', 'Pareja', 'Hijo(s)', 'Otros familiares'], tope_frase: 100, tope_elemento: 120, tope_lista: 6 };
+let opcionesPerfil = { familia: ['Padre', 'Madre', 'Hermano(s)', 'Hermana(s)', 'Abuelo(s)', 'Pareja', 'Hijo(s)', 'Otros familiares'], tope_frase: 100, tope_elemento: 80, tope_lista: 6, tope_palabra: 25 };
 let fotoPendiente; // undefined = sin cambios · null = quitar · dataURL = nueva
 
 function personaCardHtml(p) {
@@ -1587,7 +1587,7 @@ function personaCardHtml(p) {
     : `<span class="text-4xl font-extrabold text-tecnmGreen">${escapeHtml(iniciales(nombre))}</span>`;
   const dato = (etq, val) => `<div class="flex gap-2"><dt class="font-bold text-slate-700 w-24 shrink-0 text-right">${etq}:</dt><dd class="text-slate-600">${val ? escapeHtml(val) : '<span class="text-slate-300">—</span>'}</dd></div>`;
   const lista = (items, vacio) => items.length
-    ? `<ul class="space-y-1.5">${items.map((x) => `<li class="flex gap-2"><i class="fa-solid fa-circle text-[6px] mt-1.5 text-slate-700"></i><span>${escapeHtml(x)}</span></li>`).join('')}</ul>`
+    ? `<ul class="space-y-1.5">${items.map((x) => `<li class="flex gap-2"><i class="fa-solid fa-circle text-[6px] mt-1.5 text-slate-700"></i><span class="min-w-0" style="overflow-wrap:anywhere">${escapeHtml(x)}</span></li>`).join('')}</ul>`
     : `<p class="text-slate-400 italic">${vacio}</p>`;
   const sinDatos = !p.frase && !p.biografia && !p.objetivos.length && !p.frustraciones.length && !p.ciudad_natal;
   return `
@@ -1605,12 +1605,12 @@ function personaCardHtml(p) {
       </dl>
     </div>
     <div class="md:col-span-2 flex flex-col gap-4">
-      <p class="text-center text-base font-semibold italic text-slate-800">${p.frase ? `“${escapeHtml(p.frase)}”` : '<span class="text-slate-300 not-italic text-xs">Sin frase personal</span>'}</p>
+      <p class="text-center text-base font-semibold italic text-slate-800" style="overflow-wrap:anywhere">${p.frase ? `“${escapeHtml(p.frase)}”` : '<span class="text-slate-300 not-italic text-xs">Sin frase personal</span>'}</p>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div><h4 class="text-sm font-extrabold text-slate-800 mb-2">Objetivos</h4>${lista(p.objetivos, 'Sin objetivos registrados')}</div>
         <div><h4 class="text-sm font-extrabold text-slate-800 mb-2">Frustraciones</h4>${lista(p.frustraciones, 'Sin frustraciones registradas')}</div>
       </div>
-      <div class="p-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 leading-relaxed">${p.biografia ? escapeHtml(p.biografia) : '<span class="text-slate-400">Sin descripción.</span>'}</div>
+      <div class="p-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 leading-relaxed" style="overflow-wrap:anywhere">${p.biografia ? escapeHtml(p.biografia) : '<span class="text-slate-400">Sin descripción.</span>'}</div>
       ${sinDatos ? '<p class="text-[11px] text-amber-700 font-semibold"><i class="fa-solid fa-circle-info mr-1"></i>Este perfil aún no tiene información personal.</p>' : ''}
       <p class="text-[10px] text-slate-400 text-right">Riesgo: ${escapeHtml(p.nivel_riesgo)} · Promedio ${num(p.promedio)} · Tutor(a): ${escapeHtml(p.tutor_nombre || 'sin elegir')}</p>
     </div>
@@ -1811,6 +1811,10 @@ async function guardarPerfilTutorado(event) {
     biografia: $('pf-bio').value,
   };
   if (!revisarTelefonoPerfil({ obligatorio: conFicha })) return $('pf-telefono').focus();
+  const tope = opcionesPerfil.tope_palabra || 25;
+  const larga = (t) => String(t || '').split(/\s+/).some((w) => w.length > tope);
+  if ([...body.objetivos, ...body.frustraciones].some(larga)) return toast(`Revisa tus objetivos y frustraciones: hay una palabra de más de ${tope} letras sin espacios.`, 'error');
+  if (larga(body.frase)) return toast(`Revisa tu frase: hay una palabra de más de ${tope} letras sin espacios.`, 'error');
   if (conFicha && !body.fecha_nacimiento) return toast('La fecha de nacimiento es obligatoria porque forma parte de tu Ficha de Identificación.', 'error');
   if (conFicha && !body.ciudad_natal) return toast('Elige el estado y el municipio de tu ciudad natal.', 'error');
   if (!conFicha && $('pf-ciudad-estado')?.value && !body.ciudad_natal) return toast('Termina de elegir tu ciudad natal (estado y municipio).', 'error');
@@ -1970,7 +1974,7 @@ function tutorPersonaHtml(t) {
       </dl>
     </div>
     <div class="md:col-span-2 flex flex-col gap-4">
-      <p class="text-center text-base font-semibold italic text-slate-800">${t.frase ? `“${escapeHtml(t.frase)}”` : '<span class="text-slate-300 not-italic text-xs">Sin frase personal</span>'}</p>
+      <p class="text-center text-base font-semibold italic text-slate-800" style="overflow-wrap:anywhere">${t.frase ? `“${escapeHtml(t.frase)}”` : '<span class="text-slate-300 not-italic text-xs">Sin frase personal</span>'}</p>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div><h4 class="text-sm font-extrabold text-slate-800 mb-2">¿En qué puedo apoyarte?</h4>${lista(t.enfoque || [])}</div>
         <div><h4 class="text-sm font-extrabold text-slate-800 mb-2">Áreas de apoyo</h4>

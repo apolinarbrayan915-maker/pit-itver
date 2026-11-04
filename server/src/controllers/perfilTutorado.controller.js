@@ -48,7 +48,7 @@ async function miPerfil(req, res) {
   res.json({
     ok: true,
     perfil: await cargar(req.user.tutoradoId),
-    opciones: { familia: FAMILIA, tope_frase: TOPE_FRASE, tope_elemento: TOPE_ELEMENTO, tope_lista: TOPE_LISTA },
+    opciones: { familia: FAMILIA, tope_frase: TOPE_FRASE, tope_elemento: TOPE_ELEMENTO, tope_lista: TOPE_LISTA, tope_palabra: TOPE_PALABRA },
   });
 }
 
@@ -67,13 +67,17 @@ const opcional = (valor, campo, max) =>
 /** Integrantes de la familia que el tutorado puede marcar (se guardan como "Padre, Madre, …"). */
 const FAMILIA = ['Padre', 'Madre', 'Hermano(s)', 'Hermana(s)', 'Abuelo(s)', 'Pareja', 'Hijo(s)', 'Otros familiares'];
 const TOPE_FRASE = 100;
-const TOPE_ELEMENTO = 120;
+const TOPE_ELEMENTO = 80;
+const TOPE_PALABRA = 25; // evita textos sin espacios que rompen la tarjeta
 const TOPE_LISTA = 6;
+
+const palabraLarga = (t) => String(t || '').split(/\s+/).some((w) => w.length > TOPE_PALABRA);
 
 function lista(valor, campo) {
   const items = (Array.isArray(valor) ? valor : []).map((x) => String(x).trim().replace(/\s+/g, ' ')).filter(Boolean);
   if (items.length > TOPE_LISTA) throw badRequest(`Máximo ${TOPE_LISTA} ${campo}.`);
   if (items.some((x) => x.length > TOPE_ELEMENTO)) throw badRequest(`Cada uno de tus ${campo} debe tener máximo ${TOPE_ELEMENTO} caracteres.`);
+  if (items.some((x) => palabraLarga(x))) throw badRequest(`Revisa tus ${campo}: hay una palabra de más de ${TOPE_PALABRA} letras sin espacios.`);
   return items;
 }
 
@@ -127,6 +131,7 @@ async function guardar(req, res) {
   const ciudad = compartido('lugar_nacimiento', b.ciudad_natal, 'Ciudad natal');
   const telefono = compartido('celular1', b.telefono, 'Teléfono');
   const frase = opcional(b.frase, 'frase', TOPE_FRASE);
+  if (palabraLarga(frase)) throw badRequest(`Frase: hay una palabra de más de ${TOPE_PALABRA} letras sin espacios.`);
 
   const valores = [
     tutoradoId,
