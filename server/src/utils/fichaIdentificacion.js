@@ -7,10 +7,12 @@
  *   - el formulario del tutorado y el editor de la coordinación (app.js la recibe por la API),
  *   - la vista de impresión y la exportación CSV.
  *
- * Tipos: texto | textarea | fecha | entero | tel | correo | opcion | multiple
+ * Tipos: texto | textarea | fecha | entero | tel | correo | opcion | multiple | lugar ("Municipio, Estado")
  * `si: { campo, valor }` → el campo solo aplica (y solo es obligatorio) cuando otro campo tiene ese valor.
  * `no: { campo, valor }` → el campo NO aplica cuando otro campo tiene ese valor.
  */
+
+const { validarLugar } = require('./lugares');
 
 const ESTADOS_FICHA = ['Enviada', 'Revisada', 'Requiere corrección'];
 
@@ -38,13 +40,14 @@ const SECCIONES_FICHA = [
       { clave: 'nombres', etiqueta: 'Nombre(s)', tipo: 'texto', requerido: true, max: 80, ancho: 'tercio', fijo: true },
       { clave: 'sexo', etiqueta: 'Sexo', tipo: 'opcion', opciones: ['Hombre', 'Mujer'], requerido: true, ancho: 'tercio' },
       { clave: 'tel_domicilio', etiqueta: 'Tel. domicilio', tipo: 'tel', requerido: false, ancho: 'tercio', ayuda: '10 dígitos con lada.' },
-      { clave: 'celular1', etiqueta: 'Celular 1', tipo: 'tel', requerido: true, ancho: 'tercio', ayuda: '10 dígitos, sin +52.' },
+      { clave: 'celular1', etiqueta: 'Celular 1', tipo: 'tel', requerido: true, ancho: 'tercio', ayuda: '10 dígitos, sin +52. Es tu teléfono de "Mi perfil".' },
       { clave: 'celular2', etiqueta: 'Celular 2', tipo: 'tel', requerido: false, ancho: 'tercio' },
       { clave: 'correo', etiqueta: 'Correo electrónico', tipo: 'correo', requerido: true, max: 120, ancho: 'medio',
         ayuda: 'Puede ser tu correo personal o el institucional.' },
-      { clave: 'fecha_nacimiento', etiqueta: 'Fecha de nacimiento', tipo: 'fecha', requerido: true, ancho: 'tercio' },
-      { clave: 'lugar_nacimiento', etiqueta: 'Lugar de nacimiento', tipo: 'texto', requerido: true, max: 100, ancho: 'medio',
-        placeholder: 'Ciudad, estado' },
+      { clave: 'fecha_nacimiento', etiqueta: 'Fecha de nacimiento', tipo: 'fecha', requerido: true, ancho: 'tercio',
+        ayuda: 'Se comparte con "Mi perfil".' },
+      { clave: 'lugar_nacimiento', etiqueta: 'Lugar de nacimiento', tipo: 'lugar', requerido: true, ancho: 'completo',
+        ayuda: 'Elige el estado y el municipio. Es el mismo dato que tu ciudad natal en "Mi perfil".' },
       { clave: 'estado_civil', etiqueta: 'Estado civil', tipo: 'opcion', opciones: ['Soltero(a)', 'Casado(a)', 'Otro'], requerido: true, ancho: 'medio' },
       { clave: 'estado_civil_otro', etiqueta: 'Especifica tu estado civil', tipo: 'texto', requerido: true, max: 40, ancho: 'tercio',
         si: { campo: 'estado_civil', valor: 'Otro' } },
@@ -172,6 +175,10 @@ function normalizar(campo, crudo) {
       const r = validarTelefono(crudo);
       return r.error ? { error: r.error } : { valor: r.valor };
     }
+    case 'lugar': {
+      const r = validarLugar(crudo);
+      return r.error ? { error: r.error } : { valor: r.valor };
+    }
     case 'correo': {
       const t = String(crudo).trim().toLowerCase();
       if (t.length > (campo.max || 120) || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(t)) return { error: 'correo electrónico inválido' };
@@ -253,5 +260,5 @@ function valorTexto(campo, valor) {
 }
 
 module.exports = {
-  validarTelefono, ESTADOS_FICHA, SECCIONES_FICHA, CAMPOS_FICHA, validarFicha, diferencias, aplica, valorTexto,
+  normalizar, validarTelefono, ESTADOS_FICHA, SECCIONES_FICHA, CAMPOS_FICHA, validarFicha, diferencias, aplica, valorTexto,
 };

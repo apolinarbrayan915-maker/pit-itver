@@ -15,6 +15,7 @@ const v = require('../utils/validaciones');
 const {
   ESTADOS_FICHA, SECCIONES_FICHA, CAMPOS_FICHA, validarFicha, diferencias, valorTexto,
 } = require('../utils/fichaIdentificacion');
+const { sincronizarDesdeFicha } = require('./perfilTutorado.controller');
 
 const hoyIso = () => new Intl.DateTimeFormat('en-CA', { timeZone: config.tz }).format(new Date());
 
@@ -23,12 +24,14 @@ async function cargar(tutoradoId, cliente = db) {
   const { rows } = await cliente.query(
     `SELECT t.id AS tutorado_id, u.no_control_o_rfc AS no_control, u.nombre, u.apellidos,
             u.correo_institucional, t.carrera, t.semestre, t.telefono,
+            to_char(p.fecha_nacimiento, 'YYYY-MM-DD') AS perfil_nacimiento, p.ciudad_natal AS perfil_ciudad,
             f.id AS ficha_id, f.datos, f.estado, f.observaciones, f.fecha_envio, f.updated_at,
             f.actualizado_por_rol, f.fecha_revision,
             ua.nombre || ' ' || ua.apellidos AS actualizado_por_nombre,
             ur.nombre || ' ' || ur.apellidos AS revisada_por_nombre
        FROM tutorados t
        JOIN usuarios u ON u.id = t.usuario_id
+  LEFT JOIN perfiles_tutorado p ON p.tutorado_id = t.id
   LEFT JOIN fichas_identificacion f ON f.tutorado_id = t.id
   LEFT JOIN usuarios ua ON ua.id = f.actualizado_por
   LEFT JOIN usuarios ur ON ur.id = f.revisada_por
@@ -75,6 +78,8 @@ function prellenado(r) {
   return {
     correo: r.correo_institucional,
     celular1: r.telefono || '',
+    fecha_nacimiento: r.perfil_nacimiento || '',
+    lugar_nacimiento: r.perfil_ciudad || '',
     num_hijos: 0,
     ...camposFijos(r),
   };
@@ -168,6 +173,9 @@ async function guardarFicha(tutoradoId, datos, usuario, accionNueva, accionCambi
               fecha_revision = CASE WHEN $7::boolean THEN now() ELSE fichas_identificacion.fecha_revision END`,
       [tutoradoId, JSON.stringify(datos), estado, observaciones, usuario.id, usuario.rol, Boolean(opciones.revisar)]
     );
+
+    // Fecha de nacimiento, lugar de nacimiento y celular son los mismos datos del perfil
+    await sincronizarDesdeFicha(cli, tutoradoId, datos);
 
     const huboCambios = !antes || Object.keys(cambios).length > 0 || antes.estado !== estado
       || (antes.observaciones ?? null) !== (observaciones ?? null);

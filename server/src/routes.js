@@ -36,6 +36,12 @@ router.get('/health', async (req, res) => {
 });
 router.post('/auth/login', limiteLogin, auth.login);
 
+// Catálogo de estados y municipios de México (lugar de nacimiento)
+router.get('/catalogos/municipios', (req, res) => {
+  res.set('Cache-Control', 'public, max-age=86400');
+  res.json({ ok: true, estados: require('./utils/lugares').MUNICIPIOS });
+});
+
 // ---- Requiere sesión ---------------------------------------------------------
 router.use(verificarToken);
 

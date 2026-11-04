@@ -156,40 +156,68 @@
                 </div>
                 <div id="persona-card"><p class="text-xs text-slate-400 text-center py-8">Cargando perfil…</p></div>
 
-                <!-- Editor plegable -->
-                <div id="panel-perfil-editar" class="hidden mt-6 pt-6 border-t border-slate-200">
-                    <form id="form-perfil" onsubmit="guardarPerfilTutorado(event)" class="grid grid-cols-1 md:grid-cols-3 gap-5 text-xs">
-                        <div class="space-y-2">
+                <!-- Editor: reemplaza a la tarjeta mientras se edita (no se muestran juntas) -->
+                <div id="panel-perfil-editar" class="hidden">
+                    <form id="form-perfil" onsubmit="guardarPerfilTutorado(event)" novalidate class="grid grid-cols-1 lg:grid-cols-4 gap-6 text-xs">
+                        <div class="flex flex-col items-center lg:items-start gap-2">
                             <span class="block font-bold text-slate-700">Fotografía</span>
                             <div id="perfil-foto-preview" class="w-36 h-44 rounded-xl border-2 border-slate-300 bg-slate-100 overflow-hidden flex items-center justify-center text-slate-400"><i class="fa-solid fa-user text-4xl"></i></div>
-                            <label class="inline-block cursor-pointer bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold px-3 py-1.5 rounded-lg">
-                                <i class="fa-solid fa-camera mr-1"></i> Elegir foto
-                                <input type="file" id="perfil-foto-input" accept="image/jpeg,image/png,image/webp" class="sr-only">
-                            </label>
-                            <button type="button" onclick="quitarFotoPerfil()" class="block text-rose-600 font-semibold hover:underline">Quitar foto</button>
+                            <div class="flex items-center gap-3">
+                                <label class="inline-block cursor-pointer bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold px-3 py-1.5 rounded-lg">
+                                    <i class="fa-solid fa-camera mr-1"></i> Elegir foto
+                                    <input type="file" id="perfil-foto-input" accept="image/jpeg,image/png,image/webp" class="sr-only">
+                                </label>
+                                <button type="button" onclick="quitarFotoPerfil()" class="text-rose-600 font-semibold hover:underline">Quitar</button>
+                            </div>
                             <p class="text-[10px] text-slate-400">Se reduce automáticamente antes de guardarse.</p>
                         </div>
-                        <div class="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <div><label for="pf-nacimiento" class="block font-bold text-slate-700 mb-1">Fecha de nacimiento</label>
-                                <input type="date" id="pf-nacimiento" class="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-tecnmGreen outline-none"></div>
-                            <div><label for="pf-ciudad" class="block font-bold text-slate-700 mb-1">Ciudad natal</label>
-                                <input type="text" id="pf-ciudad" maxlength="80" placeholder="Ej. Veracruz, Ver." class="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-tecnmGreen outline-none"></div>
-                            <div><label for="pf-familia" class="block font-bold text-slate-700 mb-1">Familia</label>
-                                <input type="text" id="pf-familia" maxlength="120" placeholder="Ej. Vive con sus padres; no tiene hijos" class="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-tecnmGreen outline-none"></div>
-                            <div><label for="pf-ocupacion" class="block font-bold text-slate-700 mb-1">Ocupación</label>
-                                <input type="text" id="pf-ocupacion" maxlength="120" placeholder="Ej. Estudiante ISC; trabaja medio tiempo" class="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-tecnmGreen outline-none"></div>
-                            <div><label for="pf-telefono" class="block font-bold text-slate-700 mb-1">Teléfono / WhatsApp</label>
-                                <input type="tel" id="pf-telefono" maxlength="15" placeholder="229 555 1234" class="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-tecnmGreen outline-none"></div>
-                            <div><label for="pf-frase" class="block font-bold text-slate-700 mb-1">Una frase que te describa</label>
-                                <input type="text" id="pf-frase" maxlength="160" placeholder="Ej. La asesoría es la guía para llegar al final del camino" class="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-tecnmGreen outline-none"></div>
-                            <div><label for="pf-objetivos" class="block font-bold text-slate-700 mb-1">Mis objetivos <span class="font-normal text-slate-400">(uno por línea, máx. 6)</span></label>
-                                <textarea id="pf-objetivos" rows="4" placeholder="Cursar todas mis asignaturas&#10;Agendar tutorías a tiempo" class="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-tecnmGreen outline-none"></textarea></div>
-                            <div><label for="pf-frustraciones" class="block font-bold text-slate-700 mb-1">Mis frustraciones <span class="font-normal text-slate-400">(una por línea, máx. 6)</span></label>
-                                <textarea id="pf-frustraciones" rows="4" placeholder="No encuentro horarios compatibles con mi tutor" class="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-tecnmGreen outline-none"></textarea></div>
-                            <div class="sm:col-span-2"><label for="pf-bio" class="block font-bold text-slate-700 mb-1">Cuéntanos sobre ti</label>
-                                <textarea id="pf-bio" rows="3" maxlength="1500" placeholder="¿Dónde vives, qué te gusta, qué situación académica o personal quieres que tu tutor conozca?" class="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-tecnmGreen outline-none"></textarea></div>
-                            <div class="sm:col-span-2 grid grid-cols-2 gap-2">
-                                <button type="button" onclick="cerrarPanel('panel-perfil-editar')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 rounded-xl">Cancelar</button>
+
+                        <div class="lg:col-span-3 space-y-5">
+                            <fieldset class="ficha-seccion border border-slate-200 rounded-2xl p-4">
+                                <legend class="px-2 font-bold text-tecnmGreen"><i class="fa-solid fa-id-card mr-1"></i> Datos personales</legend>
+                                <p class="text-[11px] text-slate-500 mb-3"><i class="fa-solid fa-link mr-1"></i>Fecha de nacimiento, ciudad natal y teléfono son los mismos de tu Ficha de Identificación: si los cambias aquí, también cambian allá.</p>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div><label for="pf-nacimiento" class="block font-bold text-slate-700 mb-1">Fecha de nacimiento</label>
+                                        <input type="date" id="pf-nacimiento" class="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-tecnmGreen outline-none bg-white"></div>
+                                    <div><label for="pf-telefono" class="block font-bold text-slate-700 mb-1">Teléfono / WhatsApp</label>
+                                        <input type="tel" id="pf-telefono" inputmode="numeric" autocomplete="tel-national" maxlength="12" placeholder="Ej. 229 123 4567" class="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-tecnmGreen outline-none bg-white">
+                                        <p id="pf-telefono-error" class="hidden text-[11px] text-rose-600 font-semibold mt-1" role="alert"></p></div>
+                                    <div class="sm:col-span-2"><label for="pf-ciudad-estado" class="block font-bold text-slate-700 mb-1">Ciudad natal</label>
+                                        <div id="pf-ciudad-cont"></div></div>
+                                    <div class="sm:col-span-2"><label for="pf-ocupacion" class="block font-bold text-slate-700 mb-1">Ocupación</label>
+                                        <input type="text" id="pf-ocupacion" maxlength="120" placeholder="Ej. Estudiante ISC; trabaja medio tiempo" class="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-tecnmGreen outline-none bg-white"></div>
+                                </div>
+                            </fieldset>
+
+                            <fieldset class="ficha-seccion border border-slate-200 rounded-2xl p-4">
+                                <legend class="px-2 font-bold text-tecnmGreen"><i class="fa-solid fa-people-roof mr-1"></i> Familia</legend>
+                                <p class="text-[11px] text-slate-500 mb-3">Marca a los integrantes de tu familia.</p>
+                                <div id="pf-familia" class="flex flex-wrap gap-2" role="group" aria-label="Familia"></div>
+                            </fieldset>
+
+                            <fieldset class="ficha-seccion border border-slate-200 rounded-2xl p-4">
+                                <legend class="px-2 font-bold text-tecnmGreen"><i class="fa-solid fa-user-pen mr-1"></i> Sobre ti</legend>
+                                <div class="space-y-3">
+                                    <div><div class="flex justify-between items-baseline mb-1"><label for="pf-frase" class="font-bold text-slate-700">Una frase que te describa</label><span id="pf-frase-cuenta" class="text-[10px] text-slate-400">0 / 100</span></div>
+                                        <input type="text" id="pf-frase" maxlength="100" placeholder="Ej. La constancia vale más que el talento" class="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-tecnmGreen outline-none bg-white"></div>
+                                    <div><div class="flex justify-between items-baseline mb-1"><label for="pf-bio" class="font-bold text-slate-700">Cuéntanos sobre ti</label><span id="pf-bio-cuenta" class="text-[10px] text-slate-400">0 / 1500</span></div>
+                                        <textarea id="pf-bio" rows="3" maxlength="1500" placeholder="¿Qué te gusta, qué situación académica o personal quieres que tu tutor conozca?" class="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-tecnmGreen outline-none bg-white"></textarea></div>
+                                </div>
+                            </fieldset>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                <fieldset class="ficha-seccion border border-slate-200 rounded-2xl p-4">
+                                    <legend class="px-2 font-bold text-tecnmGreen"><i class="fa-solid fa-bullseye mr-1"></i> Mis objetivos</legend>
+                                    <div id="pf-objetivos" data-lista="objetivo"></div>
+                                </fieldset>
+                                <fieldset class="ficha-seccion border border-slate-200 rounded-2xl p-4">
+                                    <legend class="px-2 font-bold text-tecnmGreen"><i class="fa-solid fa-face-frown mr-1"></i> Mis frustraciones</legend>
+                                    <div id="pf-frustraciones" data-lista="frustración"></div>
+                                </fieldset>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-3">
+                                <button type="button" onclick="cerrarEditorPerfil()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 rounded-xl">Cancelar</button>
                                 <button type="submit" class="bg-tecnmGreen hover:bg-tecnmDark text-white font-bold py-2.5 rounded-xl shadow">Guardar mi perfil</button>
                             </div>
                         </div>

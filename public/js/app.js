@@ -493,7 +493,7 @@ async function cargarPerfilAlumno() {
     setText('perfil-control', u.no_control_o_rfc);
     setText('perfil-carrera', `${t.carrera} (${t.semestre}° Semestre)`);
     setText('perfil-correo', u.correo_institucional);
-    setText('perfil-telefono', t.telefono || 'No registrado');
+    setText('perfil-telefono', t.telefono ? formatearTelefono(t.telefono) : 'No registrado');
     setText('perfil-grupo', t.grupo ? `${t.grupo} · Periodo ${periodo}` : 'Sin grupo asignado');
     setText('perfil-promedio', num(t.promedio));
     setText('perfil-avance', `${num(t.avance_reticular_pct)}%`);
@@ -1577,6 +1577,7 @@ async function eliminarAviso(id) {
  *   Alumno: GET/PUT /api/perfil-tutorado/mio · Tutor/Coord: GET /api/perfil-tutorado/:id
  * ============================================================================= */
 let personaActual = null;
+let opcionesPerfil = { familia: ['Padre', 'Madre', 'Hermano(s)', 'Hermana(s)', 'Abuelo(s)', 'Pareja', 'Hijo(s)', 'Otros familiares'], tope_frase: 100, tope_elemento: 120, tope_lista: 6 };
 let fotoPendiente; // undefined = sin cambios · null = quitar · dataURL = nueva
 
 function personaCardHtml(p) {
@@ -1620,10 +1621,11 @@ async function cargarPersonaAlumno() {
   const cont = $('persona-card');
   if (!cont) return;
   try {
-    const { perfil } = await api('/perfil-tutorado/mio');
+    const { perfil, opciones } = await api('/perfil-tutorado/mio');
     personaActual = perfil;
+    if (opciones) opcionesPerfil = opciones;
     cont.innerHTML = personaCardHtml(perfil);
-    setText('perfil-telefono', perfil.telefono || 'No registrado');
+    setText('perfil-telefono', perfil.telefono ? formatearTelefono(perfil.telefono) : 'No registrado');
   } catch (err) {
     cont.innerHTML = `<p class="text-xs text-rose-600 text-center py-6">${escapeHtml(err.message)}</p>`;
   }
@@ -1635,20 +1637,134 @@ function pintarPreviewFoto(src) {
     : '<i class="fa-solid fa-user text-4xl"></i>';
 }
 
+/** Lista editable (objetivos / frustraciones): un renglón por elemento, con agregar y quitar. */
+function listaEditableHtml(cont, items) {
+  const tope = opcionesPerfil.tope_lista;
+  const max = opcionesPerfil.tope_elemento;
+  const nombre = cont.dataset.lista;
+  const base = 'flex-1 min-w-0 p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-tecnmGreen outline-none bg-white';
+  const filas = items.length ? items : [''];
+  cont.innerHTML = `
+    <ol class="space-y-2" data-filas>${filas.map((x, i) => `
+      <li class="flex items-center gap-2">
+        <span class="w-5 text-right font-bold text-slate-400 shrink-0">${i + 1}.</span>
+        <input type="text" maxlength="${max}" value="${escapeHtml(x)}" placeholder="Escribe un${nombre === 'objetivo' ? ' objetivo' : 'a frustración'}" aria-label="${nombre} ${i + 1}" class="${base}">
+        <button type="button" data-quitar class="w-8 h-8 shrink-0 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50" aria-label="Quitar ${nombre} ${i + 1}" title="Quitar"><i class="fa-solid fa-xmark"></i></button>
+      </li>`).join('')}
+    </ol>
+    <div class="flex items-center justify-between mt-3">
+      <button type="button" data-agregar class="font-bold text-tecnmBlue hover:underline disabled:opacity-40 disabled:no-underline disabled:cursor-not-allowed" ${filas.length >= tope ? 'disabled' : ''}>
+        <i class="fa-solid fa-plus mr-1"></i>Agregar ${nombre}</button>
+      <span class="text-[10px] text-slate-400">${filas.length} / ${tope} · máx. ${max} caracteres c/u</span>
+    </div>`;
+}
+
+function leerListaEditable(cont) {
+  return [...cont.querySelectorAll('[data-filas] input')].map((i) => i.value.trim().replace(/\s+/g, ' ')).filter(Boolean);
+}
+
+function conectarListaEditable(cont) {
+  if (cont.dataset.conectada) return;
+  cont.dataset.conectada = '1';
+  const valores = () => [...cont.querySelectorAll('[data-filas] input')].map((i) => i.value);
+  const enfocarUltimo = () => { const ins = cont.querySelectorAll('[data-filas] input'); ins[ins.length - 1]?.focus(); };
+  cont.addEventListener('click', (e) => {
+    if (e.target.closest('[data-agregar]')) {
+      const v = valores();
+      if (v.length >= opcionesPerfil.tope_lista) return;
+      listaEditableHtml(cont, [...v, '']);
+      enfocarUltimo();
+    } else if (e.target.closest('[data-quitar]')) {
+      const fila = e.target.closest('li');
+      const idx = [...fila.parentNode.children].indexOf(fila);
+      const v = valores();
+      v.splice(idx, 1);
+      listaEditableHtml(cont, v);
+    }
+  });
+  // Enter agrega un renglón nuevo en lugar de enviar el formulario
+  cont.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' || e.target.tagName !== 'INPUT') return;
+    e.preventDefault();
+    const v = valores();
+    if (v.length < opcionesPerfil.tope_lista && e.target.value.trim()) {
+      listaEditableHtml(cont, [...v, '']);
+      enfocarUltimo();
+    }
+  });
+}
+
+function contadorCaracteres(idCampo, idCuenta) {
+  const el = $(idCampo);
+  const cuenta = $(idCuenta);
+  const pintar = () => {
+    const max = Number(el.getAttribute('maxlength'));
+    cuenta.textContent = `${el.value.length} / ${max}`;
+    cuenta.classList.toggle('text-amber-600', el.value.length >= max * 0.9);
+  };
+  if (!el.dataset.contador) {
+    el.dataset.contador = '1';
+    el.addEventListener('input', pintar);
+  }
+  pintar();
+}
+
+function revisarTelefonoPerfil({ obligatorio } = {}) {
+  const r = validarTelefonoMx($('pf-telefono').value);
+  const err = $('pf-telefono-error');
+  const mensaje = r.error ? `Teléfono: ${r.error}.` : r.vacio && obligatorio ? 'Teléfono: es obligatorio porque forma parte de tu Ficha de Identificación.' : '';
+  err.textContent = mensaje;
+  err.classList.toggle('hidden', !mensaje);
+  $('pf-telefono').classList.toggle('border-rose-400', Boolean(mensaje));
+  return !mensaje;
+}
+
 function abrirEditorPerfil() {
   const p = personaActual || {};
   fotoPendiente = undefined;
   $('pf-nacimiento').value = p.fecha_nacimiento || '';
-  $('pf-ciudad').value = p.ciudad_natal || '';
-  $('pf-familia').value = p.familia || '';
+  $('pf-nacimiento').max = new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(new Date());
+  $('pf-ciudad-cont').innerHTML = lugarHtml('pf-ciudad', p.ciudad_natal || '');
+  prepararLugares($('pf-ciudad-cont'));
+  const fam = String(p.familia || '').split(',').map((x) => x.trim());
+  $('pf-familia').innerHTML = opcionesPerfil.familia.map((o, i) => `
+    <label class="ficha-opcion"><input type="checkbox" name="pf-familia" id="pf-familia-${i}" value="${escapeHtml(o)}" ${fam.includes(o) ? 'checked' : ''}><span>${escapeHtml(o)}</span></label>`).join('');
   $('pf-ocupacion').value = p.ocupacion || '';
-  $('pf-telefono').value = p.telefono || '';
-  $('pf-frase').value = p.frase || '';
-  $('pf-objetivos').value = (p.objetivos || []).join('\n');
-  $('pf-frustraciones').value = (p.frustraciones || []).join('\n');
+  $('pf-telefono').value = formatearTelefono(p.telefono || '');
+  revisarTelefonoPerfil();
+  if (!$('pf-telefono').dataset.conectado) {
+    $('pf-telefono').dataset.conectado = '1';
+    $('pf-telefono').addEventListener('input', (e) => {
+      let d = e.target.value.replace(/\D/g, '');
+      if (d.length > 10 && d.startsWith('52')) d = d.slice(2);
+      e.target.value = formatearTelefono(d.slice(0, 10));
+    });
+    $('pf-telefono').addEventListener('blur', () => revisarTelefonoPerfil({ obligatorio: personaActual?.tiene_ficha }));
+  }
+  $('pf-frase').maxLength = opcionesPerfil.tope_frase;
+  $('pf-frase').value = (p.frase || '').slice(0, opcionesPerfil.tope_frase);
   $('pf-bio').value = p.biografia || '';
+  contadorCaracteres('pf-frase', 'pf-frase-cuenta');
+  contadorCaracteres('pf-bio', 'pf-bio-cuenta');
+  ['pf-objetivos', 'pf-frustraciones'].forEach((id) => {
+    listaEditableHtml($(id), id === 'pf-objetivos' ? (p.objetivos || []) : (p.frustraciones || []));
+    conectarListaEditable($(id));
+  });
   pintarPreviewFoto(p.foto);
-  abrirPanel('panel-perfil-editar');
+  // La tarjeta y el editor no se muestran juntos
+  $('persona-card').classList.add('hidden');
+  $('btn-panel-perfil').classList.add('hidden');
+  $('btn-panel-perfil').setAttribute('aria-expanded', 'true');
+  $('panel-perfil-editar').classList.remove('hidden');
+  $('tab-perfil').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function cerrarEditorPerfil() {
+  $('panel-perfil-editar').classList.add('hidden');
+  $('persona-card').classList.remove('hidden');
+  $('btn-panel-perfil').classList.remove('hidden');
+  $('btn-panel-perfil').setAttribute('aria-expanded', 'false');
+  $('tab-perfil').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 /** Reduce la imagen en el navegador (máx. 360×450, JPEG) antes de enviarla. */
@@ -1682,31 +1798,33 @@ function quitarFotoPerfil() {
 
 async function guardarPerfilTutorado(event) {
   event.preventDefault();
-  const lineas = (id) => $(id).value.split('\n').map((x) => x.trim()).filter(Boolean);
-  const objetivos = lineas('pf-objetivos');
-  const frustraciones = lineas('pf-frustraciones');
-  if (objetivos.length > 6 || frustraciones.length > 6) return toast('Máximo 6 objetivos y 6 frustraciones.', 'error');
+  const conFicha = Boolean(personaActual?.tiene_ficha);
   const body = {
     fecha_nacimiento: $('pf-nacimiento').value || null,
-    ciudad_natal: $('pf-ciudad').value,
-    familia: $('pf-familia').value,
+    ciudad_natal: $('pf-ciudad')?.value || '',
+    familia: [...document.querySelectorAll('input[name="pf-familia"]:checked')].map((i) => i.value),
     ocupacion: $('pf-ocupacion').value,
-    telefono: $('pf-telefono').value,
+    telefono: $('pf-telefono').value.replace(/\D/g, ''),
     frase: $('pf-frase').value,
-    objetivos,
-    frustraciones,
+    objetivos: leerListaEditable($('pf-objetivos')),
+    frustraciones: leerListaEditable($('pf-frustraciones')),
     biografia: $('pf-bio').value,
   };
+  if (!revisarTelefonoPerfil({ obligatorio: conFicha })) return $('pf-telefono').focus();
+  if (conFicha && !body.fecha_nacimiento) return toast('La fecha de nacimiento es obligatoria porque forma parte de tu Ficha de Identificación.', 'error');
+  if (conFicha && !body.ciudad_natal) return toast('Elige el estado y el municipio de tu ciudad natal.', 'error');
+  if (!conFicha && $('pf-ciudad-estado')?.value && !body.ciudad_natal) return toast('Termina de elegir tu ciudad natal (estado y municipio).', 'error');
   if (fotoPendiente !== undefined) body.foto = fotoPendiente;
   await conBotonOcupado(event.target.querySelector('button[type="submit"]'), 'Guardando…', async () => {
     try {
       const r = await api('/perfil-tutorado/mio', { method: 'PUT', body });
       personaActual = r.perfil;
       $('persona-card').innerHTML = personaCardHtml(r.perfil);
-      setText('perfil-telefono', r.perfil.telefono || 'No registrado');
+      setText('perfil-telefono', r.perfil.telefono ? formatearTelefono(r.perfil.telefono) : 'No registrado');
       fotoPendiente = undefined;
       toast(r.mensaje);
-      cerrarPanel('panel-perfil-editar');
+      cerrarEditorPerfil();
+      if ($('panel-ficha')) cargarFichaAlumno(); // la ficha comparte fecha, ciudad natal y teléfono
     } catch (err) {
       toast(err.message, 'error');
     }
@@ -2352,6 +2470,92 @@ function revisarTelefonosFicha(form, pre, { soloTocados = false } = {}) {
   return ok;
 }
 
+/* ---------------------------------------------- Estado y municipio (catálogo INEGI) */
+const FUERA_MX = 'Fuera de México';
+let catalogoMunicipiosPromesa = null;
+function catalogoMunicipios() {
+  if (!catalogoMunicipiosPromesa) {
+    catalogoMunicipiosPromesa = api('/catalogos/municipios').then((r) => r.estados)
+      .catch((err) => { catalogoMunicipiosPromesa = null; throw err; });
+  }
+  return catalogoMunicipiosPromesa;
+}
+
+/** "Municipio, Estado" → { estado, municipio } · "Ciudad, País" → { estado: FUERA_MX, ciudad, pais } */
+function partirLugar(valor, estados) {
+  const t = String(valor || '').trim();
+  const i = t.lastIndexOf(',');
+  if (i <= 0) return { estado: '' };
+  const lugar = t.slice(0, i).trim();
+  const region = t.slice(i + 1).trim();
+  if (estados[region]) return { estado: region, municipio: estados[region].includes(lugar) ? lugar : '' };
+  return { estado: FUERA_MX, ciudad: lugar, pais: region };
+}
+
+/** Dos listas (estado → municipio). El valor final queda en el input oculto #id. */
+function lugarHtml(id, valor) {
+  const base = 'w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-tecnmGreen outline-none bg-white';
+  return `<div class="grid grid-cols-1 sm:grid-cols-2 gap-2" data-lugar>
+      <input type="hidden" id="${id}" value="${escapeHtml(valor || '')}">
+      <select id="${id}-estado" class="${base}" aria-label="Estado"><option value="">Cargando estados…</option></select>
+      <select id="${id}-municipio" class="${base}" aria-label="Municipio" disabled><option value="">Primero elige el estado</option></select>
+      <input type="text" id="${id}-ciudad" maxlength="50" placeholder="Ciudad" aria-label="Ciudad" class="${base} hidden">
+      <input type="text" id="${id}-pais" maxlength="40" placeholder="País" aria-label="País" class="${base} hidden sm:col-span-2">
+    </div>`;
+}
+
+/** Llena las listas de estado/municipio dentro de `raiz` y las mantiene sincronizadas. */
+async function prepararLugares(raiz) {
+  const grupos = [...raiz.querySelectorAll('[data-lugar]:not([data-listo])')];
+  if (!grupos.length) return;
+  let estados;
+  try {
+    estados = await catalogoMunicipios();
+  } catch (err) {
+    grupos.forEach((g) => { g.querySelector('select').innerHTML = '<option value="">No se pudo cargar el catálogo</option>'; });
+    return;
+  }
+  grupos.forEach((g) => {
+    g.dataset.listo = '1';
+    const oculto = g.querySelector('input[type=hidden]');
+    const [selEstado, selMun] = g.querySelectorAll('select');
+    const [ciudad, pais] = g.querySelectorAll('input[type=text]');
+    const opcion = (v, t = v) => `<option value="${escapeHtml(v)}">${escapeHtml(t)}</option>`;
+    selEstado.innerHTML = opcion('', 'Elige el estado…') + Object.keys(estados).map((e) => opcion(e)).join('') + opcion(FUERA_MX, 'Nací fuera de México');
+    const mostrar = () => {
+      const fuera = selEstado.value === FUERA_MX;
+      selMun.classList.toggle('hidden', fuera);
+      ciudad.classList.toggle('hidden', !fuera);
+      pais.classList.toggle('hidden', !fuera);
+      if (!fuera) {
+        const lista = estados[selEstado.value] || [];
+        const previo = selMun.value;
+        selMun.innerHTML = opcion('', selEstado.value ? 'Elige el municipio…' : 'Primero elige el estado') + lista.map((m) => opcion(m)).join('');
+        selMun.disabled = !lista.length;
+        if (lista.includes(previo)) selMun.value = previo;
+      }
+    };
+    const componer = () => {
+      const e = selEstado.value;
+      if (e === FUERA_MX) {
+        const c = ciudad.value.trim();
+        const p = pais.value.trim();
+        oculto.value = c && p ? `${c}, ${p}` : '';
+      } else oculto.value = e && selMun.value ? `${selMun.value}, ${e}` : '';
+    };
+    const ini = partirLugar(oculto.value, estados);
+    selEstado.value = ini.estado || '';
+    mostrar();
+    if (ini.municipio) selMun.value = ini.municipio;
+    if (ini.estado === FUERA_MX) { ciudad.value = ini.ciudad || ''; pais.value = ini.pais || ''; }
+    componer();
+    // Se escucha en el contenedor para que el valor oculto esté listo antes que los oyentes del formulario
+    g.addEventListener('change', (ev) => { if (ev.target === selEstado) mostrar(); componer(); });
+    g.addEventListener('input', componer);
+  });
+  raiz.dispatchEvent(new Event('change', { bubbles: true }));
+}
+
 function campoFichaHtml(c, valor, pre) {
   const id = `${pre}-${c.clave}`;
   const req = c.requerido ? '<span class="text-rose-500" aria-hidden="true">*</span>' : '';
@@ -2372,6 +2576,8 @@ function campoFichaHtml(c, valor, pre) {
     control = `<div class="flex flex-wrap gap-2" role="${tipo === 'radio' ? 'radiogroup' : 'group'}" aria-labelledby="${id}-lbl">${c.opciones.map((o, i) => `
         <label class="ficha-opcion"><input type="${tipo}" name="${pre}-${c.clave}" id="${i === 0 ? id : `${id}-${i}`}" value="${escapeHtml(o)}" ${sel.includes(o) ? 'checked' : ''}><span>${escapeHtml(o)}</span></label>`).join('')}
       </div>`;
+  } else if (c.tipo === 'lugar') {
+    control = lugarHtml(id, v);
   } else if (c.tipo === 'textarea') {
     control = `<textarea id="${id}" name="${c.clave}" rows="2" maxlength="${c.max || 250}" placeholder="${escapeHtml(c.placeholder || '')}" class="${base}">${escapeHtml(v)}</textarea>`;
   } else {
@@ -2388,7 +2594,7 @@ function campoFichaHtml(c, valor, pre) {
     control = `<input type="${tipos[c.tipo] || 'text'}" id="${id}" name="${c.clave}" value="${escapeHtml(valorCampo)}" ${extra} class="${base}">`;
   }
   return `<div class="${ANCHO_FICHA[c.ancho] || 'md:col-span-3'}" data-campo="${c.clave}"${cond}>
-      <label for="${id}" id="${id}-lbl" class="block font-bold text-slate-700 mb-1">${escapeHtml(c.etiqueta)} ${c.fijo ? '' : req}</label>
+      <label for="${c.tipo === 'lugar' && !c.fijo ? `${id}-estado` : id}" id="${id}-lbl" class="block font-bold text-slate-700 mb-1">${escapeHtml(c.etiqueta)} ${c.fijo ? '' : req}</label>
       ${control}
       ${c.ayuda ? `<p class="text-[10px] text-slate-400 mt-1">${escapeHtml(c.ayuda)}</p>` : ''}
       <p class="ficha-error hidden text-[11px] text-rose-600 font-semibold mt-1" role="alert"></p>
@@ -2496,6 +2702,7 @@ function conectarFormularioFicha(form, pre, idProgreso) {
     actualizar();
   });
   form.addEventListener('change', actualizar);
+  prepararLugares(form);
   // Teléfonos: solo números (máx. 10), se agrupan como 229 123 4567 y se validan al salir del campo
   form.querySelectorAll('input[data-tel]').forEach((el) => {
     el.addEventListener('input', () => {
@@ -2839,6 +3046,8 @@ async function enviarFichaAlumno(event) {
       Object.assign(FICHA, { ficha: data.ficha });
       toast(data.mensaje, 'ok');
       pintarTarjetaFicha();
+      cargarPersonaAlumno(); // fecha, ciudad natal y teléfono se comparten con el perfil
+      cargarPerfilAlumno();
       setTimeout(() => { pintarPanelFichaAlumno(); $('panel-ficha')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 0);
     } catch (err) {
       errorBox.innerHTML = `<i class="fa-solid fa-circle-exclamation mr-1"></i> ${escapeHtml(err.message)}`;
