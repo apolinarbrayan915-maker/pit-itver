@@ -335,3 +335,36 @@ html.dark #btn-avisos { color: #b4c0d1; }
 html.dark #btn-avisos:hover { background: #18294a; }
 html.dark #btn-avisos.campana-activa { color: #fbbf24; }
 html.dark .aviso-importante { background-color: #2a2414 !important; }
+
+/* Cinta de avisos en el encabezado del tutor */
+.aviso-ticker { flex: 1 1 auto; min-width: 0; max-width: 46rem; display: flex; align-items: center; gap: .6rem; height: 3rem;
+  padding: 0 .5rem 0 .6rem; border-radius: .9rem; background: #eef3fb; border: 1px solid #d6dfec; }
+.aviso-ticker.hidden { display: none; }
+.aviso-ticker.con-importante { background: #fffbeb; border-color: #fcd34d; }
+.aviso-ticker-icono { flex: none; width: 2rem; height: 2rem; border-radius: .6rem; display: flex; align-items: center; justify-content: center; background: #18396a; color: #fff; font-size: .85rem; }
+.aviso-ticker.con-importante .aviso-ticker-icono { background: #d97706; }
+.aviso-ticker-ventana { position: relative; flex: 1 1 auto; min-width: 0; height: 100%; overflow: hidden; }
+.aviso-ticker-item { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; text-align: left; min-width: 0;
+  opacity: 0; transform: translateY(100%); transition: transform .5s ease, opacity .5s ease; cursor: pointer; background: none; border: 0; padding: 0; }
+.aviso-ticker-item.activo { opacity: 1; transform: translateY(0); }
+.aviso-ticker-item.sale { transform: translateY(-100%); }
+.aviso-ticker-etq { font-size: .6rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: #2c64b0; line-height: 1.2; }
+.aviso-ticker-item.importante .aviso-ticker-etq { color: #b45309; }
+.aviso-ticker-titulo { font-size: .8rem; font-weight: 700; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.35; }
+.aviso-ticker-item:hover .aviso-ticker-titulo { text-decoration: underline; }
+.aviso-ticker-nav { flex: none; display: flex; align-items: center; gap: .15rem; color: #64748b; font-size: .65rem; font-weight: 700; }
+.aviso-ticker-nav button { width: 1.5rem; height: 1.5rem; border-radius: .4rem; color: #64748b; }
+.aviso-ticker-nav button:hover { background: rgba(24,57,106,.08); color: #18396a; }
+html.dark .aviso-ticker { background: #142441; border-color: #2a3d60; }
+html.dark .aviso-ticker.con-importante { background: #2a2414; border-color: #8a6a1d; }
+html.dark .aviso-ticker-titulo { color: #e2e8f0; }
+html.dark .aviso-ticker-etq { color: #9dbce8; }
+html.dark .aviso-ticker-item.importante .aviso-ticker-etq { color: #fbbf24; }
+html.dark .aviso-ticker-nav, html.dark .aviso-ticker-nav button { color: #94a3b8; }
+@media (prefers-reduced-motion: reduce) { .aviso-ticker-item { transition: none; } }
+@media (max-width: 767px) {
+  /* En celular el encabezado solo muestra la cinta de avisos */
+  .pit-header.pit-header-avisos:has(.aviso-ticker:not(.hidden)) { display: block; padding: .5rem .75rem; }
+  .pit-header-avisos > div > :not(.aviso-ticker) { display: none !important; }
+  .aviso-ticker { max-width: none; width: 100%; height: 2.75rem; }
+}

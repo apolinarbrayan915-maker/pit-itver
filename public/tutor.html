@@ -28,13 +28,15 @@
 
     <div>
 
-        <div class="pit-header bg-white shadow-sm py-3 px-4 md:px-12 border-b border-slate-200">
-            <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
+        <div class="pit-header pit-header-avisos bg-white shadow-sm py-3 px-4 md:px-12 border-b border-slate-200">
+            <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4 md:gap-6">
                 <div class="flex items-center space-x-4">
                     <a href="index.html" class="flex items-center" aria-label="Tecnológico Nacional de México">
                         <img src="img/logo-tecnm.png" alt="Tecnológico Nacional de México" class="h-14 md:h-16 w-auto">
                     </a>
                 </div>
+                <!-- Avisos de la Coordinación: cinta que rota en el encabezado -->
+                <div id="aviso-ticker" class="aviso-ticker hidden" role="region" aria-label="Avisos de la Coordinación" aria-live="polite"></div>
                 <div class="flex items-center space-x-3 bg-slate-50 px-4 py-2 rounded-xl border border-slate-200">
                     <div class="w-9 h-9 bg-tecnmGreen rounded-lg flex items-center justify-center text-white font-bold text-sm shadow"><i class="fa-solid fa-chalkboard-user"></i></div>
                     <div>
@@ -88,17 +90,6 @@
 
         <!-- TAB 1: DASHBOARD -->
         <div id="tab-dashboard" class="tab-content active space-y-6">
-            <!-- Avisos de la Coordinación (GET /api/avisos) – arriba de todo para que el tutor los vea primero -->
-            <div id="panel-avisos" class="avisos-panel bg-white p-5 rounded-2xl shadow-sm border border-slate-200 scroll-mt-20">
-                <div class="flex justify-between items-center gap-3 mb-3">
-                    <h3 class="text-sm md:text-base font-bold text-slate-800 flex items-center gap-2">
-                        <i class="fa-solid fa-bullhorn text-amber-500"></i> <span>Avisos de la Coordinación</span>
-                    </h3>
-                    <span id="avisos-contador" class="bg-slate-100 text-slate-600 text-[10px] font-bold px-2.5 py-1 rounded-full">…</span>
-                </div>
-                <div class="space-y-3" id="lista-avisos-tutor"><p class="text-xs text-slate-400 text-center py-4">Cargando avisos…</p></div>
-            </div>
-
             <div class="hero bg-gradient-to-r from-tecnmGreen to-tecnmDark text-white p-6 md:p-8 rounded-2xl shadow-lg relative overflow-hidden">
                 <div class="absolute right-0 bottom-0 opacity-10 translate-x-10 translate-y-10"><i class="fa-solid fa-users text-9xl"></i></div>
                 <div class="relative z-10 max-w-3xl">
@@ -139,6 +130,17 @@
                 </div>
             </div>
 
+
+            <!-- Lista completa de avisos (la cinta del encabezado lleva aquí) -->
+            <div id="panel-avisos" class="avisos-panel bg-white p-5 rounded-2xl shadow-sm border border-slate-200 scroll-mt-20">
+                <div class="flex justify-between items-center gap-3 mb-3">
+                    <h3 class="text-sm md:text-base font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-bullhorn text-amber-500"></i> <span>Avisos de la Coordinación</span>
+                    </h3>
+                    <span id="avisos-contador" class="bg-slate-100 text-slate-600 text-[10px] font-bold px-2.5 py-1 rounded-full">…</span>
+                </div>
+                <div class="space-y-3" id="lista-avisos-tutor"><p class="text-xs text-slate-400 text-center py-4">Cargando avisos…</p></div>
+            </div>
         </div>
 
         <!-- TAB: MIS TUTORADOS -->

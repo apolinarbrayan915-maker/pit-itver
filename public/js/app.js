@@ -1517,6 +1517,99 @@ function verAvisosTutor() {
   pintarCampanaAvisos();
 }
 
+/* ---- Cinta de avisos en el encabezado (rota sola; importantes primero) ---- */
+const TICKER = { i: 0, timer: null, pausado: false, lista: [] };
+
+function montarTickerAvisos(avisos) {
+  const cont = $('aviso-ticker');
+  if (!cont) return;
+  clearInterval(TICKER.timer);
+  TICKER.lista = [...avisos].sort((a, b) => Number(Boolean(b.importante)) - Number(Boolean(a.importante)));
+  TICKER.i = 0;
+  if (!TICKER.lista.length) { cont.classList.add('hidden'); return; }
+  cont.classList.remove('hidden');
+  const total = TICKER.lista.length;
+  cont.innerHTML = `
+    <span class="aviso-ticker-icono" aria-hidden="true"><i class="fa-solid fa-bullhorn"></i></span>
+    <div class="aviso-ticker-ventana">
+      ${TICKER.lista.map((a, i) => `
+        <button type="button" class="aviso-ticker-item${i === 0 ? ' activo' : ''}${a.importante ? ' importante' : ''}" data-i="${i}" ${i === 0 ? '' : 'tabindex="-1" aria-hidden="true"'} title="Ver aviso completo">
+          <span class="aviso-ticker-etq">${a.importante ? '<i class="fa-solid fa-star mr-1"></i>Importante' : escapeHtml(a.categoria)}</span>
+          <span class="aviso-ticker-titulo">${escapeHtml(a.titulo)}</span>
+        </button>`).join('')}
+    </div>
+    ${total > 1 ? `<div class="aviso-ticker-nav">
+      <button type="button" data-paso="-1" aria-label="Aviso anterior"><i class="fa-solid fa-chevron-up"></i></button>
+      <span class="aviso-ticker-cuenta">1/${total}</span>
+      <button type="button" data-paso="1" aria-label="Siguiente aviso"><i class="fa-solid fa-chevron-down"></i></button>
+    </div>` : ''}`;
+  cont.classList.toggle('con-importante', TICKER.lista[0].importante);
+  if (!cont.dataset.conectado) {
+    cont.dataset.conectado = '1';
+    cont.addEventListener('click', (e) => {
+      const paso = e.target.closest('[data-paso]');
+      if (paso) { moverTicker(Number(paso.dataset.paso)); reiniciarTicker(); return; }
+      const item = e.target.closest('.aviso-ticker-item');
+      if (item) abrirAvisoModal(TICKER.lista[Number(item.dataset.i)]);
+    });
+    cont.addEventListener('mouseenter', () => { TICKER.pausado = true; });
+    cont.addEventListener('mouseleave', () => { TICKER.pausado = false; });
+    cont.addEventListener('focusin', () => { TICKER.pausado = true; });
+    cont.addEventListener('focusout', () => { TICKER.pausado = false; });
+  }
+  reiniciarTicker();
+}
+
+function moverTicker(paso) {
+  const cont = $('aviso-ticker');
+  const total = TICKER.lista.length;
+  if (!cont || total < 2) return;
+  TICKER.i = (TICKER.i + paso + total) % total;
+  cont.querySelectorAll('.aviso-ticker-item').forEach((el, i) => {
+    const activo = i === TICKER.i;
+    el.classList.toggle('activo', activo);
+    el.classList.toggle('sale', !activo && el.classList.contains('activo'));
+    if (activo) { el.removeAttribute('tabindex'); el.removeAttribute('aria-hidden'); } else { el.setAttribute('tabindex', '-1'); el.setAttribute('aria-hidden', 'true'); }
+  });
+  cont.classList.toggle('con-importante', Boolean(TICKER.lista[TICKER.i].importante));
+  const cuenta = cont.querySelector('.aviso-ticker-cuenta');
+  if (cuenta) cuenta.textContent = `${TICKER.i + 1}/${total}`;
+}
+
+function reiniciarTicker() {
+  clearInterval(TICKER.timer);
+  if (TICKER.lista.length < 2) return;
+  TICKER.timer = setInterval(() => { if (!TICKER.pausado && !document.hidden) moverTicker(1); }, 6000);
+}
+
+/** Muestra un aviso completo en una ventana. */
+function abrirAvisoModal(a) {
+  if (!a) return;
+  let modal = $('modal-aviso');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'modal-aviso';
+    modal.className = 'fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.addEventListener('click', (e) => { if (e.target === modal) cerrarModal('modal-aviso'); });
+    document.body.appendChild(modal);
+  }
+  modal.innerHTML = `<div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-slate-200 max-h-[85vh] overflow-y-auto">
+      <div class="flex justify-between items-center mb-3">
+        <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-bullhorn text-amber-500"></i> Aviso de la Coordinación</h3>
+        <button type="button" onclick="cerrarModal('modal-aviso')" class="text-slate-400 hover:text-slate-600" aria-label="Cerrar"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+      ${tarjetaAviso(a, { admin: false })}
+      <button type="button" onclick="cerrarModal('modal-aviso'); verAvisosTutor()" class="mt-4 w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 rounded-xl text-xs">Ver todos los avisos</button>
+    </div>`;
+  modal.classList.remove('hidden');
+  const vistos = avisosVistos();
+  vistos.add(firmaAviso(a));
+  try { localStorage.setItem(CLAVE_AVISOS_VISTOS, JSON.stringify([...vistos])); } catch (e) { /* sin almacenamiento */ }
+  pintarCampanaAvisos();
+}
+
 async function cargarAvisosTutor() {
   const cont = $('lista-avisos-tutor');
   if (!cont) return;
@@ -1524,6 +1617,7 @@ async function cargarAvisosTutor() {
     const { avisos } = await api('/avisos');
     avisosTutor = avisos;
     pintarCampanaAvisos();
+    montarTickerAvisos(avisos);
     const importantes = avisos.filter((a) => a.importante).length;
     setText('avisos-contador', `${avisos.length} vigente${avisos.length === 1 ? '' : 's'}${importantes ? ` · ${importantes} importante${importantes === 1 ? '' : 's'}` : ''}`);
     if ($('avisos-contador')) $('avisos-contador').className = `${importantes ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'} text-[10px] font-bold px-2.5 py-1 rounded-full`;
