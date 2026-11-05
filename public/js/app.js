@@ -770,7 +770,7 @@ function tarjetaCitaTutor(c) {
     <p class="mt-2 text-xs text-slate-700 break-words"><span class="font-semibold text-slate-500">Motivo:</span> ${escapeHtml(c.motivo)}</p>
     ${c.notas_tutor ? `<p class="mt-1 text-[11px] text-slate-500 italic break-words"><span class="font-semibold not-italic">Notas:</span> ${escapeHtml(c.notas_tutor)}</p>` : ''}
     ${minuta ? `<p class="mt-1 text-[11px] text-emerald-700 break-words"><i class="fa-solid fa-file-circle-check mr-1"></i><span class="font-semibold">Acuerdos:</span> ${escapeHtml(c.minuta.acuerdos.length > 140 ? `${c.minuta.acuerdos.slice(0, 140)}…` : c.minuta.acuerdos)}</p>` : ''}
-    ${botones.length ? `<div class="mt-3 pt-3 border-t border-slate-200/80 grid grid-cols-2 sm:flex sm:justify-end gap-2">${botones.join('')}</div>` : ''}
+    ${botones.length ? `<div class="mt-3 pt-3 border-t border-slate-200 grid grid-cols-2 sm:flex sm:justify-end gap-2">${botones.join('')}</div>` : ''}
   </article>`;
 }
 
@@ -824,23 +824,31 @@ async function guardarMinuta(imprimir, boton) {
 }
 
 /* ---------- Documentos imprimibles en la hoja membretada ----------------- */
-function tablaDatosCita(c) {
+function lugarCita(c) {
+  if (c.modalidad === 'Línea') return 'En línea';
+  const cub = c.tutor_cubiculo ? (/^cub/i.test(c.tutor_cubiculo) ? c.tutor_cubiculo : `Cubículo ${c.tutor_cubiculo}`) : '';
+  return cub ? `Presencial · ${cub}` : 'Presencial';
+}
+
+/** Ficha de datos de la minuta (sin la fecha: ya va en el encabezado). */
+function fichaDatosMinuta(c) {
   const p = partesCita(c);
-  const lugar = c.modalidad === 'Línea' ? 'Sesión en línea' : (c.tutor_cubiculo ? (/^cub/i.test(c.tutor_cubiculo) ? c.tutor_cubiculo : `Cubículo ${c.tutor_cubiculo}`) : 'Instituto Tecnológico de Veracruz');
-  const fila = (a, va, b, vb) => `<tr><th>${a}</th><td>${escapeHtml(va || '—')}</td><th>${b}</th><td>${escapeHtml(vb || '—')}</td></tr>`;
-  return `<table class="hd-datos">
-    ${fila('Tutor(a)', c.tutor_nombre, 'Departamento', c.tutor_departamento)}
-    ${fila('Tutorado(a)', c.tutorado_nombre, 'No. de control', c.no_control)}
-    ${fila('Carrera', c.carrera, 'Semestre', c.semestre ? `${c.semestre}°` : '')}
-    ${fila('Fecha', p.conDia, 'Horario', `${p.horario} h`)}
-    ${fila('Modalidad', c.modalidad === 'Línea' ? 'En línea' : c.modalidad, 'Lugar', lugar)}
-  </table>`;
+  const dato = (etq, val, ancho = '') => `<div class="hd-dato ${ancho}"><span>${etq}</span><b>${escapeHtml(val || '—')}</b></div>`;
+  return `<div class="hd-ficha">
+    ${dato('Tutorado(a)', c.tutorado_nombre, 'hd-2')}
+    ${dato('No. de control', c.no_control)}
+    ${dato('Carrera', c.carrera, 'hd-2')}
+    ${dato('Semestre', c.semestre ? `${c.semestre}°` : '')}
+    ${dato('Tutor(a)', c.tutor_nombre, 'hd-2')}
+    ${dato('Horario', `${p.horario} h`)}
+    ${dato('Modalidad', lugarCita(c), 'hd-3')}
+  </div>`;
 }
 
 function firmasHoja(c) {
   return `<div class="hd-firmas">
-    <div><span class="hd-linea"></span><b>${escapeHtml(c.tutor_nombre || '')}</b><small>Nombre y firma del tutor(a)</small></div>
-    <div><span class="hd-linea"></span><b>${escapeHtml(c.tutorado_nombre || '')}</b><small>Nombre y firma del tutorado(a)</small></div>
+    <div><span class="hd-linea"></span><b>${escapeHtml(c.tutor_nombre || '')}</b><small>Tutor(a)</small></div>
+    <div><span class="hd-linea"></span><b>${escapeHtml(c.tutorado_nombre || '')}</b><small>Tutorado(a) · ${escapeHtml(c.no_control || '')}</small></div>
   </div>`;
 }
 
@@ -849,36 +857,34 @@ const parrafos = (t) => escapeHtml(t || '').split(/\n+/).filter((x) => x.trim())
 function htmlMinuta(c) {
   const p = partesCita(c);
   const m = c.minuta || {};
-  let seguimiento = 'Por definir';
-  if (m.seguimiento) seguimiento = partesCita({ fecha_hora_local: `${m.seguimiento}T00:00` }).conDia;
-  return `<p class="hd-lugar">Veracruz, Ver., a ${escapeHtml(p.larga)}</p>
-    <h1>Minuta de sesión de tutoría individual</h1>
-    <p class="hd-sub">Programa Institucional de Tutorías (PIT) · ITVER</p>
-    ${tablaDatosCita(c)}
-    <h2>Motivo de la sesión</h2><div class="hd-caja">${parrafos(c.motivo)}</div>
-    <h2>Asuntos tratados</h2><div class="hd-caja ${m.asuntos ? '' : 'hd-vacia'}">${parrafos(m.asuntos)}</div>
-    <h2>Acuerdos y compromiso académico</h2><div class="hd-caja">${parrafos(m.acuerdos)}</div>
-    <p class="hd-seguimiento"><b>Fecha de seguimiento:</b> ${escapeHtml(seguimiento)}</p>
+  const seguimiento = m.seguimiento ? partesCita({ fecha_hora_local: `${m.seguimiento}T00:00` }).conDia : 'Por definir';
+  return `<p class="hd-lugar">Veracruz, Ver., ${escapeHtml(p.conDia)}</p>
+    <div class="hd-titulo"><h1>Minuta de sesión de tutoría individual</h1><p>Programa Institucional de Tutorías</p></div>
+    ${fichaDatosMinuta(c)}
+    <section class="hd-sec"><h2>Motivo de la sesión</h2>${parrafos(c.motivo)}</section>
+    <section class="hd-sec"><h2>Asuntos tratados</h2>${m.asuntos ? parrafos(m.asuntos) : '<div class="hd-renglones"></div>'}</section>
+    <section class="hd-sec"><h2>Acuerdos y compromiso académico</h2>${parrafos(m.acuerdos)}</section>
+    <p class="hd-seguimiento"><span>Próxima sesión de seguimiento:</span> ${escapeHtml(seguimiento)}</p>
     <p class="hd-nota">Ambas partes manifiestan su conformidad con los acuerdos aquí descritos y se comprometen a darles seguimiento en las siguientes sesiones de tutoría.</p>
     ${firmasHoja(c)}`;
 }
 
 function htmlComprobante(c) {
   const p = partesCita(c);
-  const modalidad = c.modalidad === 'Línea' ? 'en línea' : 'presencial';
-  const sem = c.semestre ? `, del ${escapeHtml(c.semestre)}° semestre` : '';
-  return `<p class="hd-lugar">Veracruz, Ver., a ${escapeHtml(fechaLargaHoy())}</p>
-    <p class="hd-asunto"><b>Asunto:</b> Comprobante de asistencia a tutoría</p>
-    <h1>Comprobante de asistencia a sesión de tutoría</h1>
-    <p class="hd-sub">Programa Institucional de Tutorías (PIT) · ITVER</p>
+  const sem = c.semestre ? ` de ${escapeHtml(c.semestre)}° semestre` : '';
+  const donde = c.modalidad === 'Línea'
+    ? 'en modalidad en línea'
+    : `de manera presencial${c.tutor_cubiculo ? ` en ${escapeHtml(lugarCita(c).replace('Presencial · ', ''))}` : ''}`;
+  return `<p class="hd-lugar">Veracruz, Ver., ${escapeHtml(fechaLargaHoy())}</p>
+    <p class="hd-asunto"><span>Asunto:</span> Comprobante de asistencia a tutoría</p>
+    <div class="hd-titulo"><h1>Comprobante de asistencia</h1><p>Programa Institucional de Tutorías</p></div>
     <div class="hd-texto">
-      <p>Por medio del presente se hace constar que el (la) estudiante <b>${escapeHtml(c.tutorado_nombre || '')}</b>, con número de control <b>${escapeHtml(c.no_control || '')}</b>, inscrito(a) en la carrera de ${escapeHtml(c.carrera || '')}${sem}, <b>asistió</b> a la sesión de tutoría individual ${modalidad} celebrada el ${escapeHtml(p.conDia)}, en el horario de ${escapeHtml(p.horario)} h, con el (la) tutor(a) <b>${escapeHtml(c.tutor_nombre || '')}</b>.</p>
+      <p>Por medio del presente se hace constar que el (la) estudiante <b>${escapeHtml(c.tutorado_nombre || '')}</b>, con número de control <b>${escapeHtml(c.no_control || '')}</b>, de la carrera de ${escapeHtml(c.carrera || '')}${sem}, <b>asistió</b> a la sesión de tutoría individual realizada el ${escapeHtml(p.conDia)}, de ${escapeHtml(p.horario.replace(' – ', ' a '))} h, ${donde}, con el (la) tutor(a) <b>${escapeHtml(c.tutor_nombre || '')}</b>.</p>
+      <p><span class="hd-etq">Motivo de la sesión:</span> ${escapeHtml(c.motivo || '')}</p>
+      <p>Se extiende el presente a petición del (de la) interesado(a), para los fines que le convengan.</p>
     </div>
-    ${tablaDatosCita(c)}
-    <h2>Motivo de la sesión</h2><div class="hd-caja">${parrafos(c.motivo)}</div>
-    <p class="hd-nota">Se extiende el presente comprobante a petición del (de la) interesado(a), para los fines que le convengan.</p>
-    <p class="hd-atte">A T E N T A M E N T E</p>
-    ${firmasHoja(c)}`;
+    <p class="hd-atte">Atentamente</p>
+    ${firmasHoja(c).replace('class="hd-firmas"', 'class="hd-firmas hd-firmas-carta"')}`;
 }
 
 async function imprimirComprobante(id) {
@@ -898,7 +904,10 @@ async function imprimirHoja(html, nombreArchivo) {
   if (hoja.parentElement !== document.body) document.body.appendChild(hoja);
   hoja.innerHTML = `<div class="hoja-carta"><img class="hoja-fondo" src="img/membrete/hoja-itver.jpg" alt=""><div class="hoja-cuerpo">${html}</div></div>`;
   const img = hoja.querySelector('img');
-  await (img.decode ? img.decode().catch(() => {}) : Promise.resolve());
+  await Promise.all([
+    img.decode ? img.decode().catch(() => {}) : Promise.resolve(),
+    document.fonts?.load ? Promise.all(['400 10pt "Noto Sans"', '600 10pt "Noto Sans"', '700 10pt "Noto Sans"'].map((f) => document.fonts.load(f))).catch(() => {}) : Promise.resolve(),
+  ]);
   // Si el texto no cabe en la hoja, se reduce la letra poco a poco
   hoja.classList.add('midiendo');
   const cuerpo = hoja.querySelector('.hoja-cuerpo');
