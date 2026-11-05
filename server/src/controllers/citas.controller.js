@@ -61,8 +61,9 @@ async function reservar(req, res) {
   }
   const { valor: fechaTexto, esLocal } = v.fechaHora(body);
 
-  if (tipo === 'Grupal' && rol !== 'tutor') {
-    throw forbidden('Solo el tutor puede programar sesiones grupales.');
+  // Por acuerdo de la Coordinación, ya no se programan sesiones grupales (las anteriores se conservan)
+  if (tipo === 'Grupal') {
+    throw badRequest('Solo se pueden programar citas individuales.');
   }
 
   const cita = await db.withTransaction(async (client) => {

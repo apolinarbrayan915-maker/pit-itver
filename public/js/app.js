@@ -792,15 +792,14 @@ function abrirModalCitaTutor(nombreAlumno, tutoradoId) {
   $('modal-cita').classList.remove('hidden');
 }
 
+// Las citas que programa el tutor son siempre individuales
 function alternarTipoCita() {
-  const grupal = $('modal-cita-tipo').value === 'Grupal';
-  $('modal-cita-bloque-alumno').classList.toggle('hidden', grupal);
-  $('modal-cita-bloque-grupo').classList.toggle('hidden', !grupal);
+  $('modal-cita-bloque-alumno')?.classList.remove('hidden');
 }
 
 async function enviarCitaTutor(event) {
   event.preventDefault();
-  const tipo = $('modal-cita-tipo').value;
+  const tipo = 'Individual';
   const input = $('modal-cita-alumno');
   const select = $('modal-cita-select');
   const body = {
@@ -809,8 +808,7 @@ async function enviarCitaTutor(event) {
     fecha_hora: $('modal-cita-fecha').value,
     motivo: $('modal-cita-motivo').value.trim() || 'Sesión de tutoría',
   };
-  if (tipo === 'Grupal') body.grupo = $('modal-cita-grupo').value.trim();
-  else body.tutorado_id = Number(input.classList.contains('hidden') ? select.value : input.dataset.id);
+  body.tutorado_id = Number(input.classList.contains('hidden') ? select.value : input.dataset.id);
 
   await conBotonOcupado(event.target.querySelector('button[type="submit"]'), 'Guardando…', async () => {
     try {
@@ -1465,11 +1463,14 @@ function tarjetaAviso(a, { admin }) {
       ${a.estado === 'Publicado' ? `<button onclick="cambiarEstadoAviso(${a.id}, 'Archivado')" class="bg-amber-100 hover:bg-amber-200 text-amber-800 px-2.5 py-1 rounded-lg text-[11px] font-bold"><i class="fa-solid fa-box-archive mr-1"></i>Archivar</button>` : ''}
       <button onclick="eliminarAviso(${a.id})" class="bg-rose-50 hover:bg-rose-100 text-rose-700 px-2.5 py-1 rounded-lg text-[11px] font-bold"><i class="fa-solid fa-trash mr-1"></i>Eliminar</button>
     </div>`;
-  return `<div class="p-4 bg-slate-50 rounded-xl border-l-4 ${borde} ${a.estado === 'Archivado' ? 'opacity-60' : ''}">
+  const nuevo = !admin && !avisosVistos().has(firmaAviso(a));
+  const fondo = !admin && a.importante ? 'aviso-importante bg-amber-50' : 'bg-slate-50';
+  return `<div class="p-4 ${fondo} rounded-xl border-l-4 ${borde} ${a.estado === 'Archivado' ? 'opacity-60' : ''}">
     <div class="flex flex-wrap items-center gap-2">
       <span class="text-[10px] font-bold ${a.importante ? 'text-amber-700' : 'text-tecnmGreen'} uppercase">${escapeHtml(a.categoria)}</span>
       ${a.importante ? '<span class="bg-amber-100 text-amber-800 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase"><i class="fa-solid fa-star mr-0.5"></i>Importante</span>' : ''}
       ${admin ? chip(a.estado, ESTADO_AVISO_ESTILO[a.estado]) : ''}
+      ${nuevo ? '<span class="bg-rose-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded uppercase">Nuevo</span>' : ''}
     </div>
     <h4 class="text-xs font-bold text-slate-800 mt-1">${escapeHtml(a.titulo)}</h4>
     <p class="text-xs text-slate-600 mt-1 whitespace-pre-line">${escapeHtml(a.contenido)}</p>
@@ -1478,12 +1479,54 @@ function tarjetaAviso(a, { admin }) {
   </div>`;
 }
 
+/* Avisos ya vistos por el tutor (solo en este navegador): sirve para la campana. */
+const CLAVE_AVISOS_VISTOS = 'pit_avisos_vistos';
+const firmaAviso = (a) => `${a.id}:${a.fecha_publicacion || a.updated_at || ''}`;
+function avisosVistos() {
+  try { return new Set(JSON.parse(localStorage.getItem(CLAVE_AVISOS_VISTOS) || '[]')); } catch (e) { return new Set(); }
+}
+function marcarAvisosVistos(avisos) {
+  try { localStorage.setItem(CLAVE_AVISOS_VISTOS, JSON.stringify(avisos.map(firmaAviso))); } catch (e) { /* sin almacenamiento */ }
+}
+let avisosTutor = [];
+
+function pintarCampanaAvisos() {
+  const badge = $('avisos-badge');
+  if (!badge) return;
+  const vistos = avisosVistos();
+  const nuevos = avisosTutor.filter((a) => !vistos.has(firmaAviso(a)));
+  badge.textContent = nuevos.length > 9 ? '9+' : String(nuevos.length);
+  badge.classList.toggle('hidden', !nuevos.length);
+  const boton = $('btn-avisos');
+  if (boton) {
+    boton.title = nuevos.length ? `${nuevos.length} aviso(s) nuevo(s) de la Coordinación` : 'Avisos de la Coordinación';
+    boton.classList.toggle('campana-activa', nuevos.some((a) => a.importante));
+  }
+}
+
+/** Campana de la barra: lleva a los avisos (arriba de "Mi Grupo") y los marca como vistos. */
+function verAvisosTutor() {
+  switchTab('dashboard');
+  setTimeout(() => {
+    const panel = $('panel-avisos');
+    panel?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    panel?.classList.add('avisos-resaltar');
+    setTimeout(() => panel?.classList.remove('avisos-resaltar'), 1600);
+  }, 50);
+  marcarAvisosVistos(avisosTutor);
+  pintarCampanaAvisos();
+}
+
 async function cargarAvisosTutor() {
   const cont = $('lista-avisos-tutor');
   if (!cont) return;
   try {
     const { avisos } = await api('/avisos');
-    setText('avisos-contador', `${avisos.length} vigente${avisos.length === 1 ? '' : 's'}`);
+    avisosTutor = avisos;
+    pintarCampanaAvisos();
+    const importantes = avisos.filter((a) => a.importante).length;
+    setText('avisos-contador', `${avisos.length} vigente${avisos.length === 1 ? '' : 's'}${importantes ? ` · ${importantes} importante${importantes === 1 ? '' : 's'}` : ''}`);
+    if ($('avisos-contador')) $('avisos-contador').className = `${importantes ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'} text-[10px] font-bold px-2.5 py-1 rounded-full`;
     cont.innerHTML = avisos.length
       ? avisos.map((a) => tarjetaAviso(a, { admin: false })).join('')
       : '<p class="text-xs text-slate-400 text-center py-4">No hay avisos publicados por la Coordinación.</p>';
@@ -3476,4 +3519,5 @@ Object.assign(window, {
   abrirEditorPerfilTutor,
   quitarFotoTutor,
   cerrarSesion,
+  verAvisosTutor,
 });

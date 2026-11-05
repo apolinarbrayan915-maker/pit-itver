@@ -52,17 +52,20 @@
                     <button onclick="switchTab('dashboard')" id="btn-dashboard" title="Mi Grupo" class="nav-btn activo" role="tab" aria-selected="true">
                         <i class="fa-solid fa-chart-pie"></i> <span>Mi Grupo</span><span class="nav-corto">Grupo</span>
                     </button>
+                    <button onclick="switchTab('tutorados')" id="btn-tutorados" title="Mis Tutorados" class="nav-btn" role="tab" aria-selected="false">
+                        <i class="fa-solid fa-user-graduate"></i> <span>Mis Tutorados</span><span class="nav-corto">Tutorados</span>
+                    </button>
                     <button onclick="switchTab('agenda')" id="btn-agenda" title="Agenda y Citas" class="nav-btn" role="tab" aria-selected="false">
-                        <i class="fa-solid fa-calendar-check"></i> <span>Agenda y Citas</span><span class="nav-corto">Agenda</span>
+                        <i class="fa-solid fa-calendar-check"></i> <span>Agenda</span><span class="nav-corto">Agenda</span>
                     </button>
                     <button onclick="switchTab('canalizaciones')" id="btn-canalizaciones" title="Canalizaciones" class="nav-btn" role="tab" aria-selected="false">
                         <i class="fa-solid fa-share-nodes"></i> <span>Canalizaciones</span><span class="nav-corto">Canalizar</span>
                     </button>
                     <button onclick="switchTab('miperfil')" id="btn-miperfil" title="Mi Perfil y Horario" class="nav-btn" role="tab" aria-selected="false">
-                        <i class="fa-solid fa-id-card"></i> <span>Mi Perfil y Horario</span><span class="nav-corto">Mi perfil</span>
+                        <i class="fa-solid fa-id-card"></i> <span>Mi Perfil</span><span class="nav-corto">Mi perfil</span>
                     </button>
                     <button onclick="switchTab('reportes')" id="btn-reportes" title="Informes y Evaluaciones" class="nav-btn" role="tab" aria-selected="false">
-                        <i class="fa-solid fa-file-signature"></i> <span>Informes y Evaluaciones</span><span class="nav-corto">Informes</span>
+                        <i class="fa-solid fa-file-signature"></i> <span>Informes</span><span class="nav-corto">Informes</span>
                     </button>
                 </div>
                 <div class="pit-user shrink-0 flex items-center gap-3 pl-3 md:pl-4 border-l border-white/20 my-2.5">
@@ -70,6 +73,10 @@
                         <p class="text-xs font-bold truncate" id="nav-nombre">Profesor Tutor</p>
                         <p class="text-[10px] text-tecnmSand">Profesor Tutor Asignado</p>
                     </div>
+                    <button type="button" id="btn-avisos" onclick="verAvisosTutor()" title="Avisos de la Coordinación" aria-label="Avisos de la Coordinación" class="relative w-8 h-8 rounded-full flex items-center justify-center text-slate-500 hover:text-tecnmGreen hover:bg-slate-100">
+                        <i class="fa-solid fa-bell"></i>
+                        <span id="avisos-badge" class="hidden absolute -top-0.5 -right-0.5 min-w-[1.1rem] h-[1.1rem] px-1 rounded-full bg-rose-600 text-white text-[10px] font-bold leading-[1.1rem] text-center"></span>
+                    </button>
                     <div class="shrink-0 w-8 h-8 rounded-full bg-tecnmGold flex items-center justify-center font-bold text-tecnmDark text-xs" id="nav-iniciales">--</div>
                     <button id="btn-logout" title="Cerrar sesión" class="text-tecnmSand hover:text-white"><i class="fa-solid fa-right-from-bracket"></i></button>
                 </div>
@@ -81,6 +88,17 @@
 
         <!-- TAB 1: DASHBOARD -->
         <div id="tab-dashboard" class="tab-content active space-y-6">
+            <!-- Avisos de la Coordinación (GET /api/avisos) – arriba de todo para que el tutor los vea primero -->
+            <div id="panel-avisos" class="avisos-panel bg-white p-5 rounded-2xl shadow-sm border border-slate-200 scroll-mt-20">
+                <div class="flex justify-between items-center gap-3 mb-3">
+                    <h3 class="text-sm md:text-base font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-bullhorn text-amber-500"></i> <span>Avisos de la Coordinación</span>
+                    </h3>
+                    <span id="avisos-contador" class="bg-slate-100 text-slate-600 text-[10px] font-bold px-2.5 py-1 rounded-full">…</span>
+                </div>
+                <div class="space-y-3" id="lista-avisos-tutor"><p class="text-xs text-slate-400 text-center py-4">Cargando avisos…</p></div>
+            </div>
+
             <div class="hero bg-gradient-to-r from-tecnmGreen to-tecnmDark text-white p-6 md:p-8 rounded-2xl shadow-lg relative overflow-hidden">
                 <div class="absolute right-0 bottom-0 opacity-10 translate-x-10 translate-y-10"><i class="fa-solid fa-users text-9xl"></i></div>
                 <div class="relative z-10 max-w-3xl">
@@ -94,8 +112,9 @@
                     </p>
                     <div class="mt-6 flex flex-wrap gap-3">
                         <button onclick="switchTab('agenda'); openModalCita();" class="bg-tecnmGold hover:bg-tecnmGoldDark text-slate-900 font-bold px-4 py-2 rounded-xl text-xs shadow transition flex items-center space-x-2">
-                            <i class="fa-solid fa-plus-circle"></i> <span>Programar Cita Grupal/Individual</span>
+                            <i class="fa-solid fa-plus-circle"></i> <span>Programar Cita Individual</span>
                         </button>
+                        <button onclick="switchTab('tutorados')" class="bg-white/10 hover:bg-white/20 text-white font-semibold px-4 py-2 rounded-xl text-xs transition border border-white/20">Ver Mis Tutorados</button>
                         <button onclick="switchTab('canalizaciones')" class="bg-white/10 hover:bg-white/20 text-white font-semibold px-4 py-2 rounded-xl text-xs transition border border-white/20">Ver Canalizaciones</button>
                     </div>
                 </div>
@@ -120,17 +139,10 @@
                 </div>
             </div>
 
-            <!-- Avisos de la Coordinación (GET /api/avisos) – solo tutores -->
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-base font-bold text-slate-800 flex items-center space-x-2">
-                        <i class="fa-solid fa-bullhorn text-tecnmBlue"></i> <span>Avisos Importantes de la Coordinación</span>
-                    </h3>
-                    <span id="avisos-contador" class="bg-slate-100 text-slate-600 text-[10px] font-bold px-2.5 py-1 rounded-full">…</span>
-                </div>
-                <div class="space-y-3" id="lista-avisos-tutor"><p class="text-xs text-slate-400 text-center py-4">Cargando avisos…</p></div>
-            </div>
+        </div>
 
+        <!-- TAB: MIS TUTORADOS -->
+        <div id="tab-tutorados" class="tab-content space-y-6">
             <div class="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200">
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                     <div>
@@ -174,7 +186,7 @@
                     <div class="flex justify-between items-center mb-6">
                         <div>
                             <h3 class="text-base font-bold text-slate-800">Agenda de Citas del Tutor</h3>
-                            <p class="text-xs text-slate-500">Sesiones individuales y grupales (30 días atrás · 60 días adelante).</p>
+                            <p class="text-xs text-slate-500">Sesiones individuales (30 días atrás · 60 días adelante).</p>
                         </div>
                         <button onclick="openModalCita()" class="bg-tecnmGreen text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-tecnmDark transition flex items-center space-x-2">
                             <i class="fa-solid fa-calendar-plus"></i> <span>Nueva Cita</span>
@@ -357,25 +369,15 @@
     <div id="modal-cita" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true">
         <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-200">
             <div class="flex justify-between items-center mb-4">
-                <h3 class="text-sm font-bold text-slate-800">Agendar Cita de Tutoría</h3>
+                <h3 class="text-sm font-bold text-slate-800">Agendar Cita Individual</h3>
                 <button type="button" onclick="closeModalCita()" class="text-slate-400 hover:text-slate-600" aria-label="Cerrar"><i class="fa-solid fa-xmark text-lg"></i></button>
             </div>
             <form id="modal-cita-form" onsubmit="handleModalCitaSubmit(event)" class="space-y-3 text-xs">
-                <div>
-                    <label for="modal-cita-tipo" class="block font-bold text-slate-700 mb-1">Tipo de Sesión</label>
-                    <select id="modal-cita-tipo" onchange="alternarTipoCita()" class="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-tecnmGreen outline-none bg-white">
-                        <option value="Individual">Individual</option>
-                        <option value="Grupal">Grupal</option>
-                    </select>
-                </div>
+                <input type="hidden" id="modal-cita-tipo" value="Individual">
                 <div id="modal-cita-bloque-alumno">
                     <label class="block font-bold text-slate-700 mb-1">Tutorado</label>
                     <input type="text" id="modal-cita-alumno" readonly class="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-100 text-slate-700 font-bold">
                     <select id="modal-cita-select" class="hidden w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-tecnmGreen outline-none bg-white"></select>
-                </div>
-                <div id="modal-cita-bloque-grupo" class="hidden">
-                    <label for="modal-cita-grupo" class="block font-bold text-slate-700 mb-1">Grupo</label>
-                    <input type="text" id="modal-cita-grupo" placeholder="Ej. 4°B ISC" class="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-tecnmGreen outline-none">
                 </div>
                 <div>
                     <label for="modal-cita-modalidad" class="block font-bold text-slate-700 mb-1">Modalidad</label>

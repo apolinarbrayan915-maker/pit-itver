@@ -322,3 +322,16 @@ html.dark .flatpickr-day.selected { background: #9DBCE8; border-color: #9DBCE8; 
   .pit-footer .grid > :not(:first-child) { display: none; }
   .pit-footer p, .pit-footer li, .pit-footer a { font-size: .68rem; }
 }
+
+
+/* ---------- 6. AVISOS DE LA COORDINACIÓN (tutor) ---------------------------- */
+.avisos-panel { transition: box-shadow .3s; }
+.avisos-panel.avisos-resaltar { box-shadow: 0 0 0 3px #f59e0b; }
+#btn-avisos.campana-activa { color: #d97706; }
+#btn-avisos.campana-activa i { animation: campana 1.8s ease-in-out 3; transform-origin: 50% 0; }
+@keyframes campana { 0%, 60%, 100% { transform: rotate(0); } 10%, 30% { transform: rotate(14deg); } 20%, 40% { transform: rotate(-14deg); } }
+@media (prefers-reduced-motion: reduce) { #btn-avisos.campana-activa i { animation: none; } }
+html.dark #btn-avisos { color: #b4c0d1; }
+html.dark #btn-avisos:hover { background: #18294a; }
+html.dark #btn-avisos.campana-activa { color: #fbbf24; }
+html.dark .aviso-importante { background-color: #2a2414 !important; }
