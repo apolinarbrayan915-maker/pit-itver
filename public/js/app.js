@@ -681,6 +681,7 @@ async function cargarAgendaTutor() {
   if (!cont || !u?.tutorId) return;
   try {
     const { citas } = await api(`/citas/tutor/${u.tutorId}`);
+    citasTutor.clear();
     if (!citas.length) {
       cont.innerHTML = '<p class="text-xs text-slate-400 text-center py-6">No hay citas en el periodo consultado.</p>';
       return;
@@ -695,33 +696,225 @@ async function cargarAgendaTutor() {
   }
 }
 
+/* ---------- Agenda: tarjeta de cada cita -------------------------------- */
+const citasTutor = new Map();
+const MESES_LARGOS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+
+/** Fecha y hora de la cita en hora local del ITVER, a partir de fecha_hora_local. */
+function partesCita(c) {
+  const [f = '', h = '00:00'] = String(c.fecha_hora_local || '').split('T');
+  const [y, m, d] = f.split('-').map(Number);
+  const [hh, mm] = h.split(':').map(Number);
+  const fin = hh * 60 + mm + Number(c.duracion_min || 60);
+  const dos = (n) => String(n).padStart(2, '0');
+  const dia = new Intl.DateTimeFormat('es-MX', { weekday: 'long', timeZone: 'UTC' }).format(new Date(Date.UTC(y, m - 1, d)));
+  return {
+    larga: `${d} de ${MESES_LARGOS[m - 1]} de ${y}`,
+    conDia: `${dia} ${d} de ${MESES_LARGOS[m - 1]} de ${y}`,
+    corta: `${dia.slice(0, 3)} ${d} ${MESES_LARGOS[m - 1].slice(0, 3)} ${y}`,
+    horario: `${dos(hh)}:${dos(mm)} – ${dos(Math.floor(fin / 60) % 24)}:${dos(fin % 60)}`,
+  };
+}
+
+function fechaLargaHoy() {
+  const p = new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+  const [y, m, d] = p.split('-').map(Number);
+  return `${d} de ${MESES_LARGOS[m - 1]} de ${y}`;
+}
+
+const BTN_CITA = 'inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold whitespace-nowrap transition';
+
 function tarjetaCitaTutor(c) {
-  const titulo = c.tipo === 'Grupal'
-    ? `Grupo ${escapeHtml(c.grupo || '')} (sesión grupal)`
-    : `${escapeHtml(c.tutorado_nombre)} (${escapeHtml(c.no_control)})`;
-  const fondo = c.estatus === 'Pendiente' ? 'bg-amber-50/60 border-amber-200' : 'bg-slate-50 border-slate-200';
-  let acciones = chip(c.estatus, ESTATUS_CITA_ESTILO[c.estatus]);
+  citasTutor.set(c.id, c);
+  const p = partesCita(c);
+  const fondo = {
+    Pendiente: 'bg-amber-50/60 border-amber-200',
+    Confirmada: 'bg-white border-slate-200',
+    Completada: 'bg-white border-slate-200',
+    Cancelada: 'bg-slate-50 border-slate-200 opacity-75',
+  }[c.estatus] || 'bg-white border-slate-200';
+  const minuta = c.minuta && c.minuta.acuerdos;
+  const botonMinuta = `<button onclick="abrirMinuta(${c.id})" class="${BTN_CITA} bg-white border border-tecnmGreen text-tecnmGreen hover:bg-slate-50"><i class="fa-solid ${minuta ? 'fa-file-circle-check' : 'fa-file-signature'}"></i> Minuta</button>`;
+  const botonComprobante = `<button onclick="imprimirComprobante(${c.id})" class="${BTN_CITA} bg-tecnmGold text-slate-900 hover:bg-tecnmGoldDark"><i class="fa-solid fa-print"></i> Comprobante</button>`;
+  let botones = [];
   if (c.estatus === 'Pendiente') {
-    acciones = `
-      <button onclick="cambiarEstatusCita(${c.id}, 'Confirmada', this)" class="bg-tecnmGreen text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-tecnmDark transition"><i class="fa-solid fa-check mr-1"></i> Confirmar</button>
-      <button onclick="cambiarEstatusCita(${c.id}, 'Cancelada', this)" class="bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-300 transition">Cancelar</button>`;
+    botones = [
+      `<button onclick="cambiarEstatusCita(${c.id}, 'Confirmada', this)" class="${BTN_CITA} bg-tecnmGreen text-white hover:bg-tecnmDark"><i class="fa-solid fa-check"></i> Confirmar</button>`,
+      `<button onclick="cambiarEstatusCita(${c.id}, 'Cancelada', this)" class="${BTN_CITA} bg-slate-200 text-slate-700 hover:bg-slate-300"><i class="fa-solid fa-xmark"></i> Cancelar</button>`,
+    ];
   } else if (c.estatus === 'Confirmada') {
-    acciones = `
-      <button onclick="cambiarEstatusCita(${c.id}, 'Completada', this)" class="bg-tecnmGreen text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-tecnmDark transition"><i class="fa-solid fa-circle-check mr-1"></i> Marcar atendida</button>
-      <button onclick="window.print()" class="bg-tecnmGold text-slate-900 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-tecnmGoldDark transition"><i class="fa-solid fa-print mr-1"></i> Comprobante</button>`;
+    botones = [
+      `<button onclick="cambiarEstatusCita(${c.id}, 'Completada', this)" class="${BTN_CITA} col-span-2 bg-tecnmGreen text-white hover:bg-tecnmDark"><i class="fa-solid fa-circle-check"></i> Marcar atendida</button>`,
+      botonMinuta,
+      botonComprobante,
+    ];
+  } else if (c.estatus === 'Completada' && c.tipo !== 'Grupal') {
+    botones = [botonMinuta, botonComprobante];
   }
-  return `<div class="p-4 rounded-xl border ${fondo} flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-    <div>
-      <div class="flex items-center space-x-2">
-        <span class="bg-white border border-slate-200 text-slate-700 text-[9px] font-bold px-2 py-0.5 rounded uppercase">${escapeHtml(c.tipo)} · ${escapeHtml(c.modalidad)}</span>
-        <span class="text-xs text-slate-400 font-medium"><i class="fa-regular fa-clock mr-1"></i>${fmtFechaHora(c.fecha_hora)}</span>
+  if (c.tipo === 'Grupal') botones = botones.filter((b) => b !== botonMinuta && b !== botonComprobante);
+  const iconoModalidad = c.modalidad === 'Línea' ? 'fa-video' : 'fa-building-user';
+  const datosAlumno = [c.no_control, c.semestre ? `${c.semestre}° semestre` : ''].filter(Boolean).map(escapeHtml).join(' · ');
+  return `<article class="cita-tarjeta rounded-xl border ${fondo} p-4">
+    <div class="flex items-start justify-between gap-3">
+      <div class="min-w-0">
+        <h4 class="text-sm font-bold text-slate-800 leading-snug">${escapeHtml(c.tutorado_nombre || `Grupo ${c.grupo || ''}`)}</h4>
+        <p class="text-[11px] text-slate-500">${datosAlumno}</p>
       </div>
-      <h4 class="text-xs font-bold text-slate-800 mt-1">${titulo}</h4>
-      <p class="text-xs text-slate-600 mt-0.5">Motivo: ${escapeHtml(c.motivo)}</p>
-      ${c.notas_tutor ? `<p class="text-[11px] text-slate-500 mt-0.5 italic">Notas: ${escapeHtml(c.notas_tutor)}</p>` : ''}
+      <div class="flex-none">${chip(c.estatus, ESTATUS_CITA_ESTILO[c.estatus])}</div>
     </div>
-    <div class="flex gap-2 w-full md:w-auto flex-wrap">${acciones}</div>
+    <div class="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-[11px] text-slate-600">
+      <span class="inline-flex items-center gap-1.5"><i class="fa-regular fa-calendar text-slate-400 w-3.5 text-center"></i><span class="capitalize">${escapeHtml(p.corta)}</span></span>
+      <span class="inline-flex items-center gap-1.5"><i class="fa-regular fa-clock text-slate-400 w-3.5 text-center"></i>${escapeHtml(p.horario)}</span>
+      <span class="inline-flex items-center gap-1.5"><i class="fa-solid ${iconoModalidad} text-slate-400 w-3.5 text-center"></i>${escapeHtml(c.modalidad === 'Línea' ? 'En línea' : c.modalidad)}</span>
+    </div>
+    <p class="mt-2 text-xs text-slate-700 break-words"><span class="font-semibold text-slate-500">Motivo:</span> ${escapeHtml(c.motivo)}</p>
+    ${c.notas_tutor ? `<p class="mt-1 text-[11px] text-slate-500 italic break-words"><span class="font-semibold not-italic">Notas:</span> ${escapeHtml(c.notas_tutor)}</p>` : ''}
+    ${minuta ? `<p class="mt-1 text-[11px] text-emerald-700 break-words"><i class="fa-solid fa-file-circle-check mr-1"></i><span class="font-semibold">Acuerdos:</span> ${escapeHtml(c.minuta.acuerdos.length > 140 ? `${c.minuta.acuerdos.slice(0, 140)}…` : c.minuta.acuerdos)}</p>` : ''}
+    ${botones.length ? `<div class="mt-3 pt-3 border-t border-slate-200/80 grid grid-cols-2 sm:flex sm:justify-end gap-2">${botones.join('')}</div>` : ''}
+  </article>`;
+}
+
+/* ---------- Minuta de la sesión ----------------------------------------- */
+function abrirMinuta(id) {
+  const c = citasTutor.get(id);
+  if (!c) return;
+  const p = partesCita(c);
+  $('minuta-cita').value = id;
+  setText('minuta-resumen', `${c.tutorado_nombre} (${c.no_control}) · ${p.larga}, ${p.horario}`);
+  $('minuta-asuntos').value = c.minuta?.asuntos ?? c.notas_tutor ?? '';
+  $('minuta-acuerdos').value = c.minuta?.acuerdos ?? '';
+  $('minuta-seguimiento').value = c.minuta?.seguimiento ?? '';
+  $('minuta-seguimiento').min = String(c.fecha_hora_local || '').slice(0, 10);
+  contadorCaracteres('minuta-asuntos', 'minuta-asuntos-cuenta');
+  contadorCaracteres('minuta-acuerdos', 'minuta-acuerdos-cuenta');
+  $('modal-minuta').classList.remove('hidden');
+  setTimeout(() => $('minuta-acuerdos').focus(), 50);
+}
+
+function cerrarMinuta() {
+  $('modal-minuta')?.classList.add('hidden');
+}
+
+async function guardarMinuta(imprimir, boton) {
+  const id = Number($('minuta-cita').value);
+  const c = citasTutor.get(id);
+  const cuerpo = {
+    asuntos: $('minuta-asuntos').value.trim(),
+    acuerdos: $('minuta-acuerdos').value.trim(),
+    seguimiento: $('minuta-seguimiento').value || null,
+  };
+  if (cuerpo.acuerdos.length < 10) {
+    toast('Escribe los acuerdos o el compromiso académico (mínimo 10 caracteres).', 'error');
+    $('minuta-acuerdos').focus();
+    return;
+  }
+  const btn = boton || $('form-minuta').querySelector('button[type=submit]');
+  await conBotonOcupado(btn, 'Guardando…', async () => {
+    try {
+      const r = await api(`/citas/${id}/minuta`, { method: 'PUT', body: cuerpo });
+      if (c) c.minuta = r.minuta;
+      cerrarMinuta();
+      toast(r.mensaje);
+      cargarAgendaTutor();
+      if (imprimir && c) await imprimirHoja(htmlMinuta(c), `Minuta tutoria ${c.no_control} ${String(c.fecha_hora_local).slice(0, 10)}`);
+    } catch (err) {
+      toast(err.message, 'error');
+    }
+  });
+}
+
+/* ---------- Documentos imprimibles en la hoja membretada ----------------- */
+function tablaDatosCita(c) {
+  const p = partesCita(c);
+  const lugar = c.modalidad === 'Línea' ? 'Sesión en línea' : (c.tutor_cubiculo ? (/^cub/i.test(c.tutor_cubiculo) ? c.tutor_cubiculo : `Cubículo ${c.tutor_cubiculo}`) : 'Instituto Tecnológico de Veracruz');
+  const fila = (a, va, b, vb) => `<tr><th>${a}</th><td>${escapeHtml(va || '—')}</td><th>${b}</th><td>${escapeHtml(vb || '—')}</td></tr>`;
+  return `<table class="hd-datos">
+    ${fila('Tutor(a)', c.tutor_nombre, 'Departamento', c.tutor_departamento)}
+    ${fila('Tutorado(a)', c.tutorado_nombre, 'No. de control', c.no_control)}
+    ${fila('Carrera', c.carrera, 'Semestre', c.semestre ? `${c.semestre}°` : '')}
+    ${fila('Fecha', p.conDia, 'Horario', `${p.horario} h`)}
+    ${fila('Modalidad', c.modalidad === 'Línea' ? 'En línea' : c.modalidad, 'Lugar', lugar)}
+  </table>`;
+}
+
+function firmasHoja(c) {
+  return `<div class="hd-firmas">
+    <div><span class="hd-linea"></span><b>${escapeHtml(c.tutor_nombre || '')}</b><small>Nombre y firma del tutor(a)</small></div>
+    <div><span class="hd-linea"></span><b>${escapeHtml(c.tutorado_nombre || '')}</b><small>Nombre y firma del tutorado(a)</small></div>
   </div>`;
+}
+
+const parrafos = (t) => escapeHtml(t || '').split(/\n+/).filter((x) => x.trim()).map((x) => `<p>${x}</p>`).join('');
+
+function htmlMinuta(c) {
+  const p = partesCita(c);
+  const m = c.minuta || {};
+  let seguimiento = 'Por definir';
+  if (m.seguimiento) seguimiento = partesCita({ fecha_hora_local: `${m.seguimiento}T00:00` }).conDia;
+  return `<p class="hd-lugar">Veracruz, Ver., a ${escapeHtml(p.larga)}</p>
+    <h1>Minuta de sesión de tutoría individual</h1>
+    <p class="hd-sub">Programa Institucional de Tutorías (PIT) · ITVER</p>
+    ${tablaDatosCita(c)}
+    <h2>Motivo de la sesión</h2><div class="hd-caja">${parrafos(c.motivo)}</div>
+    <h2>Asuntos tratados</h2><div class="hd-caja ${m.asuntos ? '' : 'hd-vacia'}">${parrafos(m.asuntos)}</div>
+    <h2>Acuerdos y compromiso académico</h2><div class="hd-caja">${parrafos(m.acuerdos)}</div>
+    <p class="hd-seguimiento"><b>Fecha de seguimiento:</b> ${escapeHtml(seguimiento)}</p>
+    <p class="hd-nota">Ambas partes manifiestan su conformidad con los acuerdos aquí descritos y se comprometen a darles seguimiento en las siguientes sesiones de tutoría.</p>
+    ${firmasHoja(c)}`;
+}
+
+function htmlComprobante(c) {
+  const p = partesCita(c);
+  const modalidad = c.modalidad === 'Línea' ? 'en línea' : 'presencial';
+  const sem = c.semestre ? `, del ${escapeHtml(c.semestre)}° semestre` : '';
+  return `<p class="hd-lugar">Veracruz, Ver., a ${escapeHtml(fechaLargaHoy())}</p>
+    <p class="hd-asunto"><b>Asunto:</b> Comprobante de asistencia a tutoría</p>
+    <h1>Comprobante de asistencia a sesión de tutoría</h1>
+    <p class="hd-sub">Programa Institucional de Tutorías (PIT) · ITVER</p>
+    <div class="hd-texto">
+      <p>Por medio del presente se hace constar que el (la) estudiante <b>${escapeHtml(c.tutorado_nombre || '')}</b>, con número de control <b>${escapeHtml(c.no_control || '')}</b>, inscrito(a) en la carrera de ${escapeHtml(c.carrera || '')}${sem}, <b>asistió</b> a la sesión de tutoría individual ${modalidad} celebrada el ${escapeHtml(p.conDia)}, en el horario de ${escapeHtml(p.horario)} h, con el (la) tutor(a) <b>${escapeHtml(c.tutor_nombre || '')}</b>.</p>
+    </div>
+    ${tablaDatosCita(c)}
+    <h2>Motivo de la sesión</h2><div class="hd-caja">${parrafos(c.motivo)}</div>
+    <p class="hd-nota">Se extiende el presente comprobante a petición del (de la) interesado(a), para los fines que le convengan.</p>
+    <p class="hd-atte">A T E N T A M E N T E</p>
+    ${firmasHoja(c)}`;
+}
+
+async function imprimirComprobante(id) {
+  const c = citasTutor.get(id);
+  if (!c) return;
+  if (c.estatus !== 'Completada' && !confirm('La cita aún no está marcada como atendida. ¿Imprimir el comprobante de todos modos?')) return;
+  await imprimirHoja(htmlComprobante(c), `Comprobante tutoria ${c.no_control} ${String(c.fecha_hora_local).slice(0, 10)}`);
+}
+
+/** Pinta el documento sobre la hoja membretada (tamaño carta) y abre el diálogo de impresión. */
+async function imprimirHoja(html, nombreArchivo) {
+  let hoja = $('hoja-impresion');
+  if (!hoja) {
+    hoja = document.createElement('div');
+    hoja.id = 'hoja-impresion';
+  }
+  if (hoja.parentElement !== document.body) document.body.appendChild(hoja);
+  hoja.innerHTML = `<div class="hoja-carta"><img class="hoja-fondo" src="img/membrete/hoja-itver.jpg" alt=""><div class="hoja-cuerpo">${html}</div></div>`;
+  const img = hoja.querySelector('img');
+  await (img.decode ? img.decode().catch(() => {}) : Promise.resolve());
+  // Si el texto no cabe en la hoja, se reduce la letra poco a poco
+  hoja.classList.add('midiendo');
+  const cuerpo = hoja.querySelector('.hoja-cuerpo');
+  for (let pt = 10; pt >= 7.5 && cuerpo.scrollHeight > cuerpo.clientHeight + 1; pt -= 0.5) {
+    cuerpo.style.fontSize = `${pt - 0.5}pt`;
+  }
+  hoja.classList.remove('midiendo');
+  const titulo = document.title;
+  document.title = nombreArchivo;
+  document.body.classList.add('imprimiendo');
+  const terminar = () => {
+    document.body.classList.remove('imprimiendo');
+    document.title = titulo;
+  };
+  window.addEventListener('afterprint', terminar, { once: true });
+  window.print();
 }
 
 async function cambiarEstatusCita(id, estatus, boton) {
@@ -910,13 +1103,6 @@ async function iniciarTutor() {
 
   cargarMetricasDashboard();
   await poblarTablaRiesgo('TODOS');
-  // El formulario de acuerdos usa la misma lista de tutorados
-  const selAcuerdo = $('acuerdo-tutorado');
-  if (selAcuerdo) {
-    selAcuerdo.innerHTML = cacheTutorados
-      .map((t) => `<option value="${t.tutorado_id}">${escapeHtml(t.nombre_completo)} (${escapeHtml(t.no_control)})</option>`)
-      .join('');
-  }
   cargarAgendaTutor();
   cargarTablaCanalizaciones();
 }
@@ -3599,6 +3785,10 @@ Object.assign(window, {
   enviarReservaCita,
   cancelarCitaAlumno,
   cambiarEstatusCita,
+  abrirMinuta,
+  cerrarMinuta,
+  guardarMinuta,
+  imprimirComprobante,
   alternarTipoCita,
   verEvaluacionTutor,
   cambiarVistaEvaluacion,

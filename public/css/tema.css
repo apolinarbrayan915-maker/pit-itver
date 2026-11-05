@@ -368,3 +368,42 @@ html.dark .aviso-ticker-nav, html.dark .aviso-ticker-nav button { color: #94a3b8
   .pit-header-avisos > div > :not(.aviso-ticker) { display: none !important; }
   .aviso-ticker { max-width: none; width: 100%; height: 2.75rem; }
 }
+
+
+/* ---------- 7. HOJA MEMBRETADA (minuta y comprobante de tutoría) ---------- */
+#hoja-impresion { display: none; }
+#hoja-impresion.midiendo { display: block; position: fixed; left: -10000px; top: 0; visibility: hidden; }
+.hoja-carta { position: relative; width: 215.9mm; height: 279.3mm; overflow: hidden; background: #fff; color: #111827;
+  font-family: Arial, Helvetica, sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.hoja-fondo { position: absolute; inset: 0; width: 100%; height: 100%; }
+.hoja-cuerpo { position: absolute; top: 52mm; left: 25mm; right: 20mm; bottom: 41mm; display: flex; flex-direction: column;
+  font-size: 10pt; line-height: 1.35; overflow: hidden; }
+.hoja-cuerpo h1 { font-size: 1.3em; font-weight: 700; text-align: center; text-transform: uppercase; color: #6b1d34; margin: .2em 0 0; letter-spacing: .02em; }
+.hoja-cuerpo h2 { font-size: .95em; font-weight: 700; text-transform: uppercase; color: #1b396a; margin: .9em 0 .3em; letter-spacing: .03em; }
+.hoja-cuerpo p { margin: 0; }
+.hoja-cuerpo .hd-lugar { text-align: right; font-size: .95em; }
+.hoja-cuerpo .hd-asunto { text-align: right; font-size: .95em; margin-top: .2em; }
+.hoja-cuerpo .hd-sub { text-align: center; font-size: .9em; color: #4b5563; margin: .1em 0 .9em; }
+.hd-datos { width: 100%; border-collapse: collapse; font-size: .92em; }
+.hd-datos th, .hd-datos td { border: 1px solid #9ca3af; padding: .3em .5em; text-align: left; vertical-align: top; }
+.hd-datos th { background: #eef2f7; color: #1f2937; font-weight: 700; width: 17%; white-space: nowrap; }
+.hd-datos td { width: 33%; }
+.hd-caja { border: 1px solid #9ca3af; border-radius: 2px; padding: .45em .6em; min-height: 2.6em; white-space: normal; overflow-wrap: anywhere; }
+.hd-caja p + p { margin-top: .35em; }
+.hd-caja.hd-vacia { min-height: 4.5em; background: repeating-linear-gradient(#fff 0 1.45em, #d1d5db 1.45em calc(1.45em + 1px)); }
+.hoja-cuerpo .hd-seguimiento { margin-top: .8em; }
+.hoja-cuerpo .hd-texto { text-align: justify; margin-bottom: 1em; }
+.hoja-cuerpo .hd-nota { margin-top: .9em; font-size: .9em; color: #374151; text-align: justify; }
+.hoja-cuerpo .hd-atte { margin-top: 1.2em; text-align: center; font-weight: 700; letter-spacing: .05em; }
+.hd-firmas { margin-top: auto; padding-top: 1.5em; display: grid; grid-template-columns: 1fr 1fr; gap: 14mm; text-align: center; font-size: .9em; }
+.hd-firmas b { display: block; font-weight: 700; }
+.hd-firmas small { display: block; color: #4b5563; font-size: .9em; }
+.hd-linea { display: block; border-top: 1px solid #111827; margin: 0 4mm .3em; }
+
+@media print {
+  @page { size: letter; margin: 0; }
+  body.imprimiendo { margin: 0 !important; padding: 0 !important; background: #fff !important; min-height: 0 !important; display: block !important; }
+  body.imprimiendo > *:not(#hoja-impresion) { display: none !important; }
+  body.imprimiendo #hoja-impresion { display: block !important; position: static; visibility: visible; }
+  body.imprimiendo .hoja-carta { page-break-inside: avoid; break-inside: avoid; }
+}

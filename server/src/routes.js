@@ -60,6 +60,7 @@ router.post('/citas/reservar', requiereRol('alumno', 'tutor', 'coordinador'), ci
 router.get('/citas/mias', requiereRol('alumno'), citas.misCitas);
 router.get('/citas/tutor/:tutorId', requiereRol('tutor', 'coordinador'), citas.agendaTutor);
 router.patch('/citas/:id/estatus', citas.cambiarEstatus);
+router.put('/citas/:id/minuta', requiereRol('tutor'), citas.guardarMinuta);
 
 router.post('/canalizaciones/crear', requiereRol('tutor', 'coordinador'), canalizaciones.crear);
 router.get('/canalizaciones', canalizaciones.listar);

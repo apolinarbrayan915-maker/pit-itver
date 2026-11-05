@@ -171,39 +171,17 @@
 
         <!-- TAB 2: AGENDA -->
         <div id="tab-agenda" class="tab-content space-y-6">
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div class="lg:col-span-2 bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200">
-                    <div class="flex justify-between items-center mb-6">
-                        <div>
-                            <h3 class="text-base font-bold text-slate-800">Agenda de Citas del Tutor</h3>
-                            <p class="text-xs text-slate-500">Sesiones individuales (30 días atrás · 60 días adelante).</p>
-                        </div>
-                        <button onclick="openModalCita()" class="bg-tecnmGreen text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-tecnmDark transition flex items-center space-x-2">
-                            <i class="fa-solid fa-calendar-plus"></i> <span>Nueva Cita</span>
-                        </button>
-                    </div>
-                    <div class="space-y-4" id="lista-agenda"><p class="text-xs text-slate-400 text-center py-6">Cargando agenda…</p></div>
-                </div>
-
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between">
+            <div class="bg-white p-5 md:p-8 rounded-2xl shadow-sm border border-slate-200">
+                <div class="flex flex-wrap justify-between items-center gap-3 mb-5">
                     <div>
-                        <h3 class="text-base font-bold text-slate-800 mb-2">Acuerdo / Compromiso de Tutoría</h3>
-                        <p class="text-xs text-slate-500 mb-4">Genera la minuta formal firmada por el tutorado al finalizar una sesión presencial.</p>
-                        <form id="form-acuerdo" onsubmit="event.preventDefault(); window.print();" class="space-y-3">
-                            <div>
-                                <label for="acuerdo-tutorado" class="block text-[11px] font-bold text-slate-700 mb-1">Seleccionar Tutorado</label>
-                                <select id="acuerdo-tutorado" class="w-full text-xs p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-tecnmGreen outline-none bg-white"></select>
-                            </div>
-                            <div>
-                                <label for="acuerdo-texto" class="block text-[11px] font-bold text-slate-700 mb-1">Compromiso Académico Acordado</label>
-                                <textarea id="acuerdo-texto" rows="4" placeholder="Ej. El estudiante se compromete a asistir 3 horas semanales a las asesorías de PALPROG..." class="w-full text-xs p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-tecnmGreen outline-none"></textarea>
-                            </div>
-                            <button type="submit" class="w-full bg-tecnmGreen hover:bg-tecnmDark text-white font-bold py-2.5 rounded-xl text-xs transition shadow flex items-center justify-center space-x-2">
-                                <i class="fa-solid fa-file-contract"></i> <span>Imprimir Minuta</span>
-                            </button>
-                        </form>
+                        <h3 class="text-base font-bold text-slate-800">Agenda de Citas del Tutor</h3>
+                        <p class="text-xs text-slate-500">Sesiones individuales (30 días atrás · 60 días adelante). Desde cada cita puedes registrar la minuta e imprimir el comprobante de asistencia.</p>
                     </div>
+                    <button onclick="openModalCita()" class="bg-tecnmGreen text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-tecnmDark transition flex items-center space-x-2">
+                        <i class="fa-solid fa-calendar-plus"></i> <span>Nueva Cita</span>
+                    </button>
                 </div>
+                <div class="space-y-3" id="lista-agenda"><p class="text-xs text-slate-400 text-center py-6">Cargando agenda…</p></div>
             </div>
         </div>
 
@@ -354,6 +332,49 @@
             </div>
         </div>
     </main>
+
+    <!-- MODAL MINUTA DE LA SESIÓN -->
+    <div id="modal-minuta" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true" aria-labelledby="minuta-titulo">
+        <div class="bg-white rounded-2xl max-w-lg w-full shadow-xl border border-slate-200 max-h-[92vh] flex flex-col">
+            <div class="flex justify-between items-start gap-3 p-5 border-b border-slate-100">
+                <div class="min-w-0">
+                    <h3 id="minuta-titulo" class="text-sm font-bold text-slate-800"><i class="fa-solid fa-file-signature text-tecnmGreen mr-1"></i> Minuta de la sesión</h3>
+                    <p id="minuta-resumen" class="text-[11px] text-slate-500 mt-0.5"></p>
+                </div>
+                <button type="button" onclick="cerrarMinuta()" class="text-slate-400 hover:text-slate-600" aria-label="Cerrar"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form id="form-minuta" onsubmit="event.preventDefault(); guardarMinuta(true);" class="p-5 space-y-4 text-xs overflow-y-auto">
+                <input type="hidden" id="minuta-cita">
+                <div>
+                    <div class="flex justify-between items-baseline mb-1">
+                        <label for="minuta-asuntos" class="font-bold text-slate-700">Asuntos tratados</label>
+                        <span id="minuta-asuntos-cuenta" class="text-[10px] text-slate-400"></span>
+                    </div>
+                    <textarea id="minuta-asuntos" rows="3" maxlength="1500" placeholder="Ej. Se revisó el avance en Cálculo Integral y la carga de materias del semestre." class="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-tecnmGreen outline-none"></textarea>
+                </div>
+                <div>
+                    <div class="flex justify-between items-baseline mb-1">
+                        <label for="minuta-acuerdos" class="font-bold text-slate-700">Acuerdos / compromiso académico <span class="text-rose-600">*</span></label>
+                        <span id="minuta-acuerdos-cuenta" class="text-[10px] text-slate-400"></span>
+                    </div>
+                    <textarea id="minuta-acuerdos" rows="4" maxlength="1500" required minlength="10" placeholder="Ej. El estudiante se compromete a asistir 3 horas semanales a las asesorías de PALPROG..." class="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-tecnmGreen outline-none"></textarea>
+                </div>
+                <div>
+                    <label for="minuta-seguimiento" class="block font-bold text-slate-700 mb-1">Fecha de seguimiento <span class="font-normal text-slate-400">(opcional)</span></label>
+                    <input type="date" id="minuta-seguimiento" class="w-full sm:w-56 p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-tecnmGreen outline-none bg-white">
+                </div>
+                <p class="text-[11px] text-slate-500 bg-slate-50 border border-slate-200 rounded-xl p-2.5"><i class="fa-solid fa-circle-info mr-1 text-tecnmGreen"></i> La minuta se imprime en la hoja membretada del ITVER con los datos del tutor, del tutorado y de la cita, lista para firmar. En el diálogo de impresión elige <b>Guardar como PDF</b> si la quieres en archivo.</p>
+                <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-1">
+                    <button type="button" onclick="cerrarMinuta()" class="px-4 py-2.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200">Cancelar</button>
+                    <button type="button" onclick="guardarMinuta(false, this)" class="px-4 py-2.5 rounded-xl text-xs font-bold border border-tecnmGreen text-tecnmGreen hover:bg-slate-50"><i class="fa-solid fa-floppy-disk mr-1"></i> Guardar</button>
+                    <button type="submit" class="px-4 py-2.5 rounded-xl text-xs font-bold bg-tecnmGreen text-white hover:bg-tecnmDark"><i class="fa-solid fa-print mr-1"></i> Guardar e imprimir</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Hoja membretada para imprimir minutas y comprobantes -->
+    <div id="hoja-impresion" aria-hidden="true"></div>
 
     <!-- MODAL AGENDAR CITA -->
     <div id="modal-cita" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true">

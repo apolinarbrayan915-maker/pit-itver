@@ -297,6 +297,7 @@ CREATE TABLE citas_tutorias (
     motivo         TEXT        NOT NULL,
     estatus        estatus_cita    NOT NULL DEFAULT 'Pendiente',
     notas_tutor    TEXT,
+    minuta         JSONB,                                   -- {asuntos, acuerdos, seguimiento, actualizada}
     creado_por     INTEGER REFERENCES usuarios (id) ON DELETE SET NULL,
     created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at     TIMESTAMPTZ NOT NULL DEFAULT now(),

@@ -14,12 +14,13 @@ const ANTICIPACION_MIN_HORAS = 2;
 
 const SELECT_CITA = `
   SELECT c.id, c.tutor_id, c.tutorado_id, c.fecha_hora, c.duracion_min, c.tipo, c.modalidad,
-         c.grupo, c.motivo, c.estatus, c.notas_tutor, c.created_at,
+         c.grupo, c.motivo, c.estatus, c.notas_tutor, c.minuta, c.created_at,
          to_char(c.fecha_hora AT TIME ZONE $TZ, 'YYYY-MM-DD"T"HH24:MI') AS fecha_hora_local,
          ua.no_control_o_rfc AS no_control,
          ua.apellidos || ' ' || ua.nombre AS tutorado_nombre,
          ut.nombre || ' ' || ut.apellidos AS tutor_nombre,
-         tu.cubiculo AS tutor_cubiculo
+         tu.cubiculo AS tutor_cubiculo, tu.departamento AS tutor_departamento,
+         t.carrera, t.semestre
     FROM citas_tutorias c
     JOIN tutores   tu ON tu.id = c.tutor_id
     JOIN usuarios  ut ON ut.id = tu.usuario_id
@@ -270,4 +271,38 @@ async function cambiarEstatus(req, res) {
   res.json({ ok: true, mensaje: `Cita ${nuevo.toLowerCase()}.`, cita: act[0] });
 }
 
-module.exports = { reservar, agendaTutor, misCitas, cambiarEstatus };
+/**
+ * PUT /api/citas/:id/minuta — el tutor registra la minuta de una sesión
+ * (confirmada o atendida) de su propia agenda.
+ */
+async function guardarMinuta(req, res) {
+  const id = v.idPositivo(req.params.id, 'id');
+  const { rows } = await db.query('SELECT id, tutor_id, estatus, fecha_hora FROM citas_tutorias WHERE id = $1', [id]);
+  const cita = rows[0];
+  if (!cita) throw notFound('Cita no encontrada');
+  if (req.user.rol === 'tutor' && cita.tutor_id !== req.user.tutorId) throw forbidden('La cita no pertenece a tu agenda.');
+  if (!['Confirmada', 'Completada'].includes(cita.estatus)) {
+    throw conflict('Solo se registra minuta de citas confirmadas o atendidas.');
+  }
+  const asuntos = req.body.asuntos ? v.texto(req.body.asuntos, 'asuntos', { max: 1500 }) : '';
+  if (typeof req.body.acuerdos !== 'string' || req.body.acuerdos.trim().length < 10) {
+    throw badRequest('Escribe los acuerdos o compromisos de la sesión (mínimo 10 caracteres).');
+  }
+  const acuerdos = v.texto(req.body.acuerdos, 'acuerdos', { max: 1500 });
+  let seguimiento = null;
+  if (req.body.seguimiento) {
+    seguimiento = String(req.body.seguimiento);
+    const f = new Date(`${seguimiento}T12:00:00Z`);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(seguimiento) || Number.isNaN(f.getTime())) {
+      throw badRequest('La fecha de seguimiento no es válida.');
+    }
+    if (f < new Date(cita.fecha_hora.getTime() - 86400000)) {
+      throw badRequest('La fecha de seguimiento no puede ser anterior a la sesión.');
+    }
+  }
+  const minuta = { asuntos: asuntos.trim(), acuerdos: acuerdos.trim(), seguimiento, actualizada: new Date().toISOString() };
+  await db.query('UPDATE citas_tutorias SET minuta = $2 WHERE id = $1', [id, minuta]);
+  res.json({ ok: true, mensaje: 'Minuta guardada.', minuta });
+}
+
+module.exports = { reservar, agendaTutor, misCitas, cambiarEstatus, guardarMinuta };
