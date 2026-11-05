@@ -830,61 +830,61 @@ function lugarCita(c) {
   return cub ? `Presencial · ${cub}` : 'Presencial';
 }
 
-/** Ficha de datos de la minuta (sin la fecha: ya va en el encabezado). */
-function fichaDatosMinuta(c) {
-  const p = partesCita(c);
-  const dato = (etq, val, ancho = '') => `<div class="hd-dato ${ancho}"><span>${etq}</span><b>${escapeHtml(val || '—')}</b></div>`;
-  return `<div class="hd-ficha">
-    ${dato('Tutorado(a)', c.tutorado_nombre, 'hd-2')}
-    ${dato('No. de control', c.no_control)}
-    ${dato('Carrera', c.carrera, 'hd-2')}
-    ${dato('Semestre', c.semestre ? `${c.semestre}°` : '')}
-    ${dato('Tutor(a)', c.tutor_nombre, 'hd-2')}
-    ${dato('Horario', `${p.horario} h`)}
-    ${dato('Modalidad', lugarCita(c), 'hd-3')}
-  </div>`;
+/** Campo de formulario oficial: etiqueta y valor sobre una línea. */
+const campoHoja = (etq, val, extra = '') => `<div class="hd-campo ${extra}"><span>${etq}</span><b>${escapeHtml(val || '')}</b></div>`;
+
+function encabezadoHoja(titulo, derecha) {
+  return `<div class="hd-depto">Departamento de Sistemas y Computación<br>Programa Institucional de Tutorías</div>
+    <h1 class="hd-titulo">${titulo}</h1>
+    <div class="hd-derecha">${derecha}</div>`;
 }
 
 function firmasHoja(c) {
-  return `<div class="hd-firmas">
-    <div><span class="hd-linea"></span><b>${escapeHtml(c.tutor_nombre || '')}</b><small>Tutor(a)</small></div>
-    <div><span class="hd-linea"></span><b>${escapeHtml(c.tutorado_nombre || '')}</b><small>Tutorado(a) · ${escapeHtml(c.no_control || '')}</small></div>
-  </div>`;
+  return `<table class="hd-firmas"><tr>
+    <td><span class="hd-linea"></span><b>${escapeHtml(c.tutor_nombre || '')}</b>Nombre y firma del tutor(a)</td>
+    <td><span class="hd-linea"></span><b>${escapeHtml(c.tutorado_nombre || '')}</b>Nombre y firma del tutorado(a)</td>
+  </tr></table>`;
 }
 
 const parrafos = (t) => escapeHtml(t || '').split(/\n+/).filter((x) => x.trim()).map((x) => `<p>${x}</p>`).join('');
+const bloqueHoja = (etq, texto) => `<div class="hd-bloque"><span>${etq}</span><div class="hd-renglon">${texto ? parrafos(texto) : '<p>&nbsp;</p><p>&nbsp;</p>'}</div></div>`;
 
 function htmlMinuta(c) {
   const p = partesCita(c);
   const m = c.minuta || {};
-  const seguimiento = m.seguimiento ? partesCita({ fecha_hora_local: `${m.seguimiento}T00:00` }).conDia : 'Por definir';
-  return `<p class="hd-lugar">Veracruz, Ver., ${escapeHtml(p.conDia)}</p>
-    <div class="hd-titulo"><h1>Minuta de sesión de tutoría individual</h1><p>Programa Institucional de Tutorías</p></div>
-    ${fichaDatosMinuta(c)}
-    <section class="hd-sec"><h2>Motivo de la sesión</h2>${parrafos(c.motivo)}</section>
-    <section class="hd-sec"><h2>Asuntos tratados</h2>${m.asuntos ? parrafos(m.asuntos) : '<div class="hd-renglones"></div>'}</section>
-    <section class="hd-sec"><h2>Acuerdos y compromiso académico</h2>${parrafos(m.acuerdos)}</section>
-    <p class="hd-seguimiento"><span>Próxima sesión de seguimiento:</span> ${escapeHtml(seguimiento)}</p>
-    <p class="hd-nota">Ambas partes manifiestan su conformidad con los acuerdos aquí descritos y se comprometen a darles seguimiento en las siguientes sesiones de tutoría.</p>
-    ${firmasHoja(c)}`;
+  const seguimiento = m.seguimiento ? partesCita({ fecha_hora_local: `${m.seguimiento}T00:00` }).larga : '';
+  const lugar = c.modalidad === 'Línea' ? 'En línea' : lugarCita(c).replace('Presencial · ', '') || 'ITVER';
+  return `${encabezadoHoja('Minuta de sesión de tutoría individual', `<p><b>MINUTA No.</b> ${String(c.id).padStart(4, '0')}</p><p>Veracruz, Ver., a ${escapeHtml(p.larga)}</p>`)}
+    <div class="hd-campos">
+      ${campoHoja('Nombre del tutorado(a):', c.tutorado_nombre)}
+      <div class="hd-fila">${campoHoja('Carrera:', c.carrera, 'hd-ancho')}${campoHoja('Semestre:', c.semestre ? `${c.semestre}°` : '')}</div>
+      <div class="hd-fila">${campoHoja('No. de control:', c.no_control)}${campoHoja('Horario:', `${p.horario.replace(' – ', ' a ')} h`)}</div>
+      <div class="hd-fila">${campoHoja('Modalidad:', c.modalidad === 'Línea' ? 'En línea' : 'Presencial')}${campoHoja('Lugar:', lugar, 'hd-ancho')}</div>
+      ${campoHoja('Nombre del tutor(a):', c.tutor_nombre)}
+    </div>
+    ${bloqueHoja('Motivo de la sesión:', c.motivo)}
+    ${bloqueHoja('Asuntos tratados:', m.asuntos)}
+    ${bloqueHoja('Acuerdos y compromiso académico:', m.acuerdos)}
+    <div class="hd-campos">${campoHoja('Fecha de la próxima sesión de seguimiento:', seguimiento || 'Por definir')}</div>
+    ${firmasHoja(c)}
+    <p class="hd-nota"><b>NOTA:</b> Ambas partes manifiestan su conformidad con los acuerdos aquí descritos. Este documento forma parte del expediente de tutoría del estudiante y no es válido si presenta tachaduras, enmendaduras y/o correcciones.</p>`;
 }
 
 function htmlComprobante(c) {
   const p = partesCita(c);
-  const sem = c.semestre ? ` de ${escapeHtml(c.semestre)}° semestre` : '';
+  const sem = c.semestre ? `, del ${escapeHtml(c.semestre)}° semestre` : '';
   const donde = c.modalidad === 'Línea'
     ? 'en modalidad en línea'
     : `de manera presencial${c.tutor_cubiculo ? ` en ${escapeHtml(lugarCita(c).replace('Presencial · ', ''))}` : ''}`;
-  return `<p class="hd-lugar">Veracruz, Ver., ${escapeHtml(fechaLargaHoy())}</p>
-    <p class="hd-asunto"><span>Asunto:</span> Comprobante de asistencia a tutoría</p>
-    <div class="hd-titulo"><h1>Comprobante de asistencia</h1><p>Programa Institucional de Tutorías</p></div>
+  return `${encabezadoHoja('Comprobante de asistencia a sesión de tutoría', `<p>Veracruz, Ver., a ${escapeHtml(fechaLargaHoy())}</p><p><b>ASUNTO:</b> Comprobante de asistencia</p>`)}
     <div class="hd-texto">
-      <p>Por medio del presente se hace constar que el (la) estudiante <b>${escapeHtml(c.tutorado_nombre || '')}</b>, con número de control <b>${escapeHtml(c.no_control || '')}</b>, de la carrera de ${escapeHtml(c.carrera || '')}${sem}, <b>asistió</b> a la sesión de tutoría individual realizada el ${escapeHtml(p.conDia)}, de ${escapeHtml(p.horario.replace(' – ', ' a '))} h, ${donde}, con el (la) tutor(a) <b>${escapeHtml(c.tutor_nombre || '')}</b>.</p>
-      <p><span class="hd-etq">Motivo de la sesión:</span> ${escapeHtml(c.motivo || '')}</p>
+      <p>Por medio del presente se hace constar que el (la) estudiante <b>${escapeHtml(c.tutorado_nombre || '')}</b>, con número de control <b>${escapeHtml(c.no_control || '')}</b>, de la carrera de ${escapeHtml(c.carrera || '')}${sem}, <b>asistió</b> a la sesión de tutoría individual realizada el día ${escapeHtml(p.larga)}, de ${escapeHtml(p.horario.replace(' – ', ' a '))} h, ${donde}, con el (la) tutor(a) <b>${escapeHtml(c.tutor_nombre || '')}</b>.</p>
+      <p><b>Motivo de la sesión:</b> ${escapeHtml(c.motivo || '')}</p>
       <p>Se extiende el presente a petición del (de la) interesado(a), para los fines que le convengan.</p>
     </div>
-    <p class="hd-atte">Atentamente</p>
-    ${firmasHoja(c).replace('class="hd-firmas"', 'class="hd-firmas hd-firmas-carta"')}`;
+    <p class="hd-atte">ATENTAMENTE</p>
+    ${firmasHoja(c)}
+    <p class="hd-ccp">c.c.p. Coordinación del Programa Institucional de Tutorías<br>c.c.p. Expediente del tutorado(a)</p>`;
 }
 
 async function imprimirComprobante(id) {
@@ -906,7 +906,6 @@ async function imprimirHoja(html, nombreArchivo) {
   const img = hoja.querySelector('img');
   await Promise.all([
     img.decode ? img.decode().catch(() => {}) : Promise.resolve(),
-    document.fonts?.load ? Promise.all(['400 10pt "Noto Sans"', '600 10pt "Noto Sans"', '700 10pt "Noto Sans"'].map((f) => document.fonts.load(f))).catch(() => {}) : Promise.resolve(),
   ]);
   // Si el texto no cabe en la hoja, se reduce la letra poco a poco
   hoja.classList.add('midiendo');

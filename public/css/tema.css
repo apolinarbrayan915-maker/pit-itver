@@ -376,40 +376,35 @@ html.dark .aviso-ticker-nav, html.dark .aviso-ticker-nav button { color: #94a3b8
 .hoja-carta { position: relative; width: 215.9mm; height: 279.3mm; overflow: hidden; background: #fff; color: #111827;
   font-family: Arial, Helvetica, sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 .hoja-fondo { position: absolute; inset: 0; width: 100%; height: 100%; }
+/* Estructura y tipografía de los formatos oficiales ITVER (Arial 10 pt, negro) */
 .hoja-cuerpo { position: absolute; top: 52mm; left: 25mm; right: 20mm; bottom: 41mm; display: flex; flex-direction: column;
-  font-family: "Noto Sans", Arial, Helvetica, sans-serif; font-size: 10pt; font-weight: 400; line-height: 1.45; color: #1f2937; overflow: hidden; }
+  font-family: Arial, "Liberation Sans", Helvetica, sans-serif; font-size: 10pt; line-height: 1.3; color: #000; overflow: hidden; }
 .hoja-cuerpo p { margin: 0; }
-.hoja-cuerpo b { font-weight: 600; color: #111827; }
-.hoja-cuerpo .hd-lugar { text-align: right; font-size: .92em; color: #374151; }
-.hoja-cuerpo .hd-asunto { text-align: right; font-size: .92em; color: #374151; margin-top: .15em; }
-.hoja-cuerpo .hd-asunto span, .hd-etq { font-weight: 600; color: #691c32; }
-.hd-titulo { text-align: center; margin: 1.1em 0 1em; }
-.hd-titulo h1 { font-size: 1.32em; font-weight: 600; color: #691c32; letter-spacing: .01em; margin: 0; }
-.hd-titulo p { font-size: .82em; font-weight: 500; color: #9f2241; letter-spacing: .14em; text-transform: uppercase; margin-top: .2em; }
-.hd-titulo::after { content: ""; display: block; width: 18mm; height: 2px; background: #bc955c; margin: .55em auto 0; }
-.hd-ficha { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1.5px solid #691c32; border-bottom: 1px solid #d6cfc4; background: #faf8f5; }
-.hd-dato { padding: .4em .7em .45em; border-bottom: 1px solid #e7e1d8; min-width: 0; }
-.hd-dato.hd-2 { grid-column: span 2; }
-.hd-dato.hd-3 { grid-column: span 3; border-bottom: 0; }
-.hd-dato span { display: block; font-size: .7em; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: #8a7f72; }
-.hd-dato b { display: block; font-size: .98em; font-weight: 500; color: #111827; overflow-wrap: anywhere; }
-.hd-sec { margin-top: 1em; }
-.hd-sec h2 { font-size: .78em; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: #691c32; margin: 0 0 .3em;
-  padding-bottom: .2em; border-bottom: 1px solid #e7e1d8; }
-.hd-sec p { text-align: justify; overflow-wrap: anywhere; }
-.hd-sec p + p { margin-top: .3em; }
-.hd-renglones { height: 4.4em; background: repeating-linear-gradient(transparent 0 1.45em, #cfc8bd 1.45em calc(1.45em + 1px)); }
-.hoja-cuerpo .hd-seguimiento { margin-top: 1em; font-size: .95em; }
-.hoja-cuerpo .hd-seguimiento span { font-weight: 600; color: #691c32; }
-.hoja-cuerpo .hd-texto { text-align: justify; }
-.hoja-cuerpo .hd-texto p + p { margin-top: .8em; }
-.hoja-cuerpo .hd-nota { margin-top: .9em; font-size: .86em; color: #4b5563; text-align: justify; }
-.hoja-cuerpo .hd-atte { margin-top: 2em; text-align: center; font-weight: 600; font-size: .9em; letter-spacing: .3em; text-transform: uppercase; color: #374151; }
-.hd-firmas { margin-top: auto; padding-top: 1.5em; display: grid; grid-template-columns: 1fr 1fr; gap: 16mm; text-align: center; font-size: .9em; }
-.hd-firmas.hd-firmas-carta { margin-top: 0; padding-top: 24mm; }
-.hd-firmas b { display: block; font-weight: 600; }
-.hd-firmas small { display: block; color: #6b7280; font-size: .88em; margin-top: .1em; }
-.hd-linea { display: block; border-top: 1px solid #374151; margin: 0 3mm .35em; }
+.hoja-cuerpo b { font-weight: 700; }
+.hd-depto { text-align: center; font-weight: 700; text-transform: uppercase; font-size: 1em; line-height: 1.35; }
+.hoja-cuerpo .hd-titulo { text-align: center; font-weight: 700; text-transform: uppercase; font-size: 1.1em; margin: 1.1em 0 .9em; }
+.hd-derecha { text-align: right; line-height: 1.6; margin-bottom: 1em; }
+.hd-campos { display: flex; flex-direction: column; gap: .85em; }
+.hd-fila { display: flex; gap: 6mm; }
+.hd-fila > .hd-campo { flex: 1 1 0; }
+.hd-fila > .hd-campo.hd-ancho { flex: 2 1 0; }
+.hd-campo { display: flex; align-items: flex-end; gap: .4em; min-width: 0; }
+.hd-campo span { flex: none; }
+.hd-campo b { flex: 1; min-width: 0; font-weight: 400; border-bottom: 1px solid #000; padding: 0 .3em .05em; overflow-wrap: anywhere; }
+.hd-bloque { margin-top: 1em; }
+.hd-bloque > span { display: block; font-weight: 700; margin-bottom: .2em; }
+.hd-renglon p { border-bottom: 1px solid #000; padding: .15em .3em; text-align: justify; overflow-wrap: anywhere; }
+.hd-bloque + .hd-campos { margin-top: 1em; }
+.hoja-cuerpo .hd-texto { text-align: justify; line-height: 1.6; margin-top: .5em; }
+.hoja-cuerpo .hd-texto p + p { margin-top: 1em; }
+.hoja-cuerpo .hd-atte { margin-top: 2em; text-align: center; font-weight: 700; }
+.hd-firmas { width: 100%; border-collapse: collapse; margin-top: auto; text-align: center; font-size: .92em; }
+.hd-firmas td { width: 50%; border: 1px solid #000; padding: 18mm 5mm 2.5mm; vertical-align: bottom; }
+.hd-firmas b { display: block; }
+.hd-linea { display: block; border-top: 1px solid #000; margin: 0 2mm .35em; }
+.hoja-cuerpo .hd-atte + .hd-firmas { margin-top: 1.2em; }
+.hoja-cuerpo .hd-nota { margin-top: .8em; font-size: .82em; text-align: justify; }
+.hoja-cuerpo .hd-ccp { margin-top: .8em; font-size: .8em; }
 
 @media print {
   @page { size: letter; margin: 0; }
