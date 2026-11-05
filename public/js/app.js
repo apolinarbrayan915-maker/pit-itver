@@ -1504,15 +1504,28 @@ function pintarCampanaAvisos() {
   }
 }
 
-/** Campana de la barra: lleva a los avisos (arriba de "Mi Grupo") y los marca como vistos. */
+/** Campana de la barra: abre todos los avisos vigentes en una ventana y los marca como vistos. */
 function verAvisosTutor() {
-  switchTab('dashboard');
-  setTimeout(() => {
-    const panel = $('panel-avisos');
-    panel?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    panel?.classList.add('avisos-resaltar');
-    setTimeout(() => panel?.classList.remove('avisos-resaltar'), 1600);
-  }, 50);
+  let modal = $('modal-aviso');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'modal-aviso';
+    modal.className = 'fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.addEventListener('click', (e) => { if (e.target === modal) cerrarModal('modal-aviso'); });
+    document.body.appendChild(modal);
+  }
+  const lista = [...avisosTutor].sort((a, b) => Number(Boolean(b.importante)) - Number(Boolean(a.importante)));
+  modal.innerHTML = `<div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-xl border border-slate-200 max-h-[85vh] overflow-y-auto">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-bullhorn text-amber-500"></i> Avisos de la Coordinación</h3>
+        <button type="button" onclick="cerrarModal('modal-aviso')" class="text-slate-400 hover:text-slate-600" aria-label="Cerrar"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+      <div class="space-y-3">${lista.length ? lista.map((a) => tarjetaAviso(a, { admin: false })).join('')
+        : '<p class="text-xs text-slate-400 text-center py-6">No hay avisos publicados por la Coordinación.</p>'}</div>
+    </div>`;
+  modal.classList.remove('hidden');
   marcarAvisosVistos(avisosTutor);
   pintarCampanaAvisos();
 }
@@ -1612,7 +1625,7 @@ function abrirAvisoModal(a) {
 
 async function cargarAvisosTutor() {
   const cont = $('lista-avisos-tutor');
-  if (!cont) return;
+  if (!cont && !$('aviso-ticker')) return;
   try {
     const { avisos } = await api('/avisos');
     avisosTutor = avisos;
@@ -1621,11 +1634,13 @@ async function cargarAvisosTutor() {
     const importantes = avisos.filter((a) => a.importante).length;
     setText('avisos-contador', `${avisos.length} vigente${avisos.length === 1 ? '' : 's'}${importantes ? ` · ${importantes} importante${importantes === 1 ? '' : 's'}` : ''}`);
     if ($('avisos-contador')) $('avisos-contador').className = `${importantes ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'} text-[10px] font-bold px-2.5 py-1 rounded-full`;
-    cont.innerHTML = avisos.length
-      ? avisos.map((a) => tarjetaAviso(a, { admin: false })).join('')
-      : '<p class="text-xs text-slate-400 text-center py-4">No hay avisos publicados por la Coordinación.</p>';
+    if (cont) {
+      cont.innerHTML = avisos.length
+        ? avisos.map((a) => tarjetaAviso(a, { admin: false })).join('')
+        : '<p class="text-xs text-slate-400 text-center py-4">No hay avisos publicados por la Coordinación.</p>';
+    }
   } catch (err) {
-    cont.innerHTML = `<p class="text-xs text-rose-600 text-center py-4">${escapeHtml(err.message)}</p>`;
+    if (cont) cont.innerHTML = `<p class="text-xs text-rose-600 text-center py-4">${escapeHtml(err.message)}</p>`;
   }
 }
 
