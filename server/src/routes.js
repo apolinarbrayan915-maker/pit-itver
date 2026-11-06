@@ -92,6 +92,7 @@ router.patch('/asignaciones/:id/finalizar', requiereRol('coordinador'), asignaci
 router.get('/tutores/disponibles', requiereRol('alumno', 'coordinador'), tutores.directorio);
 router.post('/tutores/elegir', requiereRol('alumno'), tutores.elegir);
 router.get('/tutores/mi-perfil', requiereRol('tutor'), tutores.miPerfil);
+router.get('/tutores/mi-reporte', requiereRol('tutor'), tutores.miReporte);
 router.put('/tutores/mi-perfil', requiereRol('tutor'), tutores.guardarMiPerfil);
 router.get('/tutores/:id/disponibilidad', tutores.disponibilidad);
 router.patch('/tutores/:id', requiereRol('coordinador'), tutores.actualizarCupo);

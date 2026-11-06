@@ -413,3 +413,30 @@ html.dark .aviso-ticker-nav, html.dark .aviso-ticker-nav button { color: #94a3b8
   body.imprimiendo #hoja-impresion { display: block !important; position: static; visibility: visible; }
   body.imprimiendo .hoja-carta { page-break-inside: avoid; break-inside: avoid; }
 }
+
+
+/* ---------- 8. EDITOR DEL PERFIL DEL TUTOR (horario y áreas) ------------- */
+.hora-celda { display: block; width: 100%; height: 1.65rem; border-radius: .35rem; border: 1px solid #e2e8f0; background: #f1f5f9;
+  cursor: pointer; touch-action: pan-y; transition: background-color .1s, border-color .1s; }
+.hora-celda:hover { border-color: #8aa9d6; background: #e8eef8; }
+.hora-celda.activa { background: #18396a; border-color: #18396a; }
+.hora-celda.activa:hover { background: #24508f; }
+.hora-celda:focus-visible { outline: 2px solid #2c64b0; outline-offset: 1px; }
+.area-bloque { display: inline-flex; align-items: center; gap: .4rem; padding: .5rem .8rem; border-radius: .75rem; border: 1px solid #cbd5e1;
+  background: #fff; color: #475569; font-weight: 600; font-size: .72rem; transition: all .12s; }
+.area-bloque i { font-size: .65rem; color: #94a3b8; }
+.area-bloque:hover { border-color: #8aa9d6; background: #f5f8fd; }
+.area-bloque.activa { background: #e8eef8; border-color: #18396a; color: #18396a; }
+.area-bloque.activa i { color: #18396a; }
+html.dark .hora-celda { background: #1a2638; border-color: #25344d; }
+html.dark .hora-celda:hover { background: #22324a; border-color: #3b5579; }
+html.dark .hora-celda.activa { background: #7fa6de; border-color: #7fa6de; }
+html.dark .area-bloque { background: #131d2c; border-color: #2a3a54; color: #cbd5e1; }
+html.dark .area-bloque.activa { background: #1d3150; border-color: #7fa6de; color: #dbe7f8; }
+html.dark .area-bloque.activa i { color: #9dbce8; }
+.hd-tabla { width: 100%; border-collapse: collapse; font-size: .88em; margin-top: .2em; }
+.hd-tabla th, .hd-tabla td { border: 1px solid #000; padding: .25em .45em; text-align: left; vertical-align: top; }
+.hd-tabla thead th { text-align: center; font-weight: 700; }
+.hd-resumen th { font-weight: 400; width: 34%; }
+.hd-resumen td { width: 16%; text-align: center; font-weight: 700; }
+.hoja-cuerpo .hd-linea-texto { margin-top: .4em; font-size: .92em; }

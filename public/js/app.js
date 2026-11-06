@@ -628,32 +628,44 @@ function esDiaDeClases(ymd, cal) {
   return cal.periodos.some(dentro);
 }
 
-async function iniciarCalendarioCita() {
-  const input = $('cita-fecha');
-  if (!input) return;
-  const manana = new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(new Date(Date.now() + 864e5));
-  input.min = manana;
-  if (!window.flatpickr) return;
-  let cal = null;
-  try {
-    cal = await api('/calendario-escolar');
-  } catch {
-    cal = null; // sin calendario: al menos se bloquean sábados y domingos
+let calendarioEscolarCache = null;
+async function calendarioEscolar() {
+  if (!calendarioEscolarCache) {
+    calendarioEscolarCache = api('/calendario-escolar').catch(() => {
+      calendarioEscolarCache = null;
+      return null; // sin calendario: al menos se bloquean sábados y domingos
+    });
   }
+  return calendarioEscolarCache;
+}
+
+/** Calendario (flatpickr) que solo deja elegir días con clases, desde `desde` (AAAA-MM-DD). */
+async function crearCalendarioClases(input, desde, onChange) {
+  input.min = desde;
+  if (!window.flatpickr) return null;
+  const cal = await calendarioEscolar();
   const ultimoDia = cal?.periodos?.length ? cal.periodos[cal.periodos.length - 1].fin : null;
   const ymdLocal = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  calendarioCita = window.flatpickr(input, {
+  return window.flatpickr(input, {
     locale: window.flatpickr.l10ns?.es || 'default',
     dateFormat: 'Y-m-d',
     altInput: true,
     altFormat: 'l j \\d\\e F \\d\\e Y',
     altInputClass: input.className,
-    minDate: manana,
+    minDate: desde,
     maxDate: ultimoDia || new Date(Date.now() + 120 * 864e5),
     disable: [(d) => !esDiaDeClases(ymdLocal(d), cal)],
     disableMobile: true,
-    onChange: () => cargarHorariosCita(),
+    onChange: () => onChange(),
   });
+}
+
+const hoyLocal = (dias = 0) => new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(new Date(Date.now() + dias * 864e5));
+
+async function iniciarCalendarioCita() {
+  const input = $('cita-fecha');
+  if (!input) return;
+  calendarioCita = await crearCalendarioClases(input, hoyLocal(1), cargarHorariosCita);
 }
 
 function iniciarAlumno() {
@@ -936,7 +948,7 @@ async function cambiarEstatusCita(id, estatus, boton) {
     try {
       const r = await api(`/citas/${id}/estatus`, { method: 'PATCH', body: { estatus, notas_tutor: notas } });
       toast(r.mensaje);
-      await Promise.all([cargarAgendaTutor(), cargarMetricasDashboard()]);
+      await Promise.all([cargarAgendaTutor(), cargarMetricasDashboard(), cargarReporteTutor()]);
     } catch (err) {
       toast(err.message, 'error');
     }
@@ -970,7 +982,9 @@ async function cargarTablaCanalizaciones() {
 }
 
 /* ---- Modal de cita (tutor) ------------------------------------------------ */
-function abrirModalCitaTutor(nombreAlumno, tutoradoId) {
+let calendarioCitaTutor = null;
+
+async function abrirModalCitaTutor(nombreAlumno, tutoradoId) {
   const select = $('modal-cita-select');
   const input = $('modal-cita-alumno');
   $('modal-cita-form').reset();
@@ -990,7 +1004,49 @@ function abrirModalCitaTutor(nombreAlumno, tutoradoId) {
     input.classList.add('hidden');
     select.classList.remove('hidden');
   }
+  const hora = $('modal-cita-hora');
+  hora.innerHTML = '<option value="">Primero elige el día</option>';
+  hora.disabled = true;
+  setText('modal-cita-ayuda', 'Solo se muestran los días con clases del calendario escolar TecNM.');
   $('modal-cita').classList.remove('hidden');
+  if (!calendarioCitaTutor) {
+    calendarioCitaTutor = await crearCalendarioClases($('modal-cita-dia'), hoyLocal(), cargarHorasCitaTutor);
+    if (!calendarioCitaTutor) $('modal-cita-dia').addEventListener('change', cargarHorasCitaTutor);
+  } else {
+    calendarioCitaTutor.set('minDate', hoyLocal());
+    calendarioCitaTutor.clear();
+  }
+}
+
+async function cargarHorasCitaTutor() {
+  const fecha = $('modal-cita-dia').value;
+  const sel = $('modal-cita-hora');
+  const ayuda = $('modal-cita-ayuda');
+  sel.disabled = true;
+  if (!fecha) return;
+  sel.innerHTML = '<option value="">Cargando…</option>';
+  try {
+    const r = await api(`/tutores/${Sesion.usuario.tutorId}/disponibilidad`, { query: { fecha, completo: '1' } });
+    if (r.sin_clases) {
+      sel.innerHTML = '<option value="">Ese día no hay clases</option>';
+      ayuda.textContent = r.motivo;
+      return;
+    }
+    const fin = (h) => `${String(Number(h.slice(0, 2)) + 1).padStart(2, '0')}:00`;
+    const opcion = (b) => `<option value="${b.hora}" ${b.disponible ? '' : 'disabled'}>${b.hora} – ${fin(b.hora)}${
+      b.motivo === 'ocupado' ? ' (ocupado)' : b.motivo === 'pasado' ? ' (ya pasó)' : ''}</option>`;
+    const dentro = r.bloques.filter((b) => b.en_horario);
+    const fuera = r.bloques.filter((b) => !b.en_horario);
+    const libres = r.bloques.filter((b) => b.disponible);
+    sel.innerHTML = `<option value="">${libres.length ? 'Elige la hora' : 'Sin horas libres ese día'}</option>
+      ${dentro.length ? `<optgroup label="En tu horario de atención">${dentro.map(opcion).join('')}</optgroup>` : ''}
+      ${fuera.length ? `<optgroup label="${dentro.length ? 'Fuera de tu horario' : 'Horario de tutorías'}">${fuera.map(opcion).join('')}</optgroup>` : ''}`;
+    sel.disabled = !libres.length;
+    ayuda.textContent = `${libres.length} hora(s) libre(s) · sesiones de 60 minutos.`;
+  } catch (err) {
+    sel.innerHTML = '<option value="">No se pudo cargar</option>';
+    ayuda.textContent = err.message;
+  }
 }
 
 // Las citas que programa el tutor son siempre individuales
@@ -1000,13 +1056,15 @@ function alternarTipoCita() {
 
 async function enviarCitaTutor(event) {
   event.preventDefault();
-  const tipo = 'Individual';
   const input = $('modal-cita-alumno');
   const select = $('modal-cita-select');
+  const dia = $('modal-cita-dia').value;
+  const hora = $('modal-cita-hora').value;
+  if (!dia || !hora) return toast('Elige el día de clases y la hora de la cita.', 'error');
   const body = {
-    tipo,
+    tipo: 'Individual',
     modalidad: $('modal-cita-modalidad').value,
-    fecha_hora: $('modal-cita-fecha').value,
+    fecha_hora: `${dia}T${hora}`,
     motivo: $('modal-cita-motivo').value.trim() || 'Sesión de tutoría',
   };
   body.tutorado_id = Number(input.classList.contains('hidden') ? select.value : input.dataset.id);
@@ -1016,7 +1074,7 @@ async function enviarCitaTutor(event) {
       await api('/citas/reservar', { method: 'POST', body });
       window.closeModalCita();
       toast('Cita registrada y confirmada en tu agenda.');
-      await Promise.all([cargarAgendaTutor(), cargarMetricasDashboard()]);
+      await Promise.all([cargarAgendaTutor(), cargarMetricasDashboard(), cargarReporteTutor()]);
     } catch (err) {
       toast(err.message, 'error');
     }
@@ -1113,6 +1171,84 @@ async function iniciarTutor() {
   await poblarTablaRiesgo('TODOS');
   cargarAgendaTutor();
   cargarTablaCanalizaciones();
+  cargarReporteTutor();
+}
+
+/* ---- Tutor: informes del periodo ------------------------------------------- */
+let reporteTutor = null;
+
+async function cargarReporteTutor() {
+  const cont = $('rep-sesiones');
+  if (!cont) return;
+  try {
+    reporteTutor = await api('/tutores/mi-reporte');
+    const { resumen: r, periodo, sesiones } = reporteTutor;
+    setText('rep-periodo', periodo.nombre);
+    const kpi = (icono, valor, etq, sub = '', extra = '') => `<div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 ${extra}">
+        <div class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wide text-slate-500"><i class="fa-solid ${icono} text-tecnmGreen"></i>${etq}</div>
+        <p class="text-2xl font-extrabold text-slate-800 mt-1">${valor}</p>
+        ${sub ? `<p class="text-[10px] text-slate-400">${sub}</p>` : ''}
+      </div>`;
+    $('rep-kpis').innerHTML = [
+      kpi('fa-users', r.tutorados, 'Tutorados', `${r.en_riesgo} en riesgo alto o crítico`),
+      kpi('fa-circle-check', r.atendidas, 'Sesiones atendidas', `${r.programadas} programadas · ${r.canceladas} canceladas`),
+      kpi('fa-user-check', r.tutorados_atendidos, 'Tutorados atendidos', r.tutorados ? `${Math.round((r.tutorados_atendidos / r.tutorados) * 100)}% de tu grupo` : ''),
+      kpi('fa-file-signature', r.minutas, 'Minutas', 'registradas en la agenda'),
+      kpi('fa-share-nodes', r.canalizaciones, 'Canalizaciones', 'en el periodo', 'col-span-2 md:col-span-1'),
+    ].join('');
+    if (!sesiones.length) {
+      cont.innerHTML = '<p class="text-xs text-slate-400 text-center py-6 border border-dashed border-slate-200 rounded-xl">Aún no hay sesiones atendidas en este periodo. Cuando marques una cita como atendida aparecerá aquí.</p>';
+      return;
+    }
+    cont.innerHTML = `<div class="overflow-x-auto"><table class="w-full text-xs text-left">
+      <thead class="text-[10px] uppercase tracking-wide text-slate-500 border-b border-slate-200">
+        <tr><th class="py-2 pr-3">Fecha</th><th class="py-2 pr-3">Tutorado</th><th class="py-2 pr-3">Motivo</th><th class="py-2 text-center">Minuta</th></tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">${sesiones.slice(0, 8).map((x) => `<tr>
+        <td class="py-2 pr-3 whitespace-nowrap text-slate-600">${escapeHtml(partesCita(x).corta)}</td>
+        <td class="py-2 pr-3 font-semibold text-slate-800">${escapeHtml(x.tutorado_nombre || `Grupo ${x.grupo || ''}`)}</td>
+        <td class="py-2 pr-3 text-slate-600">${escapeHtml(x.motivo)}</td>
+        <td class="py-2 text-center">${x.con_minuta ? '<i class="fa-solid fa-circle-check text-emerald-600" title="Con minuta"></i>' : '<span class="text-slate-300">—</span>'}</td>
+      </tr>`).join('')}</tbody></table></div>
+      ${sesiones.length > 8 ? `<p class="text-[11px] text-slate-500 mt-2">Y ${sesiones.length - 8} sesión(es) más; el reporte impreso incluye el detalle.</p>` : ''}`;
+  } catch (err) {
+    cont.innerHTML = `<p class="text-xs text-rose-600 text-center py-6">${escapeHtml(err.message)}</p>`;
+  }
+}
+
+function htmlReporteSemestral(rep) {
+  const { resumen: r, periodo, sesiones, tutor } = rep;
+  const fmt = (ymd) => partesCita({ fecha_hora_local: `${ymd}T00:00` }).larga;
+  const canal = rep.canalizaciones_por_area.map((c) => `${escapeHtml(c.area)} (${c.total})`).join(', ') || 'Ninguna';
+  const maxFilas = 14;
+  const filas = sesiones.slice(0, maxFilas).map((x, i) => `<tr><td>${i + 1}</td><td>${escapeHtml(partesCita(x).larga)}</td><td>${escapeHtml(x.tutorado_nombre || `Grupo ${x.grupo || ''}`)}</td><td>${escapeHtml(x.no_control || '')}</td><td>${x.con_minuta ? 'Sí' : 'No'}</td></tr>`).join('');
+  return `${encabezadoHoja('Reporte semestral del tutor', `<p>Veracruz, Ver., a ${escapeHtml(fechaLargaHoy())}</p>`)}
+    <div class="hd-campos">
+      ${campoHoja('Nombre del tutor(a):', tutor?.nombre)}
+      <div class="hd-fila">${campoHoja('Periodo:', periodo.nombre, 'hd-ancho')}${campoHoja('Ciclo:', rep.periodo_escolar)}</div>
+      ${campoHoja('Del día:', `${fmt(periodo.inicio)} al ${fmt(periodo.fin)}`)}
+    </div>
+    <div class="hd-bloque"><span>Resumen de actividades:</span></div>
+    <table class="hd-tabla hd-resumen"><tbody>
+      <tr><th>Tutorados asignados</th><td>${r.tutorados}</td><th>En riesgo alto o crítico</th><td>${r.en_riesgo}</td></tr>
+      <tr><th>Sesiones individuales atendidas</th><td>${r.individuales}</td><th>Sesiones grupales atendidas</th><td>${r.grupales}</td></tr>
+      <tr><th>Tutorados atendidos</th><td>${r.tutorados_atendidos}</td><th>Minutas registradas</th><td>${r.minutas}</td></tr>
+      <tr><th>Citas canceladas</th><td>${r.canceladas}</td><th>Canalizaciones</th><td>${r.canalizaciones}</td></tr>
+    </tbody></table>
+    <p class="hd-linea-texto"><b>Canalizaciones por área:</b> ${canal}</p>
+    <div class="hd-bloque"><span>Sesiones atendidas:</span></div>
+    ${sesiones.length ? `<table class="hd-tabla"><thead><tr><th>No.</th><th>Fecha</th><th>Tutorado(a)</th><th>No. de control</th><th>Minuta</th></tr></thead><tbody>${filas}</tbody></table>
+      ${sesiones.length > maxFilas ? `<p class="hd-linea-texto">Más ${sesiones.length - maxFilas} sesión(es) registradas en la plataforma.</p>` : ''}` : '<p class="hd-linea-texto">Sin sesiones atendidas en el periodo.</p>'}
+    <table class="hd-firmas"><tr>
+      <td><span class="hd-linea"></span><b>${escapeHtml(tutor?.nombre || '')}</b>Nombre y firma del tutor(a)</td>
+      <td><span class="hd-linea"></span><b>&nbsp;</b>Vo. Bo. Coordinación de Tutorías</td>
+    </tr></table>`;
+}
+
+async function imprimirReporteSemestral() {
+  if (!reporteTutor) await cargarReporteTutor();
+  if (!reporteTutor) return toast('No se pudo cargar el reporte.', 'error');
+  await imprimirHoja(htmlReporteSemestral(reporteTutor), `Reporte semestral tutor ${reporteTutor.periodo.nombre}`);
 }
 
 /* =============================================================================
@@ -2465,24 +2601,154 @@ async function cargarHorariosCita() {
 }
 
 /* ---- Tutor: mi perfil y horario ------------------------------------------ */
-function filaBloqueHorario(b = { dia_semana: 1, hora_inicio: '10:00', hora_fin: '12:00' }) {
-  const div = document.createElement('div');
-  div.className = 'flex flex-wrap items-center gap-2 p-2 bg-slate-50 rounded-xl border border-slate-200';
-  div.dataset.bloque = '1';
-  div.innerHTML = `
-    <select class="b-dia p-2 rounded-lg border border-slate-300 bg-white" aria-label="Día">
-      ${[1, 2, 3, 4, 5].map((d) => `<option value="${d}" ${b.dia_semana === d ? 'selected' : ''}>${['', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'][d]}</option>`).join('')}
-    </select>
-    <input type="time" class="b-ini p-2 rounded-lg border border-slate-300" min="07:00" max="20:00" step="1800" value="${b.hora_inicio}" aria-label="Hora de inicio">
-    <span class="text-slate-400">a</span>
-    <input type="time" class="b-fin p-2 rounded-lg border border-slate-300" min="07:00" max="20:00" step="1800" value="${b.hora_fin}" aria-label="Hora de fin">
-    <button type="button" class="ml-auto text-rose-600 hover:bg-rose-50 px-2 py-1 rounded-lg" aria-label="Eliminar bloque"><i class="fa-solid fa-trash"></i></button>`;
-  div.querySelector('button').addEventListener('click', () => div.remove());
-  return div;
+const HORAS_JORNADA = Array.from({ length: 13 }, (_, i) => 7 + i); // 07:00 … 19:00 (la última termina a las 20:00)
+const AREAS_APOYO_SUGERIDAS = [
+  'Programación', 'Matemáticas', 'Bases de datos', 'Redes', 'Retícula y carga académica',
+  'Hábitos de estudio', 'Orientación vocacional', 'Servicio social y residencias', 'Titulación', 'Inglés', 'Becas y trámites',
+];
+let areasEditor = [];
+let horasEditor = new Set(); // claves "dia-hora", p. ej. "1-10"
+
+const minDeHora = (h) => Number(h.slice(0, 2)) * 60 + Number(h.slice(3, 5));
+const hh = (n) => `${String(n).padStart(2, '0')}:00`;
+
+/** Bloques {dia_semana, hora_inicio, hora_fin} → horas sueltas marcadas. */
+function horasDesdeBloques(horarios) {
+  const set = new Set();
+  (horarios || []).forEach((b) => {
+    HORAS_JORNADA.forEach((h) => {
+      if (minDeHora(b.hora_inicio) < (h + 1) * 60 && minDeHora(b.hora_fin) > h * 60) set.add(`${b.dia_semana}-${h}`);
+    });
+  });
+  return set;
 }
 
-function agregarBloqueHorario() {
-  $('horario-bloques').appendChild(filaBloqueHorario());
+/** Horas marcadas → bloques continuos por día (lo que guarda el servidor). */
+function bloquesDesdeHoras(set) {
+  const bloques = [];
+  [1, 2, 3, 4, 5].forEach((d) => {
+    let inicio = null;
+    [...HORAS_JORNADA, 20].forEach((h) => {
+      const on = h < 20 && set.has(`${d}-${h}`);
+      if (on && inicio === null) inicio = h;
+      if (!on && inicio !== null) {
+        bloques.push({ dia_semana: d, hora_inicio: hh(inicio), hora_fin: hh(h) });
+        inicio = null;
+      }
+    });
+  });
+  return bloques;
+}
+
+function pintarHorarioEditor() {
+  const cont = $('horario-editor');
+  const dias = ['', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
+  cont.innerHTML = `<table class="sin-tarjetas horario-editor w-full table-fixed text-xs" aria-label="Horario semanal de atención: marca las horas disponibles">
+    <thead><tr><th class="w-14"></th>${[1, 2, 3, 4, 5].map((d) => `<th class="text-[10px] font-extrabold text-slate-600 pb-1"><span class="hidden sm:inline">${dias[d]}</span><span class="sm:hidden">${DIAS_CORTOS[d]}</span></th>`).join('')}</tr></thead>
+    <tbody>${HORAS_JORNADA.map((h) => `<tr><th scope="row" class="pr-2 text-right text-[10px] font-semibold text-slate-400 whitespace-nowrap">${hh(h)}</th>${
+      [1, 2, 3, 4, 5].map((d) => {
+        const on = horasEditor.has(`${d}-${h}`);
+        return `<td class="p-0.5"><button type="button" data-celda="${d}-${h}" aria-pressed="${on}" aria-label="${dias[d]} ${hh(h)} a ${hh(h + 1)}" class="hora-celda ${on ? 'activa' : ''}"></button></td>`;
+      }).join('')}</tr>`).join('')}</tbody>
+  </table>
+  <div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] text-slate-500">
+    <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-tecnmGreen"></span>Atiendes tutorados</span>
+    <span class="flex items-center gap-1"><span class="w-3 h-3 rounded border border-slate-300 bg-slate-100"></span>Sin atención</span>
+  </div>`;
+  actualizarTotalHorario();
+}
+
+function actualizarTotalHorario() {
+  setText('horario-total', `${horasEditor.size} h por semana`);
+}
+
+function alternarCelda(btn, valor) {
+  const clave = btn.dataset.celda;
+  if (valor) horasEditor.add(clave); else horasEditor.delete(clave);
+  btn.classList.toggle('activa', valor);
+  btn.setAttribute('aria-pressed', String(valor));
+  actualizarTotalHorario();
+}
+
+/** Clic, toque o arrastre para marcar/desmarcar varias horas seguidas. */
+function conectarHorarioEditor() {
+  const cont = $('horario-editor');
+  if (!cont || cont.dataset.conectado) return;
+  cont.dataset.conectado = '1';
+  let pintando = null;
+  cont.addEventListener('pointerdown', (e) => {
+    const btn = e.target.closest('[data-celda]');
+    if (!btn) return;
+    e.preventDefault();
+    pintando = !horasEditor.has(btn.dataset.celda);
+    alternarCelda(btn, pintando);
+  });
+  cont.addEventListener('pointerover', (e) => {
+    if (pintando === null) return;
+    const btn = e.target.closest('[data-celda]');
+    if (btn) alternarCelda(btn, pintando);
+  });
+  cont.addEventListener('pointermove', (e) => {
+    // En pantallas táctiles el puntero queda "capturado": se busca la celda bajo el dedo
+    if (pintando === null || e.pointerType === 'mouse') return;
+    const btn = document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-celda]');
+    if (btn && horasEditor.has(btn.dataset.celda) !== pintando) alternarCelda(btn, pintando);
+  });
+  const soltar = () => { pintando = null; };
+  window.addEventListener('pointerup', soltar);
+  window.addEventListener('pointercancel', soltar);
+  cont.addEventListener('keydown', (e) => {
+    const btn = e.target.closest('[data-celda]');
+    if (btn && (e.key === 'Enter' || e.key === ' ')) {
+      e.preventDefault();
+      alternarCelda(btn, !horasEditor.has(btn.dataset.celda));
+    }
+  });
+}
+
+function limpiarHorarioEditor() {
+  horasEditor = new Set();
+  pintarHorarioEditor();
+}
+
+function pintarAreasEditor() {
+  const todas = [...new Set([...AREAS_APOYO_SUGERIDAS, ...areasEditor])];
+  $('mp-areas').innerHTML = todas.map((a) => {
+    const on = areasEditor.includes(a);
+    return `<button type="button" data-area="${escapeHtml(a)}" aria-pressed="${on}" class="area-bloque ${on ? 'activa' : ''}">${on ? '<i class="fa-solid fa-check"></i>' : '<i class="fa-solid fa-plus"></i>'} ${escapeHtml(a)}</button>`;
+  }).join('');
+  setText('mp-areas-cuenta', `${areasEditor.length} / 8`);
+}
+
+function conectarAreasEditor() {
+  const cont = $('mp-areas');
+  if (!cont || cont.dataset.conectado) return;
+  cont.dataset.conectado = '1';
+  cont.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-area]');
+    if (!btn) return;
+    const area = btn.dataset.area;
+    if (areasEditor.includes(area)) areasEditor = areasEditor.filter((x) => x !== area);
+    else if (areasEditor.length >= 8) return toast('Máximo 8 áreas de apoyo.', 'error');
+    else areasEditor.push(area);
+    pintarAreasEditor();
+  });
+  $('mp-area-nueva').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); agregarAreaApoyo(); }
+  });
+}
+
+function agregarAreaApoyo() {
+  const input = $('mp-area-nueva');
+  const area = input.value.trim().replace(/\s+/g, ' ');
+  if (!area) return;
+  if (area.length > 40) return toast('Cada área puede tener hasta 40 caracteres.', 'error');
+  const existente = [...AREAS_APOYO_SUGERIDAS, ...areasEditor].find((a) => a.toLowerCase() === area.toLowerCase());
+  if (existente && areasEditor.includes(existente)) { input.value = ''; return; }
+  if (areasEditor.length >= 8) return toast('Máximo 8 áreas de apoyo.', 'error');
+  areasEditor.push(existente || area);
+  input.value = '';
+  pintarAreasEditor();
 }
 
 let perfilTutorActual = null;
@@ -2494,9 +2760,6 @@ async function cargarMiPerfilTutor() {
     const { tutor } = await api('/tutores/mi-perfil');
     perfilTutorActual = tutor;
     $('tutor-persona-card').innerHTML = tutorPersonaHtml(tutor);
-    const cont = $('horario-bloques');
-    cont.innerHTML = '';
-    tutor.horarios.forEach((h) => cont.appendChild(filaBloqueHorario(h)));
   } catch (err) {
     toast(err.message, 'error');
   }
@@ -2517,12 +2780,25 @@ function abrirEditorPerfilTutor() {
   $('mp-frase').value = t.frase || '';
   $('mp-presentacion').value = t.presentacion || '';
   $('mp-enfoque').value = (t.enfoque || []).join('\n');
-  $('mp-areas').value = (t.areas_apoyo || []).join(', ');
-  const cont = $('horario-bloques');
-  cont.innerHTML = '';
-  (t.horarios || []).forEach((h) => cont.appendChild(filaBloqueHorario(h)));
+  areasEditor = [...(t.areas_apoyo || [])];
+  $('mp-area-nueva').value = '';
+  pintarAreasEditor();
+  conectarAreasEditor();
+  horasEditor = horasDesdeBloques(t.horarios);
+  pintarHorarioEditor();
+  conectarHorarioEditor();
   pintarPreviewFotoTutor(t.foto);
+  // Un solo contenedor: el editor ocupa el lugar de la tarjeta del perfil
+  $('tutor-persona-card').classList.add('hidden');
+  $('btn-panel-tutor-editar').classList.add('hidden');
   abrirPanel('panel-tutor-editar');
+  $('tab-miperfil').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function cerrarEditorPerfilTutor() {
+  $('tutor-persona-card').classList.remove('hidden');
+  $('btn-panel-tutor-editar').classList.remove('hidden');
+  cerrarPanel('panel-tutor-editar');
 }
 
 /** Reduce una imagen a máx. 360×450 JPEG y devuelve el data URL. */
@@ -2566,16 +2842,12 @@ function quitarFotoTutor() {
 
 async function guardarPerfilTutor(event) {
   event.preventDefault();
-  const horarios = [...$('horario-bloques').querySelectorAll('[data-bloque]')].map((d) => ({
-    dia_semana: Number(d.querySelector('.b-dia').value),
-    hora_inicio: d.querySelector('.b-ini').value,
-    hora_fin: d.querySelector('.b-fin').value,
-  }));
+  const horarios = bloquesDesdeHoras(horasEditor);
   const enfoque = $('mp-enfoque').value.split('\n').map((x) => x.trim()).filter(Boolean);
   if (enfoque.length > 6) return toast('Máximo 6 elementos en "¿En qué puedo apoyarte?".', 'error');
   const body = {
     presentacion: $('mp-presentacion').value.trim(),
-    areas_apoyo: $('mp-areas').value.split(',').map((a) => a.trim()).filter(Boolean),
+    areas_apoyo: areasEditor,
     grado_academico: $('mp-grado').value,
     especialidad: $('mp-especialidad').value,
     anios_experiencia: $('mp-anios').value === '' ? null : Number($('mp-anios').value),
@@ -2591,7 +2863,7 @@ async function guardarPerfilTutor(event) {
       perfilTutorActual = r.tutor;
       fotoTutorPendiente = undefined;
       $('tutor-persona-card').innerHTML = tutorPersonaHtml(r.tutor);
-      cerrarPanel('panel-tutor-editar');
+      cerrarEditorPerfilTutor();
     } catch (err) {
       toast(err.message, 'error');
     }
@@ -3797,6 +4069,7 @@ Object.assign(window, {
   cerrarMinuta,
   guardarMinuta,
   imprimirComprobante,
+  imprimirReporteSemestral,
   alternarTipoCita,
   verEvaluacionTutor,
   cambiarVistaEvaluacion,
@@ -3817,7 +4090,9 @@ Object.assign(window, {
   guardarPerfilTutorado,
   quitarFotoPerfil,
   elegirTutor,
-  agregarBloqueHorario,
+  limpiarHorarioEditor,
+  agregarAreaApoyo,
+  cerrarEditorPerfilTutor,
   guardarPerfilTutor,
   guardarCupoTutor,
   cambiarAceptaTutor,

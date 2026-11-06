@@ -140,6 +140,8 @@ async function disponibilidad(req, res) {
   }
 
   const { rows: horario } = await db.query('SELECT count(*)::int AS n FROM tutor_horarios WHERE tutor_id = $1', [tutorId]);
+  // El propio tutor puede ver toda la jornada (07:00–20:00) para programar citas fuera de su horario publicado
+  const completo = req.query.completo === '1' && req.user?.rol === 'tutor' && req.user.tutorId === tutorId;
   const { rows } = await db.query(
     `WITH h AS (
         SELECT hora_inicio, hora_fin FROM tutor_horarios
@@ -150,6 +152,10 @@ async function disponibilidad(req, res) {
           FROM h, generate_series($2::date + h.hora_inicio,
                                   $2::date + h.hora_fin - INTERVAL '60 minutes',
                                   INTERVAL '60 minutes') AS s
+         WHERE NOT $4
+        UNION
+        SELECT s FROM generate_series($2::date + TIME '07:00', $2::date + TIME '19:00', INTERVAL '60 minutes') AS s
+         WHERE $4
      )
      SELECT to_char(b.local, 'HH24:MI') AS hora,
             NOT EXISTS (
@@ -158,17 +164,87 @@ async function disponibilidad(req, res) {
                  AND tstzrange(c.fecha_hora, c.fecha_hora + make_interval(mins => c.duracion_min))
                      && tstzrange(b.local AT TIME ZONE $3, (b.local + INTERVAL '60 minutes') AT TIME ZONE $3)
             ) AS libre,
-            (b.local AT TIME ZONE $3) > now() + INTERVAL '2 hours' AS a_tiempo
+            (b.local AT TIME ZONE $3) > now() + INTERVAL '2 hours' AS a_tiempo,
+            EXISTS (SELECT 1 FROM h WHERE b.local::time >= h.hora_inicio AND b.local::time + INTERVAL '60 minutes' <= h.hora_fin) AS en_horario
        FROM bloques b
    ORDER BY b.local`,
-    [tutorId, fecha, config.tz]
+    [tutorId, fecha, config.tz, completo]
   );
   res.json({
     ok: true,
     fecha,
     tiene_horario: horario[0].n > 0,
-    bloques: rows.map((r) => ({ hora: r.hora, disponible: r.libre && r.a_tiempo, motivo: !r.a_tiempo ? 'pasado' : !r.libre ? 'ocupado' : null })),
+    bloques: rows.map((r) => ({
+      hora: r.hora,
+      disponible: r.libre && r.a_tiempo,
+      en_horario: r.en_horario,
+      motivo: !r.a_tiempo ? 'pasado' : !r.libre ? 'ocupado' : null,
+    })),
   });
+}
+
+/** Periodo de clases vigente (o el último que ya inició) según el calendario escolar. */
+function periodoDeClases(hoy) {
+  const { CALENDARIO } = require('../utils/calendarioEscolar');
+  const iniciados = CALENDARIO.periodos.filter((p) => p.inicio <= hoy);
+  return iniciados[iniciados.length - 1] || CALENDARIO.periodos[0];
+}
+
+/**
+ * GET /api/tutores/mi-reporte   (tutor)
+ * Resumen del semestre para el Reporte Semestral del Tutor.
+ */
+async function miReporte(req, res) {
+  const tutorId = req.user.tutorId;
+  const hoy = new Intl.DateTimeFormat('en-CA', { timeZone: config.tz }).format(new Date());
+  const periodo = periodoDeClases(hoy);
+  const params = [tutorId, periodo.inicio, periodo.fin, config.tz, config.periodoActual];
+  const { rows: r } = await db.query(
+    `WITH c AS (
+        SELECT * FROM citas_tutorias
+         WHERE tutor_id = $1
+           AND (fecha_hora AT TIME ZONE $4)::date BETWEEN $2::date AND $3::date
+     ),
+     asig AS (
+        SELECT t.nivel_riesgo FROM asignaciones_tutoria a JOIN tutorados t ON t.id = a.tutorado_id
+         WHERE a.tutor_id = $1 AND a.periodo_escolar = $5 AND a.estatus_asignacion = 'Activa'
+     )
+     SELECT (SELECT count(*) FROM asig)::int AS tutorados,
+            (SELECT count(*) FROM asig WHERE nivel_riesgo IN ('ALTO','CRÍTICO'))::int AS en_riesgo,
+            (SELECT count(*) FROM c WHERE estatus = 'Completada')::int AS atendidas,
+            (SELECT count(*) FROM c WHERE estatus = 'Completada' AND tipo = 'Individual')::int AS individuales,
+            (SELECT count(*) FROM c WHERE estatus = 'Completada' AND tipo = 'Grupal')::int AS grupales,
+            (SELECT count(*) FROM c WHERE estatus IN ('Pendiente','Confirmada'))::int AS programadas,
+            (SELECT count(*) FROM c WHERE estatus = 'Cancelada')::int AS canceladas,
+            (SELECT count(*) FROM c WHERE minuta IS NOT NULL)::int AS minutas,
+            (SELECT count(DISTINCT tutorado_id) FROM c WHERE estatus = 'Completada' AND tutorado_id IS NOT NULL)::int AS tutorados_atendidos,
+            (SELECT count(*) FROM canalizaciones k WHERE k.tutor_id = $1
+               AND (k.fecha_registro AT TIME ZONE $4)::date BETWEEN $2::date AND $3::date)::int AS canalizaciones`,
+    params
+  );
+  const { rows: sesiones } = await db.query(
+    `SELECT c.id, to_char(c.fecha_hora AT TIME ZONE $4, 'YYYY-MM-DD"T"HH24:MI') AS fecha_hora_local,
+            c.tipo, c.modalidad, c.motivo, c.grupo, (c.minuta IS NOT NULL) AS con_minuta,
+            ua.apellidos || ' ' || ua.nombre AS tutorado_nombre, ua.no_control_o_rfc AS no_control
+       FROM citas_tutorias c
+  LEFT JOIN tutorados t ON t.id = c.tutorado_id
+  LEFT JOIN usuarios ua ON ua.id = t.usuario_id
+      WHERE c.tutor_id = $1 AND c.estatus = 'Completada'
+        AND (c.fecha_hora AT TIME ZONE $4)::date BETWEEN $2::date AND $3::date
+   ORDER BY c.fecha_hora DESC`,
+    params.slice(0, 4)
+  );
+  const { rows: canal } = await db.query(
+    `SELECT area_destino AS area, count(*)::int AS total FROM canalizaciones
+      WHERE tutor_id = $1 AND (fecha_registro AT TIME ZONE $4)::date BETWEEN $2::date AND $3::date
+   GROUP BY 1 ORDER BY 2 DESC`,
+    params.slice(0, 4)
+  );
+  const { rows: t } = await db.query(
+    `SELECT u.nombre || ' ' || u.apellidos AS nombre, tu.departamento FROM tutores tu JOIN usuarios u ON u.id = tu.usuario_id WHERE tu.id = $1`,
+    [tutorId]
+  );
+  res.json({ ok: true, periodo, periodo_escolar: config.periodoActual, tutor: t[0], resumen: r[0], sesiones, canalizaciones_por_area: canal });
 }
 
 /** GET /api/tutores/mi-perfil   (tutor) */
@@ -211,7 +287,7 @@ async function guardarMiPerfil(req, res) {
   if (areas.length > 8 || areas.some((a) => a.length > 40)) throw badRequest('Máximo 8 áreas de apoyo de hasta 40 caracteres.');
 
   const horarios = Array.isArray(req.body.horarios) ? req.body.horarios : [];
-  if (horarios.length > 20) throw badRequest('Máximo 20 bloques de horario.');
+  if (horarios.length > 65) throw badRequest('Demasiados bloques de horario.');
   const limpios = horarios.map((h, i) => {
     const dia = Number(h.dia_semana);
     if (!Number.isInteger(dia) || dia < 1 || dia > 5) throw badRequest(`Bloque ${i + 1}: el día debe ser de lunes a viernes.`);
@@ -311,6 +387,7 @@ async function esTutorDe(tutorId, tutoradoId) {
 }
 
 module.exports = {
+  miReporte,
   directorio, elegir, disponibilidad, miPerfil, guardarMiPerfil, actualizarCupo,
   dentroDeHorario, esTutorDe,
 };
