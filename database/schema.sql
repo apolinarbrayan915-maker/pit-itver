@@ -298,6 +298,9 @@ CREATE TABLE citas_tutorias (
     estatus        estatus_cita    NOT NULL DEFAULT 'Pendiente',
     notas_tutor    TEXT,
     minuta         JSONB,                                   -- {asuntos, acuerdos, seguimiento, actualizada}
+    asistio        BOOLEAN,                                 -- confirmación del tutor
+    duracion_real_min SMALLINT CHECK (duracion_real_min IN (15, 30, 45, 60)),
+    atendida_en    TIMESTAMPTZ,
     creado_por     INTEGER REFERENCES usuarios (id) ON DELETE SET NULL,
     created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at     TIMESTAMPTZ NOT NULL DEFAULT now(),

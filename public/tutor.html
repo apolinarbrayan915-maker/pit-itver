@@ -52,8 +52,8 @@
             <div class="pit-nav max-w-7xl mx-auto px-3 md:px-8 flex items-stretch h-14 gap-3">
                 <a href="index.html" class="pit-logo-movil" aria-label="Tecnológico Nacional de México"><img src="img/logo-tecnm.png" alt=""><span>PIT · ITVER</span></a>
                 <div class="pit-tabs flex-1 min-w-0 flex items-stretch gap-0.5 overflow-x-auto text-xs md:text-sm font-medium" role="tablist">
-                    <button onclick="switchTab('dashboard')" id="btn-dashboard" title="Mi Grupo" class="nav-btn activo" role="tab" aria-selected="true">
-                        <i class="fa-solid fa-chart-pie"></i> <span>Mi Grupo</span><span class="nav-corto">Grupo</span>
+                    <button onclick="switchTab('dashboard')" id="btn-dashboard" title="Inicio" class="nav-btn activo" role="tab" aria-selected="true">
+                        <i class="fa-solid fa-house"></i> <span>Inicio</span><span class="nav-corto">Inicio</span>
                     </button>
                     <button onclick="switchTab('tutorados')" id="btn-tutorados" title="Mis Tutorados" class="nav-btn" role="tab" aria-selected="false">
                         <i class="fa-solid fa-user-graduate"></i> <span>Mis Tutorados</span><span class="nav-corto">Tutorados</span>
@@ -64,23 +64,22 @@
                     <button onclick="switchTab('canalizaciones')" id="btn-canalizaciones" title="Canalizaciones" class="nav-btn" role="tab" aria-selected="false">
                         <i class="fa-solid fa-share-nodes"></i> <span>Canalizaciones</span><span class="nav-corto">Canalizar</span>
                     </button>
-                    <button onclick="switchTab('miperfil')" id="btn-miperfil" title="Mi Perfil y Horario" class="nav-btn" role="tab" aria-selected="false">
-                        <i class="fa-solid fa-id-card"></i> <span>Mi Perfil</span><span class="nav-corto">Mi perfil</span>
-                    </button>
                     <button onclick="switchTab('reportes')" id="btn-reportes" title="Informes y Evaluaciones" class="nav-btn" role="tab" aria-selected="false">
                         <i class="fa-solid fa-file-signature"></i> <span>Informes</span><span class="nav-corto">Informes</span>
                     </button>
                 </div>
-                <div class="pit-user shrink-0 flex items-center gap-3 pl-3 md:pl-4 border-l border-white/20 my-2.5">
-                    <div class="text-right hidden xl:block max-w-[14rem]">
-                        <p class="text-xs font-bold truncate" id="nav-nombre">Profesor Tutor</p>
-                        <p class="text-[10px] text-tecnmSand">Profesor Tutor Asignado</p>
-                    </div>
+                <div class="pit-user shrink-0 flex items-center gap-2 md:gap-3 pl-3 md:pl-4 border-l border-white/20 my-2.5">
+                    <button type="button" id="btn-miperfil" onclick="switchTab('miperfil')" title="Mi perfil y horario" aria-label="Mi perfil y horario" class="btn-perfil flex items-center gap-2 rounded-full pl-1 pr-1 xl:pr-3 py-1 hover:bg-white/10 transition">
+                        <span class="shrink-0 w-8 h-8 rounded-full bg-tecnmGold flex items-center justify-center font-bold text-tecnmDark text-xs overflow-hidden ring-2 ring-white/40" id="nav-iniciales">--</span>
+                        <span class="text-left hidden xl:block max-w-[14rem] leading-tight">
+                            <span class="block text-xs font-bold truncate" id="nav-nombre">Profesor Tutor</span>
+                            <span class="block text-[10px] text-tecnmSand">Mi perfil y horario</span>
+                        </span>
+                    </button>
                     <button type="button" id="btn-avisos" onclick="verAvisosTutor()" title="Avisos de la Coordinación" aria-label="Avisos de la Coordinación" class="relative w-8 h-8 rounded-full flex items-center justify-center text-slate-500 hover:text-tecnmGreen hover:bg-slate-100">
                         <i class="fa-solid fa-bell"></i>
                         <span id="avisos-badge" class="hidden absolute -top-0.5 -right-0.5 min-w-[1.1rem] h-[1.1rem] px-1 rounded-full bg-rose-600 text-white text-[10px] font-bold leading-[1.1rem] text-center"></span>
                     </button>
-                    <div class="shrink-0 w-8 h-8 rounded-full bg-tecnmGold flex items-center justify-center font-bold text-tecnmDark text-xs" id="nav-iniciales">--</div>
                     <button id="btn-logout" title="Cerrar sesión" class="text-tecnmSand hover:text-white"><i class="fa-solid fa-right-from-bracket"></i></button>
                 </div>
             </div>
@@ -109,25 +108,6 @@
                         <button onclick="switchTab('tutorados')" class="bg-white/10 hover:bg-white/20 text-white font-semibold px-4 py-2 rounded-xl text-xs transition border border-white/20">Ver Mis Tutorados</button>
                         <button onclick="switchTab('canalizaciones')" class="bg-white/10 hover:bg-white/20 text-white font-semibold px-4 py-2 rounded-xl text-xs transition border border-white/20">Ver Canalizaciones</button>
                     </div>
-                </div>
-            </div>
-
-            <div class="kpi-grid grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-4">
-                    <div class="kpi-icon w-12 h-12 bg-blue-50 text-tecnmGreen rounded-xl flex items-center justify-center text-xl font-bold"><i class="fa-solid fa-user-group"></i></div>
-                    <div><p class="text-xs text-slate-500 font-medium">Total Tutorados</p><h4 class="text-xl font-extrabold text-slate-800" id="kpi-total-tutorados">…</h4></div>
-                </div>
-                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-4">
-                    <div class="kpi-icon w-12 h-12 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center text-xl font-bold"><i class="fa-solid fa-triangle-exclamation"></i></div>
-                    <div><p class="text-xs text-slate-500 font-medium">Alumnos en Riesgo (Alto/Crítico)</p><h4 class="text-xl font-extrabold text-amber-600" id="kpi-en-riesgo">…</h4></div>
-                </div>
-                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-4">
-                    <div class="kpi-icon w-12 h-12 bg-sky-50 text-sky-600 rounded-xl flex items-center justify-center text-xl font-bold"><i class="fa-solid fa-calendar-day"></i></div>
-                    <div><p class="text-xs text-slate-500 font-medium">Citas esta Semana</p><h4 class="text-xl font-extrabold text-slate-800" id="kpi-citas-semana">…</h4></div>
-                </div>
-                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-4">
-                    <div class="kpi-icon w-12 h-12 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center text-xl font-bold"><i class="fa-solid fa-paper-plane"></i></div>
-                    <div><p class="text-xs text-slate-500 font-medium">Canalizaciones Activas</p><h4 class="text-xl font-extrabold text-slate-800" id="kpi-canalizaciones">…</h4></div>
                 </div>
             </div>
         </div>
@@ -304,6 +284,24 @@
                 </div>
             </div>
 
+            <div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-slate-200">
+                <div class="flex flex-wrap items-end justify-between gap-3 mb-4">
+                    <div>
+                        <h3 class="text-sm font-bold text-slate-800"><i class="fa-solid fa-calendar-day text-tecnmGreen mr-1"></i> Reporte del día</h3>
+                        <p class="text-xs text-slate-500">Tus sesiones del día: tutorado atendido, asistencia y tiempo de cada sesión.</p>
+                    </div>
+                    <div class="flex flex-wrap items-end gap-2">
+                        <div>
+                            <label for="rd-fecha" class="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1">Fecha</label>
+                            <input type="date" id="rd-fecha" class="p-2 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-tecnmGreen outline-none bg-white">
+                        </div>
+                        <button type="button" onclick="imprimirReporteDiario()" class="bg-tecnmGreen hover:bg-tecnmDark text-white font-bold px-4 py-2 rounded-xl text-xs shadow transition"><i class="fa-solid fa-print mr-1"></i> Imprimir reporte del día</button>
+                    </div>
+                </div>
+                <div id="rd-resumen" class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4"></div>
+                <div id="rd-tabla"><p class="text-xs text-slate-400 text-center py-6">Cargando…</p></div>
+            </div>
+
             <div id="rep-kpis" class="grid grid-cols-2 md:grid-cols-5 gap-3"></div>
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -353,6 +351,43 @@
             </div>
         </div>
     </main>
+
+    <!-- MODAL CONFIRMAR ASISTENCIA -->
+    <div id="modal-asistencia" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true" aria-labelledby="asistencia-titulo">
+        <div class="bg-white rounded-2xl max-w-md w-full shadow-xl border border-slate-200">
+            <div class="flex justify-between items-start gap-3 p-5 border-b border-slate-100">
+                <div class="min-w-0">
+                    <h3 id="asistencia-titulo" class="text-sm font-bold text-slate-800"><i class="fa-solid fa-user-check text-tecnmGreen mr-1"></i> Confirmar asistencia</h3>
+                    <p id="asistencia-resumen" class="text-[11px] text-slate-500 mt-0.5"></p>
+                </div>
+                <button type="button" onclick="cerrarAsistencia()" class="text-slate-400 hover:text-slate-600" aria-label="Cerrar"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form id="form-asistencia" onsubmit="guardarAsistencia(event)" onchange="pintarOpcionesAsistencia()" class="p-5 space-y-4 text-xs">
+                <input type="hidden" id="asistencia-cita">
+                <fieldset>
+                    <legend class="font-bold text-slate-700 mb-2">¿El tutorado asistió a la sesión?</legend>
+                    <div class="grid grid-cols-2 gap-2">
+                        <label class="opcion-asistencia"><input type="radio" name="asistio" value="si"><span><i class="fa-solid fa-circle-check"></i> Sí asistió</span></label>
+                        <label class="opcion-asistencia opcion-no"><input type="radio" name="asistio" value="no"><span><i class="fa-solid fa-circle-xmark"></i> No asistió</span></label>
+                    </div>
+                </fieldset>
+                <fieldset id="asistencia-duracion" class="hidden">
+                    <legend class="font-bold text-slate-700 mb-2">¿Cuánto duró la sesión?</legend>
+                    <div class="grid grid-cols-4 gap-2">
+                        <label class="opcion-asistencia"><input type="radio" name="duracion" value="15"><span>15 min</span></label>
+                        <label class="opcion-asistencia"><input type="radio" name="duracion" value="30"><span>30 min</span></label>
+                        <label class="opcion-asistencia"><input type="radio" name="duracion" value="45"><span>45 min</span></label>
+                        <label class="opcion-asistencia"><input type="radio" name="duracion" value="60"><span>1 hora</span></label>
+                    </div>
+                    <p class="text-[10px] text-slate-400 mt-2">La duración aparecerá en el comprobante de asistencia y en el reporte del día.</p>
+                </fieldset>
+                <div class="grid grid-cols-2 gap-2 pt-1">
+                    <button type="button" onclick="cerrarAsistencia()" class="py-2.5 rounded-xl font-bold bg-slate-100 text-slate-700 hover:bg-slate-200">Cancelar</button>
+                    <button type="submit" class="py-2.5 rounded-xl font-bold bg-tecnmGreen text-white hover:bg-tecnmDark">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <!-- MODAL MINUTA DE LA SESIÓN -->
     <div id="modal-minuta" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true" aria-labelledby="minuta-titulo">
@@ -427,7 +462,7 @@
                         <label for="modal-cita-hora" class="block font-bold text-slate-700 mb-1">Hora</label>
                         <select id="modal-cita-hora" required disabled class="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-tecnmGreen outline-none bg-white"><option value="">Primero elige el día</option></select>
                     </div>
-                    <p id="modal-cita-ayuda" class="sm:col-span-5 text-[11px] text-slate-500 -mt-1">Solo se muestran los días con clases del calendario escolar TecNM.</p>
+                    <p id="modal-cita-ayuda" class="sm:col-span-5 text-[11px] text-slate-500 -mt-1 empty:hidden"></p>
                 </div>
                 <div>
                     <label for="modal-cita-motivo" class="block font-bold text-slate-700 mb-1">Objetivo / Observaciones</label>

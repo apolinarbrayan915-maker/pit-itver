@@ -440,3 +440,17 @@ html.dark .area-bloque.activa i { color: #9dbce8; }
 .hd-resumen th { font-weight: 400; width: 34%; }
 .hd-resumen td { width: 16%; text-align: center; font-weight: 700; }
 .hoja-cuerpo .hd-linea-texto { margin-top: .4em; font-size: .92em; }
+:root nav .btn-perfil:hover { background-color: var(--pit-azul-suave); }
+:root nav .btn-perfil.activo { background-color: var(--pit-azul-suave); }
+:root nav .btn-perfil.activo #nav-iniciales { box-shadow: 0 0 0 2px var(--pit-azul); }
+.opcion-asistencia { position: relative; display: block; cursor: pointer; }
+.opcion-asistencia input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.opcion-asistencia span { display: flex; align-items: center; justify-content: center; gap: .4rem; padding: .7rem .5rem; border-radius: .75rem;
+  border: 1px solid #cbd5e1; background: #fff; color: #475569; font-weight: 700; text-align: center; transition: all .12s; }
+.opcion-asistencia:hover span { border-color: #8aa9d6; background: #f5f8fd; }
+.opcion-asistencia input:checked + span { border-color: #18396a; background: #e8eef8; color: #18396a; box-shadow: inset 0 0 0 1px #18396a; }
+.opcion-asistencia.opcion-no input:checked + span { border-color: #e11d48; background: #fff1f2; color: #be123c; box-shadow: inset 0 0 0 1px #e11d48; }
+.opcion-asistencia input:focus-visible + span { outline: 2px solid #2c64b0; outline-offset: 2px; }
+html.dark .opcion-asistencia span { background: #131d2c; border-color: #2a3a54; color: #cbd5e1; }
+html.dark .opcion-asistencia input:checked + span { background: #1d3150; border-color: #7fa6de; color: #dbe7f8; }
+html.dark .opcion-asistencia.opcion-no input:checked + span { background: #3b1220; border-color: #fb7185; color: #fecdd3; }

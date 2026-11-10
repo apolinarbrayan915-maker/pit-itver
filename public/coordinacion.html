@@ -581,6 +581,24 @@
 
         <!-- TAB 5: REPORTES PIT (prototipo) -->
         <div id="tab-reportes" class="tab-content space-y-6">
+            <div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-slate-200">
+                <div class="flex flex-wrap items-end justify-between gap-3 mb-4">
+                    <div>
+                        <h3 class="text-sm font-bold text-slate-800"><i class="fa-solid fa-calendar-day text-tecnmGreen mr-1"></i> Reporte del día</h3>
+                        <p class="text-xs text-slate-500">Sesiones de todos los tutores en el día: tutor que atendió, tutorado y tiempo de la sesión.</p>
+                    </div>
+                    <div class="flex flex-wrap items-end gap-2">
+                        <div>
+                            <label for="rd-fecha" class="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1">Fecha</label>
+                            <input type="date" id="rd-fecha" class="p-2 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-tecnmGreen outline-none bg-white">
+                        </div>
+                        <button type="button" onclick="imprimirReporteDiario()" class="bg-tecnmGreen hover:bg-tecnmDark text-white font-bold px-4 py-2 rounded-xl text-xs shadow transition"><i class="fa-solid fa-print mr-1"></i> Imprimir reporte del día</button>
+                    </div>
+                </div>
+                <div id="rd-resumen" class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4"></div>
+                <div id="rd-tabla"><p class="text-xs text-slate-400 text-center py-6">Cargando…</p></div>
+            </div>
+
             <div class="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200">
                 <h3 class="text-base font-bold text-slate-800 mb-1">Centro de Descarga e Informes Oficiales PIT</h3>
                 <p class="text-xs text-slate-500 mb-6">Generación de reportes normativos para entrega a la Dirección Institucional del ITVER (módulo en desarrollo).</p>

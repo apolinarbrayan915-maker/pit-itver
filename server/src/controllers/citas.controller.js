@@ -14,7 +14,7 @@ const ANTICIPACION_MIN_HORAS = 2;
 
 const SELECT_CITA = `
   SELECT c.id, c.tutor_id, c.tutorado_id, c.fecha_hora, c.duracion_min, c.tipo, c.modalidad,
-         c.grupo, c.motivo, c.estatus, c.notas_tutor, c.minuta, c.created_at,
+         c.grupo, c.motivo, c.estatus, c.notas_tutor, c.minuta, c.asistio, c.duracion_real_min, c.created_at,
          to_char(c.fecha_hora AT TIME ZONE $TZ, 'YYYY-MM-DD"T"HH24:MI') AS fecha_hora_local,
          ua.no_control_o_rfc AS no_control,
          ua.apellidos || ' ' || ua.nombre AS tutorado_nombre,
@@ -246,7 +246,8 @@ async function cambiarEstatus(req, res) {
   if (!nuevo) throw badRequest('Indica el nuevo estatus.');
   const notas = req.body.notas_tutor ? v.texto(req.body.notas_tutor, 'notas_tutor', { max: 2000 }) : null;
 
-  const { rows } = await db.query('SELECT id, tutor_id, tutorado_id, estatus FROM citas_tutorias WHERE id = $1', [id]);
+  const { rows } = await db.query(
+    'SELECT id, tutor_id, tutorado_id, estatus, fecha_hora <= now() AS ya_inicio FROM citas_tutorias WHERE id = $1', [id]);
   const cita = rows[0];
   if (!cita) throw notFound('Cita no encontrada');
 
@@ -255,20 +256,72 @@ async function cambiarEstatus(req, res) {
   if (rol === 'alumno') {
     if (cita.tutorado_id !== tutoradoId) throw forbidden('La cita no es tuya.');
     if (nuevo !== 'Cancelada') throw forbidden('Solo puedes cancelar tus citas.');
-    if (notas) throw forbidden('Las notas solo las registra el tutor.');
+    if (notas || req.body.asistio !== undefined) throw forbidden('La asistencia solo la registra el tutor.');
   }
   if (!TRANSICIONES[cita.estatus].includes(nuevo)) {
     throw conflict(`No se puede cambiar una cita "${cita.estatus}" a "${nuevo}".`);
   }
 
+  // Confirmación de asistencia: solo cuando la sesión ya comenzó
+  let asistio = null;
+  let duracionReal = null;
+  const inasistencia = nuevo === 'Cancelada' && req.body.asistio === false;
+  if (nuevo === 'Completada' || inasistencia) {
+    if (!cita.ya_inicio) throw conflict('La asistencia se confirma cuando ya pasó la hora de la cita.');
+    asistio = nuevo === 'Completada';
+  }
+  if (nuevo === 'Completada') {
+    duracionReal = Number(req.body.duracion_real);
+    if (![15, 30, 45, 60].includes(duracionReal)) {
+      throw badRequest('Indica cuánto duró la sesión: 15, 30, 45 o 60 minutos.');
+    }
+  }
+
   const { rows: act } = await db.query(
     `UPDATE citas_tutorias
-        SET estatus = $2, notas_tutor = COALESCE($3, notas_tutor)
+        SET estatus = $2, notas_tutor = COALESCE($3, notas_tutor),
+            asistio = COALESCE($4, asistio), duracion_real_min = COALESCE($5, duracion_real_min),
+            atendida_en = CASE WHEN $4::boolean IS NOT NULL THEN now() ELSE atendida_en END
       WHERE id = $1
-  RETURNING id, estatus, notas_tutor, updated_at`,
-    [id, nuevo, notas]
+  RETURNING id, estatus, notas_tutor, asistio, duracion_real_min, updated_at`,
+    [id, nuevo, notas, asistio, duracionReal]
   );
-  res.json({ ok: true, mensaje: `Cita ${nuevo.toLowerCase()}.`, cita: act[0] });
+  const mensaje = nuevo === 'Completada'
+    ? `Asistencia confirmada: sesión de ${duracionReal} minutos.`
+    : inasistencia ? 'Se registró que el tutorado no asistió.' : `Cita ${nuevo.toLowerCase()}.`;
+  res.json({ ok: true, mensaje, cita: act[0] });
+}
+
+/**
+ * GET /api/citas/reporte-diario?fecha=AAAA-MM-DD   (tutor: sus sesiones · coordinador: todas)
+ * Sesiones del día con tutor, tutorado, asistencia y tiempo de la sesión.
+ */
+async function reporteDiario(req, res) {
+  const hoy = new Intl.DateTimeFormat('en-CA', { timeZone: config.tz }).format(new Date());
+  const fecha = /^\d{4}-\d{2}-\d{2}$/.test(String(req.query.fecha || '')) ? String(req.query.fecha) : hoy;
+  const tutorId = req.user.rol === 'tutor' ? req.user.tutorId : null;
+  const { rows } = await db.query(
+    `${SELECT_CITA.replaceAll('$TZ', '$2')}
+      WHERE (c.fecha_hora AT TIME ZONE $2)::date = $1::date
+        AND ($3::int IS NULL OR c.tutor_id = $3)
+        AND c.estatus <> 'Pendiente'
+        AND NOT (c.estatus = 'Cancelada' AND c.asistio IS NULL)
+   ORDER BY tutor_nombre, c.fecha_hora`,
+    [fecha, config.tz, tutorId]
+  );
+  const atendidas = rows.filter((c) => c.estatus === 'Completada');
+  res.json({
+    ok: true,
+    fecha,
+    sesiones: rows,
+    resumen: {
+      atendidas: atendidas.length,
+      inasistencias: rows.filter((c) => c.asistio === false).length,
+      por_confirmar: rows.filter((c) => c.estatus === 'Confirmada').length,
+      minutos: atendidas.reduce((t, c) => t + (c.duracion_real_min || 0), 0),
+      tutores: new Set(atendidas.map((c) => c.tutor_id)).size,
+    },
+  });
 }
 
 /**
@@ -305,4 +358,5 @@ async function guardarMinuta(req, res) {
   res.json({ ok: true, mensaje: 'Minuta guardada.', minuta });
 }
 
-module.exports = { reservar, agendaTutor, misCitas, cambiarEstatus, guardarMinuta };
+
+module.exports = { reservar, agendaTutor, misCitas, cambiarEstatus, guardarMinuta, reporteDiario };

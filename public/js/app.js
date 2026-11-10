@@ -717,7 +717,7 @@ function partesCita(c) {
   const [f = '', h = '00:00'] = String(c.fecha_hora_local || '').split('T');
   const [y, m, d] = f.split('-').map(Number);
   const [hh, mm] = h.split(':').map(Number);
-  const fin = hh * 60 + mm + Number(c.duracion_min || 60);
+  const fin = hh * 60 + mm + Number(c.duracion_real_min || c.duracion_min || 60);
   const dos = (n) => String(n).padStart(2, '0');
   const dia = new Intl.DateTimeFormat('es-MX', { weekday: 'long', timeZone: 'UTC' }).format(new Date(Date.UTC(y, m - 1, d)));
   return {
@@ -756,9 +756,10 @@ function tarjetaCitaTutor(c) {
     ];
   } else if (c.estatus === 'Confirmada') {
     botones = [
-      `<button onclick="cambiarEstatusCita(${c.id}, 'Completada', this)" class="${BTN_CITA} col-span-2 bg-tecnmGreen text-white hover:bg-tecnmDark"><i class="fa-solid fa-circle-check"></i> Marcar atendida</button>`,
+      new Date(c.fecha_hora) <= new Date()
+        ? `<button onclick="abrirAsistencia(${c.id})" class="${BTN_CITA} bg-tecnmGreen text-white hover:bg-tecnmDark"><i class="fa-solid fa-user-check"></i> Confirmar asistencia</button>`
+        : `<button disabled title="Se confirma cuando llegue la hora de la cita" class="${BTN_CITA} bg-slate-100 text-slate-400 cursor-not-allowed"><i class="fa-solid fa-user-clock"></i> Confirmar asistencia</button>`,
       botonMinuta,
-      botonComprobante,
     ];
   } else if (c.estatus === 'Completada' && c.tipo !== 'Grupal') {
     botones = [botonMinuta, botonComprobante];
@@ -780,10 +781,46 @@ function tarjetaCitaTutor(c) {
       <span class="inline-flex items-center gap-1.5"><i class="fa-solid ${iconoModalidad} text-slate-400 w-3.5 text-center"></i>${escapeHtml(c.modalidad === 'Línea' ? 'En línea' : c.modalidad)}</span>
     </div>
     <p class="mt-2 text-xs text-slate-700 break-words"><span class="font-semibold text-slate-500">Motivo:</span> ${escapeHtml(c.motivo)}</p>
+    ${c.estatus === 'Completada' && c.duracion_real_min ? `<p class="mt-1 text-[11px] text-emerald-700 font-semibold"><i class="fa-solid fa-user-check mr-1"></i>Asistió · sesión de ${c.duracion_real_min} minutos</p>` : ''}
+    ${c.asistio === false ? '<p class="mt-1 text-[11px] text-rose-600 font-semibold"><i class="fa-solid fa-user-xmark mr-1"></i>El tutorado no asistió</p>' : ''}
     ${c.notas_tutor ? `<p class="mt-1 text-[11px] text-slate-500 italic break-words"><span class="font-semibold not-italic">Notas:</span> ${escapeHtml(c.notas_tutor)}</p>` : ''}
     ${minuta ? `<p class="mt-1 text-[11px] text-emerald-700 break-words"><i class="fa-solid fa-file-circle-check mr-1"></i><span class="font-semibold">Acuerdos:</span> ${escapeHtml(c.minuta.acuerdos.length > 140 ? `${c.minuta.acuerdos.slice(0, 140)}…` : c.minuta.acuerdos)}</p>` : ''}
     ${botones.length ? `<div class="mt-3 pt-3 border-t border-slate-200 grid grid-cols-2 sm:flex sm:justify-end gap-2">${botones.join('')}</div>` : ''}
   </article>`;
+}
+
+/* ---------- Confirmación de asistencia ---------------------------------- */
+function abrirAsistencia(id) {
+  const c = citasTutor.get(id);
+  if (!c) return;
+  const p = partesCita({ ...c, duracion_real_min: null });
+  $('asistencia-cita').value = id;
+  setText('asistencia-resumen', `${c.tutorado_nombre} (${c.no_control}) · ${p.larga}, ${p.horario}`);
+  $('form-asistencia').reset();
+  pintarOpcionesAsistencia();
+  $('modal-asistencia').classList.remove('hidden');
+}
+
+function cerrarAsistencia() {
+  $('modal-asistencia')?.classList.add('hidden');
+}
+
+function pintarOpcionesAsistencia() {
+  const asistio = $('form-asistencia').querySelector('input[name=asistio]:checked')?.value;
+  $('asistencia-duracion').classList.toggle('hidden', asistio !== 'si');
+}
+
+async function guardarAsistencia(event) {
+  event.preventDefault();
+  const form = $('form-asistencia');
+  const id = Number($('asistencia-cita').value);
+  const asistio = form.querySelector('input[name=asistio]:checked')?.value;
+  const boton = form.querySelector('button[type=submit]');
+  if (!asistio) return toast('Indica si el tutorado asistió.', 'error');
+  if (asistio === 'no') return cambiarEstatusCita(id, 'Cancelada', boton, { asistio: false });
+  const duracion = Number(form.querySelector('input[name=duracion]:checked')?.value);
+  if (!duracion) return toast('Elige cuánto duró la sesión.', 'error');
+  return cambiarEstatusCita(id, 'Completada', boton, { asistio: true, duracion_real: duracion });
 }
 
 /* ---------- Minuta de la sesión ----------------------------------------- */
@@ -870,7 +907,7 @@ function htmlMinuta(c) {
     <div class="hd-campos">
       ${campoHoja('Nombre del tutorado(a):', c.tutorado_nombre)}
       <div class="hd-fila">${campoHoja('Carrera:', c.carrera, 'hd-ancho')}${campoHoja('Semestre:', c.semestre ? `${c.semestre}°` : '')}</div>
-      <div class="hd-fila">${campoHoja('No. de control:', c.no_control)}${campoHoja('Horario:', `${p.horario.replace(' – ', ' a ')} h`)}</div>
+      <div class="hd-fila">${campoHoja('No. de control:', c.no_control)}${campoHoja('Horario:', `${p.horario.replace(' – ', ' a ')} h`)}${c.duracion_real_min ? campoHoja('Duración:', `${c.duracion_real_min} min`) : ''}</div>
       <div class="hd-fila">${campoHoja('Modalidad:', c.modalidad === 'Línea' ? 'En línea' : 'Presencial')}${campoHoja('Lugar:', lugar, 'hd-ancho')}</div>
       ${campoHoja('Nombre del tutor(a):', c.tutor_nombre)}
     </div>
@@ -890,7 +927,7 @@ function htmlComprobante(c) {
     : `de manera presencial${c.tutor_cubiculo ? ` en ${escapeHtml(lugarCita(c).replace('Presencial · ', ''))}` : ''}`;
   return `${encabezadoHoja('Comprobante de asistencia a sesión de tutoría', `<p>Veracruz, Ver., a ${escapeHtml(fechaLargaHoy())}</p><p><b>ASUNTO:</b> Comprobante de asistencia</p>`)}
     <div class="hd-texto">
-      <p>Por medio del presente se hace constar que el (la) estudiante <b>${escapeHtml(c.tutorado_nombre || '')}</b>, con número de control <b>${escapeHtml(c.no_control || '')}</b>, de la carrera de ${escapeHtml(c.carrera || '')}${sem}, <b>asistió</b> a la sesión de tutoría individual realizada el día ${escapeHtml(p.larga)}, de ${escapeHtml(p.horario.replace(' – ', ' a '))} h, ${donde}, con el (la) tutor(a) <b>${escapeHtml(c.tutor_nombre || '')}</b>.</p>
+      <p>Por medio del presente se hace constar que el (la) estudiante <b>${escapeHtml(c.tutorado_nombre || '')}</b>, con número de control <b>${escapeHtml(c.no_control || '')}</b>, de la carrera de ${escapeHtml(c.carrera || '')}${sem}, <b>asistió</b> a la sesión de tutoría individual realizada el día ${escapeHtml(p.larga)}, de ${escapeHtml(p.horario.replace(' – ', ' a '))} h, con una duración de <b>${escapeHtml(c.duracion_real_min || c.duracion_min || 60)} minutos</b>, ${donde}, con el (la) tutor(a) <b>${escapeHtml(c.tutor_nombre || '')}</b>.</p>
       <p><b>Motivo de la sesión:</b> ${escapeHtml(c.motivo || '')}</p>
       <p>Se extiende el presente a petición del (de la) interesado(a), para los fines que le convengan.</p>
     </div>
@@ -902,7 +939,7 @@ function htmlComprobante(c) {
 async function imprimirComprobante(id) {
   const c = citasTutor.get(id);
   if (!c) return;
-  if (c.estatus !== 'Completada' && !confirm('La cita aún no está marcada como atendida. ¿Imprimir el comprobante de todos modos?')) return;
+  if (c.estatus !== 'Completada') return toast('Primero confirma la asistencia y la duración de la sesión.', 'error');
   await imprimirHoja(htmlComprobante(c), `Comprobante tutoria ${c.no_control} ${String(c.fecha_hora_local).slice(0, 10)}`);
 }
 
@@ -937,18 +974,14 @@ async function imprimirHoja(html, nombreArchivo) {
   window.print();
 }
 
-async function cambiarEstatusCita(id, estatus, boton) {
-  let notas;
-  if (estatus === 'Completada') {
-    notas = prompt('Notas de la sesión (opcional):') || undefined;
-  } else if (estatus === 'Cancelada' && !confirm('¿Cancelar esta cita?')) {
-    return;
-  }
+async function cambiarEstatusCita(id, estatus, boton, extra = {}) {
+  if (estatus === 'Cancelada' && extra.asistio === undefined && !confirm('¿Cancelar esta cita?')) return;
   await conBotonOcupado(boton, '…', async () => {
     try {
-      const r = await api(`/citas/${id}/estatus`, { method: 'PATCH', body: { estatus, notas_tutor: notas } });
+      const r = await api(`/citas/${id}/estatus`, { method: 'PATCH', body: { estatus, ...extra } });
+      cerrarAsistencia();
       toast(r.mensaje);
-      await Promise.all([cargarAgendaTutor(), cargarMetricasDashboard(), cargarReporteTutor()]);
+      await Promise.all([cargarAgendaTutor(), cargarMetricasDashboard(), cargarReporteTutor(), cargarReporteDiario()]);
     } catch (err) {
       toast(err.message, 'error');
     }
@@ -1007,7 +1040,7 @@ async function abrirModalCitaTutor(nombreAlumno, tutoradoId) {
   const hora = $('modal-cita-hora');
   hora.innerHTML = '<option value="">Primero elige el día</option>';
   hora.disabled = true;
-  setText('modal-cita-ayuda', 'Solo se muestran los días con clases del calendario escolar TecNM.');
+  setText('modal-cita-ayuda', '');
   $('modal-cita').classList.remove('hidden');
   if (!calendarioCitaTutor) {
     calendarioCitaTutor = await crearCalendarioClases($('modal-cita-dia'), hoyLocal(), cargarHorasCitaTutor);
@@ -1074,7 +1107,7 @@ async function enviarCitaTutor(event) {
       await api('/citas/reservar', { method: 'POST', body });
       window.closeModalCita();
       toast('Cita registrada y confirmada en tu agenda.');
-      await Promise.all([cargarAgendaTutor(), cargarMetricasDashboard(), cargarReporteTutor()]);
+      await Promise.all([cargarAgendaTutor(), cargarMetricasDashboard(), cargarReporteTutor(), cargarReporteDiario()]);
     } catch (err) {
       toast(err.message, 'error');
     }
@@ -1147,6 +1180,14 @@ function pintarEncabezadoUsuario() {
   setText('banner-nombre', nombre);
 }
 
+/** Foto del tutor en el botón de perfil del encabezado (o sus iniciales). */
+function pintarAvatarNav(foto) {
+  const el = $('nav-iniciales');
+  if (!el) return;
+  if (foto) el.innerHTML = `<img src="${escapeHtml(foto)}" alt="" class="w-full h-full object-cover">`;
+  else el.textContent = iniciales(`${Sesion.usuario?.nombre || ''} ${Sesion.usuario?.apellidos || ''}`);
+}
+
 async function iniciarTutor() {
   if (!requiereSesion('tutor')) return;
   pintarEncabezadoUsuario();
@@ -1172,6 +1213,89 @@ async function iniciarTutor() {
   cargarAgendaTutor();
   cargarTablaCanalizaciones();
   cargarReporteTutor();
+  iniciarReporteDiario();
+}
+
+/* ---- Reporte del día (tutor: sus sesiones · coordinación: todos) --------- */
+let reporteDiario = null;
+
+function iniciarReporteDiario() {
+  const input = $('rd-fecha');
+  if (!input) return;
+  input.value = hoyLocal();
+  input.max = hoyLocal(60);
+  input.addEventListener('change', cargarReporteDiario);
+  cargarReporteDiario();
+}
+
+const fmtMin = (m) => (m >= 60 ? `${Math.floor(m / 60)} h${m % 60 ? ` ${m % 60} min` : ''}` : `${m} min`);
+
+async function cargarReporteDiario() {
+  const cont = $('rd-tabla');
+  if (!cont) return;
+  const conTutor = PAGINA === 'coordinacion';
+  try {
+    reporteDiario = await api('/citas/reporte-diario', { query: { fecha: $('rd-fecha').value || hoyLocal() } });
+    const { resumen: r, sesiones } = reporteDiario;
+    const dato = (etq, val, color = 'text-slate-800') => `<div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
+        <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500">${etq}</p><p class="text-lg font-extrabold ${color}">${val}</p></div>`;
+    $('rd-resumen').innerHTML = [
+      dato('Sesiones atendidas', r.atendidas),
+      dato('Tiempo de tutoría', fmtMin(r.minutos)),
+      dato('Inasistencias', r.inasistencias, r.inasistencias ? 'text-rose-600' : 'text-slate-800'),
+      conTutor ? dato('Tutores que atendieron', r.tutores) : dato('Por confirmar', r.por_confirmar, r.por_confirmar ? 'text-amber-600' : 'text-slate-800'),
+    ].join('');
+    if (!sesiones.length) {
+      cont.innerHTML = '<p class="text-xs text-slate-400 text-center py-6 border border-dashed border-slate-200 rounded-xl">No hay sesiones registradas ese día.</p>';
+      return;
+    }
+    const estado = (c) => (c.estatus === 'Completada'
+      ? chip('Asistió', 'bg-emerald-100 text-emerald-800')
+      : c.asistio === false ? chip('No asistió', 'bg-rose-100 text-rose-700') : chip('Por confirmar', 'bg-amber-100 text-amber-800'));
+    cont.innerHTML = `<div class="overflow-x-auto"><table class="w-full text-xs text-left">
+      <thead class="text-[10px] uppercase tracking-wide text-slate-500 border-b border-slate-200"><tr>
+        <th class="py-2 pr-3">Hora</th>${conTutor ? '<th class="py-2 pr-3">Tutor(a)</th>' : ''}<th class="py-2 pr-3">Tutorado(a)</th><th class="py-2 pr-3">No. de control</th><th class="py-2 pr-3">Asistencia</th><th class="py-2">Tiempo</th>
+      </tr></thead>
+      <tbody class="divide-y divide-slate-100">${sesiones.map((c) => `<tr>
+        <td class="py-2 pr-3 whitespace-nowrap text-slate-600">${escapeHtml(String(c.fecha_hora_local).slice(11, 16))}</td>
+        ${conTutor ? `<td class="py-2 pr-3 text-slate-700">${escapeHtml(c.tutor_nombre)}</td>` : ''}
+        <td class="py-2 pr-3 font-semibold text-slate-800">${escapeHtml(c.tutorado_nombre || `Grupo ${c.grupo || ''}`)}</td>
+        <td class="py-2 pr-3 text-slate-600">${escapeHtml(c.no_control || '—')}</td>
+        <td class="py-2 pr-3">${estado(c)}</td>
+        <td class="py-2 font-semibold text-slate-700">${c.estatus === 'Completada' && c.duracion_real_min ? `${c.duracion_real_min} min` : '—'}</td>
+      </tr>`).join('')}</tbody></table></div>`;
+  } catch (err) {
+    cont.innerHTML = `<p class="text-xs text-rose-600 text-center py-6">${escapeHtml(err.message)}</p>`;
+  }
+}
+
+function htmlReporteDiario(rep) {
+  const conTutor = PAGINA === 'coordinacion';
+  const { resumen: r, sesiones } = rep;
+  const fecha = partesCita({ fecha_hora_local: `${rep.fecha}T00:00` }).conDia;
+  const asist = (c) => (c.estatus === 'Completada' ? 'Asistió' : c.asistio === false ? 'No asistió' : 'Por confirmar');
+  const filas = sesiones.map((c, i) => `<tr><td>${i + 1}</td>${conTutor ? `<td>${escapeHtml(c.tutor_nombre)}</td>` : ''}<td>${escapeHtml(c.tutorado_nombre || `Grupo ${c.grupo || ''}`)}</td><td>${escapeHtml(c.no_control || '')}</td><td>${escapeHtml(String(c.fecha_hora_local).slice(11, 16))}</td><td>${asist(c)}</td><td>${c.estatus === 'Completada' && c.duracion_real_min ? `${c.duracion_real_min} min` : '—'}</td></tr>`).join('');
+  const u = Sesion.usuario || {};
+  const responsable = conTutor ? 'Coordinación del Programa Institucional de Tutorías' : `${u.nombre || ''} ${u.apellidos || ''}`.trim();
+  return `${encabezadoHoja('Reporte diario de sesiones de tutoría', `<p>Veracruz, Ver., a ${escapeHtml(fechaLargaHoy())}</p>`)}
+    <div class="hd-campos">
+      ${campoHoja('Fecha de las sesiones:', fecha)}
+      ${conTutor ? '' : campoHoja('Nombre del tutor(a):', responsable)}
+    </div>
+    <div class="hd-bloque"><span>Sesiones del día:</span></div>
+    ${sesiones.length ? `<table class="hd-tabla"><thead><tr><th>No.</th>${conTutor ? '<th>Tutor(a)</th>' : ''}<th>Tutorado(a)</th><th>No. de control</th><th>Hora</th><th>Asistencia</th><th>Tiempo</th></tr></thead><tbody>${filas}</tbody></table>`
+      : '<p class="hd-linea-texto">No se registraron sesiones ese día.</p>'}
+    <p class="hd-linea-texto"><b>Total:</b> ${r.atendidas} sesión(es) atendida(s) · ${fmtMin(r.minutos)} de tutoría · ${r.inasistencias} inasistencia(s)${r.por_confirmar ? ` · ${r.por_confirmar} por confirmar` : ''}.</p>
+    <table class="hd-firmas"><tr>
+      <td><span class="hd-linea"></span><b>${escapeHtml(conTutor ? '' : responsable) || '&nbsp;'}</b>${conTutor ? 'Coordinación de Tutorías' : 'Nombre y firma del tutor(a)'}</td>
+      <td><span class="hd-linea"></span><b>&nbsp;</b>${conTutor ? 'Jefatura del Departamento' : 'Vo. Bo. Coordinación de Tutorías'}</td>
+    </tr></table>`;
+}
+
+async function imprimirReporteDiario() {
+  if (!reporteDiario) await cargarReporteDiario();
+  if (!reporteDiario) return toast('No se pudo cargar el reporte del día.', 'error');
+  await imprimirHoja(htmlReporteDiario(reporteDiario), `Reporte diario tutorias ${reporteDiario.fecha}`);
 }
 
 /* ---- Tutor: informes del periodo ------------------------------------------- */
@@ -2760,6 +2884,7 @@ async function cargarMiPerfilTutor() {
     const { tutor } = await api('/tutores/mi-perfil');
     perfilTutorActual = tutor;
     $('tutor-persona-card').innerHTML = tutorPersonaHtml(tutor);
+    pintarAvatarNav(tutor.foto);
   } catch (err) {
     toast(err.message, 'error');
   }
@@ -2861,6 +2986,7 @@ async function guardarPerfilTutor(event) {
       const r = await api('/tutores/mi-perfil', { method: 'PUT', body });
       toast(r.mensaje);
       perfilTutorActual = r.tutor;
+      pintarAvatarNav(r.tutor.foto);
       fotoTutorPendiente = undefined;
       $('tutor-persona-card').innerHTML = tutorPersonaHtml(r.tutor);
       cerrarEditorPerfilTutor();
@@ -2996,6 +3122,7 @@ async function quitarDeGrupo(asignacionId, nombre) {
 function iniciarCoordinacion() {
   if (!requiereSesion('coordinador')) return;
   pintarEncabezadoUsuario();
+  iniciarReporteDiario();
   conectarModales();
   conectarFiltrosRiesgo();
   // Botones del prototipo original
@@ -4066,10 +4193,15 @@ Object.assign(window, {
   cancelarCitaAlumno,
   cambiarEstatusCita,
   abrirMinuta,
+  abrirAsistencia,
+  cerrarAsistencia,
+  guardarAsistencia,
+  pintarOpcionesAsistencia,
   cerrarMinuta,
   guardarMinuta,
   imprimirComprobante,
   imprimirReporteSemestral,
+  imprimirReporteDiario,
   alternarTipoCita,
   verEvaluacionTutor,
   cambiarVistaEvaluacion,
