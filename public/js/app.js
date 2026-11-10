@@ -272,6 +272,8 @@ async function cargarMetricasDashboard() {
   try {
     const s = await api('/dashboard/stats');
 
+    if (PAGINA === 'coordinacion') return pintarInicioCoord(s);
+
     // Tarjetas comunes (tutor y coordinación)
     setText('kpi-total-tutorados', `${s.total_tutorados} Alumnos`);
     setText('kpi-en-riesgo', `${s.en_riesgo} (${s.pct_en_riesgo}%)`);
@@ -994,7 +996,7 @@ async function cargarTablaCanalizaciones() {
   const columnas = tbody.closest('table').querySelectorAll('thead th').length;
   try {
     const { canalizaciones, total } = await api('/canalizaciones');
-    setText('canal-registrados', `${total} Casos Registrados`);
+    setText('canal-registrados', PAGINA === 'coordinacion' ? `Casos activos por área · ${total} registrados` : `${total} Casos Registrados`);
     if (!canalizaciones.length) {
       mostrarEstadoTabla(tbody, columnas, 'Sin canalizaciones registradas.');
       return;
@@ -1178,6 +1180,8 @@ function pintarEncabezadoUsuario() {
   setText('nav-nombre', nombre);
   setText('nav-iniciales', iniciales(nombre));
   setText('banner-nombre', nombre);
+  setText('menu-nombre', nombre);
+  if (u.correo) setText('menu-correo', u.correo);
 }
 
 /** Foto del tutor en el botón de perfil del encabezado (o sus iniciales). */
@@ -1267,6 +1271,75 @@ async function cargarReporteDiario() {
       </tr>`).join('')}</tbody></table></div>`;
   } catch (err) {
     cont.innerHTML = `<p class="text-xs text-rose-600 text-center py-6">${escapeHtml(err.message)}</p>`;
+  }
+}
+
+/* ---- Inicio de la Coordinación ------------------------------------------- */
+const pendientesCoord = {};
+const AREA_NOMBRE = { PALPROG: 'PALPROG', CIS: 'CIS', CEPC: 'CEPC', PAPAs: "PAPA's", 'Psicología/Salud': 'Psicología / salud' };
+
+function pintarInicioCoord(s) {
+  setText('inicio-periodo', s.periodo);
+  setText('kpi-total-tutorados', s.total_tutorados);
+  setText('kpi-tutores', `${s.tutores_con_grupo} de ${s.tutores_totales}`);
+  const riesgo = $('kpi-en-riesgo');
+  if (riesgo) riesgo.innerHTML = `${s.en_riesgo} <small>${s.pct_en_riesgo}%</small>`;
+  setText('kpi-citas-semana', s.citas_semana);
+
+  const areas = s.canalizaciones_por_area || {};
+  Object.entries(areas).forEach(([area, v]) => {
+    setText(`canal-activas-${area === 'Psicología/Salud' ? 'PSICO' : area}`, v.activas);
+  });
+  const lista = $('inicio-canal');
+  if (lista) {
+    const filas = Object.keys(AREA_NOMBRE).map((a) => [a, areas[a] || { total: 0, activas: 0 }]);
+    lista.innerHTML = filas.map(([a, v]) => `<li><span>${escapeHtml(AREA_NOMBRE[a])}</span>
+      <span class="text-slate-500">${v.activas} activa${v.activas === 1 ? '' : 's'} <span class="text-slate-300">/</span> ${v.total}</span></li>`).join('');
+  }
+  pendientesCoord.riesgo = s.en_riesgo_critico;
+  pintarPendientesCoord();
+}
+
+/** Lista corta de lo que espera a la coordinación; cada fuente llena su parte al cargar. */
+function pintarPendientesCoord() {
+  const ul = $('inicio-pendientes');
+  if (!ul) return;
+  const p = pendientesCoord;
+  const items = [
+    [p.sinTutor, 'asignaciones', (n) => `${n} tutorado${n === 1 ? '' : 's'} sin tutor`],
+    [p.fichas, 'fichas', (n) => `${n} ficha${n === 1 ? '' : 's'} por revisar`],
+    [p.evaluaciones, 'evaluaciones', (n) => `${n} tutor${n === 1 ? '' : 'es'} sin evaluar el programa`],
+    [p.riesgo, 'riesgo', (n) => `${n} en riesgo crítico`],
+  ].filter(([n]) => n > 0);
+  if (!items.length) {
+    const cargando = ['sinTutor', 'fichas', 'evaluaciones'].some((k) => p[k] === undefined);
+    ul.innerHTML = `<li class="text-slate-400">${cargando ? 'Cargando…' : 'Nada pendiente.'}</li>`;
+    return;
+  }
+  ul.innerHTML = items.map(([n, tab, txt]) => `<li><button type="button" onclick="switchTab('${tab}')" class="fila-enlace">
+    <span>${escapeHtml(txt(n))}</span><i class="fa-solid fa-chevron-right text-[10px] text-slate-400"></i></button></li>`).join('');
+}
+
+async function cargarSesionesHoyCoord() {
+  const cont = $('inicio-hoy');
+  if (!cont) return;
+  try {
+    const { resumen: r, sesiones } = await api('/citas/reporte-diario', { query: { fecha: hoyLocal() } });
+    const linea = `<p class="text-xs text-slate-500 mb-2">${r.atendidas} atendida${r.atendidas === 1 ? '' : 's'} · ${fmtMin(r.minutos)} de tutoría${r.inasistencias ? ` · ${r.inasistencias} inasistencia${r.inasistencias === 1 ? '' : 's'}` : ''}${r.por_confirmar ? ` · ${r.por_confirmar} por confirmar` : ''}</p>`;
+    if (!sesiones.length) {
+      cont.innerHTML = '<p class="text-xs text-slate-400 py-6 text-center">No hay sesiones registradas hoy.</p>';
+      return;
+    }
+    const estado = (c) => (c.estatus === 'Completada' ? `<span class="text-emerald-700">${c.duracion_real_min ? `${c.duracion_real_min} min` : 'Asistió'}</span>`
+      : c.asistio === false ? '<span class="text-rose-600">No asistió</span>' : '<span class="text-amber-700">Por confirmar</span>');
+    const max = 8;
+    cont.innerHTML = linea + `<ul class="lista-simple">${sesiones.slice(0, max).map((c) => `<li>
+      <span class="min-w-0 truncate"><span class="text-slate-400 tabular-nums mr-2">${escapeHtml(String(c.fecha_hora_local).slice(11, 16))}</span>${escapeHtml(c.tutorado_nombre || `Grupo ${c.grupo || ''}`)}
+        <span class="text-slate-400"> · ${escapeHtml(c.tutor_nombre)}</span></span>
+      <span class="shrink-0 text-xs font-semibold">${estado(c)}</span></li>`).join('')}</ul>
+      ${sesiones.length > max ? `<p class="text-[11px] text-slate-400 mt-2">y ${sesiones.length - max} más en el reporte del día.</p>` : ''}`;
+  } catch (err) {
+    cont.innerHTML = `<p class="text-xs text-rose-600 py-4">${escapeHtml(err.message)}</p>`;
   }
 }
 
@@ -1659,10 +1732,11 @@ async function cargarResumenEvaluaciones(periodo) {
       `<span class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm ${COLOR_LIKERT[e.valor].barra}"></span>${e.valor} ${escapeHtml(e.etiqueta)}</span>`).join('');
 
     setText('eval-participacion', `${r.respondidas} / ${r.total_tutores}`);
+    if (!periodo || periodo === r.periodo) { pendientesCoord.evaluaciones = Math.max(0, r.total_tutores - r.respondidas); pintarPendientesCoord(); }
     setText('eval-participacion-sub', `${r.pct_participacion}% de los tutores respondió`);
     const prom = $('eval-promedio');
     prom.textContent = r.promedio_general === null ? '—' : num(r.promedio_general, 2);
-    prom.className = `text-xl font-extrabold mt-1 ${colorPromedio(r.promedio_general)}`;
+    prom.className = colorPromedio(r.promedio_general);
     setText('eval-promedio-sub', r.promedio_general === null ? 'Sin respuestas en el periodo' : `Equivale a "${etiquetaLikert(r.promedio_general)}"`);
 
     const conDatos = r.preguntas.filter((p) => p.promedio !== null);
@@ -1878,10 +1952,8 @@ function cambiarVistaEvaluacion(vista) {
   ['tutores', 'alumnos'].forEach((v) => {
     $(`eval-vista-${v}`).classList.toggle('hidden', v !== vista);
     const b = $(`evalbtn-${v}`);
-    b.classList.toggle('bg-tecnmGreen', v === vista);
-    b.classList.toggle('text-white', v === vista);
-    b.classList.toggle('text-slate-600', v !== vista);
-    b.classList.toggle('hover:bg-slate-100', v !== vista);
+    b.classList.toggle('activo', v === vista);
+    b.setAttribute('aria-selected', String(v === vista));
   });
   if (vista === 'alumnos' && !vistaAlumnosCargada) {
     vistaAlumnosCargada = true;
@@ -1931,7 +2003,7 @@ async function cargarResumenEvalAlumnos() {
     setText('evalal-kpi-resp-sub', `${r.pct_participacion}% de los tutorados${elegido ? ' de este tutor' : ''} respondió`);
     const prom = $('evalal-kpi-prom');
     prom.textContent = r.promedio_general === null ? '—' : num(r.promedio_general, 2);
-    prom.className = `text-xl font-extrabold mt-1 ${colorPromedio(r.promedio_general)}`;
+    prom.className = colorPromedio(r.promedio_general);
     setText('evalal-kpi-prom-sub', r.promedio_general === null ? 'Sin respuestas' : `Equivale a "${etiquetaLikert(r.promedio_general)}"`);
 
     const conDatos = r.items.filter((i) => i.promedio !== null).sort((a, b) => a.promedio - b.promedio);
@@ -3134,6 +3206,8 @@ async function cargarAsignaciones() {
     const { tutores, sin_tutor: sinTutor, periodo } = datosAsig;
     setText('asig-periodo', periodo);
     $('asig-alerta').classList.toggle('hidden', sinTutor === 0);
+    pendientesCoord.sinTutor = sinTutor;
+    pintarPendientesCoord();
     setText('asig-alerta-texto', `${sinTutor} tutorado(s) aún no eligen tutor en ${periodo}.`);
 
     tbody.innerHTML = tutores.map((t) => {
@@ -3252,6 +3326,7 @@ function iniciarCoordinacion() {
   window.canalizarDirecto = (nombre, area, id) => abrirModalCanalizacion(nombre, area, id);
 
   cargarMetricasDashboard();
+  cargarSesionesHoyCoord();
   poblarTablaRiesgo('TODOS');
   cargarTablaCanalizaciones();
   cargarResumenEvaluaciones();
@@ -3963,6 +4038,14 @@ function pintarResumenFichas(r) {
   const cont = $('fichas-resumen');
   if (!cont) return;
   const actual = $('fichas-estado')?.value || '';
+  if (!actual && !$('fichas-buscar')?.value.trim()) { pendientesCoord.fichas = r.Enviada || 0; pintarPendientesCoord(); }
+  if (cont.classList.contains('filtro-chips')) {
+    const opciones = [['', 'Todas', r.total], ['Enviada', 'Por revisar', r.Enviada], ['Requiere corrección', 'En corrección', r['Requiere corrección']],
+      ['Revisada', 'Revisadas', r.Revisada], ['Pendiente', 'Sin ficha', r.Pendiente]];
+    cont.innerHTML = opciones.map(([estado, etq, n]) => `<button type="button" onclick="filtrarFichas('${estado}')" class="${actual === estado ? 'activo' : ''}">
+      ${etq} <span>${n}</span></button>`).join('');
+    return;
+  }
   const tarjetas = [
     ['', 'Tutorados', r.total, 'fa-users', 'text-tecnmGreen'],
     ['Enviada', 'Por revisar', r.Enviada, 'fa-paper-plane', 'text-sky-700'],
