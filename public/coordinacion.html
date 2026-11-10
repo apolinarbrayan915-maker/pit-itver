@@ -89,99 +89,102 @@
 
         <!-- INICIO -->
         <div id="tab-kpi" class="tab-content active space-y-5">
-            <div class="flex flex-wrap items-baseline justify-between gap-2">
-                <h2 class="text-lg font-bold text-slate-800">Inicio</h2>
-                <p class="text-xs text-slate-500">Periodo <span id="inicio-periodo">…</span> · Ingeniería en Sistemas Computacionales</p>
+            <section class="m3-hero">
+                <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <p id="inicio-fecha">&nbsp;</p>
+                        <h2 id="inicio-saludo">Hola</h2>
+                        <p>Periodo <span id="inicio-periodo">…</span> · Ingeniería en Sistemas Computacionales</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <button type="button" class="m3-btn lleno" onclick="switchTab('reportes')"><i class="fa-solid fa-calendar-day"></i> Reporte del día</button>
+                        <button type="button" class="m3-btn contorno" onclick="switchTab('avisos')"><i class="fa-regular fa-bell"></i> Publicar aviso</button>
+                    </div>
+                </div>
+            </section>
+
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+                <button type="button" class="m3-card m3-interactiva m3-kpi tono-azul" onclick="switchTab('riesgo')">
+                    <div class="fila"><span class="m3-icono"><i class="fa-solid fa-user-graduate"></i></span><i class="fa-solid fa-arrow-right flecha"></i></div>
+                    <div><p class="etq">Tutorados</p><p class="valor" id="kpi-total-tutorados">…</p></div>
+                    <p class="apoyo" id="kpi-total-sub">&nbsp;</p>
+                </button>
+                <button type="button" class="m3-card m3-interactiva m3-kpi tono-verde" onclick="switchTab('asignaciones')">
+                    <div class="fila"><span class="m3-icono"><i class="fa-solid fa-chalkboard-user"></i></span><i class="fa-solid fa-arrow-right flecha"></i></div>
+                    <div><p class="etq">Tutores con tutorados</p><p class="valor" id="kpi-tutores">…</p></div>
+                    <div class="m3-progreso"><span id="kpi-tutores-barra" style="width:0"></span></div>
+                </button>
+                <button type="button" class="m3-card m3-interactiva m3-kpi tono-rojo" onclick="filtrarRiesgoDesdeInicio('ALTO,CRÍTICO')">
+                    <div class="fila"><span class="m3-icono"><i class="fa-solid fa-triangle-exclamation"></i></span><i class="fa-solid fa-arrow-right flecha"></i></div>
+                    <div><p class="etq">En riesgo alto o crítico</p><p class="valor" id="kpi-en-riesgo">…</p></div>
+                    <div class="m3-progreso"><span id="kpi-riesgo-barra" style="width:0"></span></div>
+                </button>
+                <button type="button" class="m3-card m3-interactiva m3-kpi tono-ambar" onclick="switchTab('reportes')">
+                    <div class="fila"><span class="m3-icono"><i class="fa-regular fa-calendar-check"></i></span><i class="fa-solid fa-arrow-right flecha"></i></div>
+                    <div><p class="etq">Citas esta semana</p><p class="valor" id="kpi-citas-semana">…</p></div>
+                    <p class="apoyo" id="kpi-citas-sub">&nbsp;</p>
+                </button>
             </div>
 
-            <dl class="cifras">
-                <div><dt>Tutorados</dt><dd id="kpi-total-tutorados">…</dd></div>
-                <div><dt>Tutores con tutorados</dt><dd id="kpi-tutores">…</dd></div>
-                <div><dt>Riesgo alto o crítico</dt><dd id="kpi-en-riesgo">…</dd></div>
-                <div><dt>Citas esta semana</dt><dd id="kpi-citas-semana">…</dd></div>
-            </dl>
-
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
-                <section class="lg:col-span-2 lg:self-start bg-white p-5 rounded-2xl border border-slate-200">
-                    <div class="flex items-center justify-between mb-3">
-                        <h3 class="text-sm font-bold text-slate-800">Sesiones de hoy</h3>
-                        <button type="button" onclick="switchTab('reportes')" class="enlace-sec">Reporte del día</button>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <section class="m3-card">
+                    <div class="m3-card-titulo"><div><h3>Riesgo académico</h3><p>Toca un nivel para ver a esos tutorados</p></div></div>
+                    <div class="flex items-center gap-4">
+                        <div class="m3-dona" id="inicio-dona"><svg viewBox="0 0 120 120"></svg><div class="centro"><b id="inicio-dona-total">…</b><span>tutorados</span></div></div>
+                        <ul class="m3-lista flex-1" id="inicio-niveles"></ul>
                     </div>
-                    <div id="inicio-hoy"><p class="text-xs text-slate-400 py-4">Cargando…</p></div>
                 </section>
+                <section class="m3-card">
+                    <div class="m3-card-titulo"><div><h3>Canalizaciones por área</h3><p><span class="inline-block w-2 h-2 rounded-full align-middle" style="background:var(--m3-primario)"></span> activas · total</p></div>
+                        <button type="button" class="m3-btn texto chico" onclick="switchTab('canalizaciones')">Ver todas</button></div>
+                    <div id="inicio-canal" class="-mx-2 space-y-0.5"></div>
+                </section>
+                <section class="m3-card">
+                    <div class="m3-card-titulo"><div><h3>Pendientes</h3><p>Lo que requiere tu atención</p></div></div>
+                    <ul id="inicio-pendientes" class="m3-lista"><li class="m3-item text-xs" style="color:var(--m3-texto-3)">Cargando…</li></ul>
+                </section>
+            </div>
 
-                <div class="space-y-5">
-                    <section class="bg-white p-5 rounded-2xl border border-slate-200">
-                        <h3 class="text-sm font-bold text-slate-800 mb-2">Pendientes</h3>
-                        <ul id="inicio-pendientes" class="lista-simple"><li class="text-slate-400">Cargando…</li></ul>
-                    </section>
-                    <section class="bg-white p-5 rounded-2xl border border-slate-200">
-                        <div class="flex items-center justify-between mb-2">
-                            <h3 class="text-sm font-bold text-slate-800">Canalizaciones</h3>
-                            <button type="button" onclick="switchTab('canalizaciones')" class="enlace-sec">Ver todas</button>
-                        </div>
-                        <ul id="inicio-canal" class="lista-simple"><li class="text-slate-400">Cargando…</li></ul>
-                    </section>
-                </div>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <section class="m3-card lg:col-span-2">
+                    <div class="m3-card-titulo"><div><h3>Sesiones de hoy</h3><p id="inicio-hoy-resumen">&nbsp;</p></div>
+                        <button type="button" class="m3-btn texto chico" onclick="switchTab('reportes')">Reporte del día <i class="fa-solid fa-arrow-right text-[10px]"></i></button></div>
+                    <div id="inicio-hoy"><p class="text-xs py-4" style="color:var(--m3-texto-3)">Cargando…</p></div>
+                </section>
+                <section class="m3-card">
+                    <div class="m3-card-titulo"><div><h3>Ocupación de tutores</h3><p>Tutorados respecto al cupo</p></div>
+                        <button type="button" class="m3-btn texto chico" onclick="switchTab('asignaciones')">Gestionar</button></div>
+                    <ul id="inicio-ocupacion" class="m3-lista"></ul>
+                </section>
             </div>
         </div>
 
-        <!-- TAB 2: TUTORES Y ELECCIÓN DE TUTOR (GET /api/asignaciones · PATCH /api/tutores/:id) -->
+        <!-- TUTORES (GET /api/asignaciones · PATCH /api/tutores/:id) -->
         <div id="tab-asignaciones" class="tab-content space-y-5">
-            <div class="bg-white p-5 md:p-6 rounded-2xl border border-slate-200">
-                <div class="mb-4">
-                    <h2 class="text-base font-bold text-slate-800">Tutores</h2>
-                    <p class="text-xs text-slate-500">Cupo de cada docente y si recibe tutorados · Periodo <span id="asig-periodo">…</span></p>
-                </div>
-
-                <div id="asig-alerta" class="hidden mb-4 p-3 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 text-xs font-semibold flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <span><i class="fa-solid fa-triangle-exclamation mr-1"></i> <span id="asig-alerta-texto"></span></span>
-                    <button onclick="document.getElementById('asig-ver-grupo').value='__sin'; document.getElementById('asig-ver-grupo').dispatchEvent(new Event('change'))" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded-lg font-bold">Ver quiénes</button>
-                </div>
-
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left text-xs text-slate-700">
-                        <thead class="tabla-cabeza uppercase font-semibold text-[10px] text-slate-500">
-                            <tr>
-                                <th class="p-3 rounded-l-lg">Docente Tutor</th>
-                                <th class="p-3">Formación / Áreas</th>
-                                <th class="p-3 text-center">Horario</th>
-                                <th class="p-3 text-center">Tutorados</th>
-                                <th class="p-3 text-center">Cupo</th>
-                                <th class="p-3 text-center">Recibe tutorados</th>
-                                <th class="p-3 rounded-r-lg text-center">Acción</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-slate-100 font-medium" id="tbody-asig-tutores"></tbody>
-                    </table>
-                </div>
+            <div class="m3-seccion">
+                <div><h2>Tutores</h2><p>Cupo y disponibilidad de cada docente · Periodo <span id="asig-periodo">…</span></p></div>
             </div>
 
-            <div class="bg-white p-5 md:p-6 rounded-2xl border border-slate-200">
-                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-3">
-                    <div>
-                        <h3 class="text-sm font-bold text-slate-800">Tutorados por tutor</h3>
-                        <p class="text-xs text-slate-500">A quién eligió cada tutorado.</p>
-                    </div>
-                    <select id="asig-ver-grupo" class="text-xs p-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-tecnmGreen outline-none"></select>
+            <div id="asig-alerta" class="hidden m3-banner tono-ambar">
+                <span class="m3-icono chico" style="background:transparent"><i class="fa-solid fa-user-clock"></i></span>
+                <span class="flex-1" id="asig-alerta-texto"></span>
+                <button type="button" onclick="verSinTutor()" class="m3-btn texto chico" style="color:inherit">Ver quiénes</button>
+            </div>
+
+            <div id="tutores-tarjetas" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
+
+            <section class="m3-card" id="asig-integrantes">
+                <div class="m3-card-titulo flex-wrap">
+                    <div><h3>Tutorados por tutor</h3><p>A quién eligió cada tutorado</p></div>
+                    <select id="asig-ver-grupo" class="text-xs h-10 px-3 rounded-full border bg-transparent outline-none" style="border-color:var(--m3-contorno-fuerte);color:var(--m3-texto)"></select>
                 </div>
                 <div class="overflow-x-auto">
-                    <table class="w-full text-left text-xs text-slate-700">
-                        <thead class="tabla-cabeza uppercase font-semibold text-[10px] text-slate-500">
-                            <tr>
-                                <th class="p-3 rounded-l-lg">N° Control</th>
-                                <th class="p-3">Tutorado</th>
-                                <th class="p-3">Semestre</th>
-                                <th class="p-3">Riesgo</th>
-                                <th class="p-3">Tutor</th>
-                                <th class="p-3">Desde</th>
-                                <th class="p-3 rounded-r-lg text-center">Acción</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-slate-100 font-medium" id="tbody-asig-integrantes"></tbody>
+                    <table class="m3-tabla">
+                        <thead><tr><th>Tutorado</th><th>Semestre</th><th>Riesgo</th><th>Tutor</th><th>Desde</th><th class="text-center">Acción</th></tr></thead>
+                        <tbody id="tbody-asig-integrantes"></tbody>
                     </table>
                 </div>
-            </div>
+            </section>
         </div>
 
         <!-- TAB: AVISOS DE LA COORDINACIÓN (CRUD /api/avisos) – los ven solo los tutores -->
@@ -278,76 +281,47 @@
             </div>
         </div>
 
-        <!-- TAB 3: SEMÁFORO DE RIESGO (GET /api/tutorados/riesgo) -->
+        <!-- TUTORADOS Y RIESGO (GET /api/tutorados/riesgo) -->
         <div id="tab-riesgo" class="tab-content space-y-5">
-            <div class="bg-white p-5 md:p-6 rounded-2xl border border-slate-200">
-                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-3">
-                    <div>
-                        <h2 class="text-base font-bold text-slate-800">Tutorados</h2>
-                        <p class="text-xs text-slate-500">Riesgo académico por materias reprobadas y avance reticular · <span id="riesgo-contador">…</span></p>
-                    </div>
-                    <div class="flex items-center space-x-2 w-full md:w-auto">
-                        <input type="search" id="buscar-tutorado" placeholder="Nombre o N° Control…" class="text-xs p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-tecnmGreen outline-none w-full md:w-56">
-                        <select id="filter-riesgo" class="text-xs p-2.5 rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-tecnmGreen outline-none">
-                            <option value="TODOS">Todos los niveles</option>
-                            <option value="CRÍTICO">Crítico (3+ reprobadas)</option>
-                            <option value="ALTO">Alto (2 reprobadas)</option>
-                            <option value="MEDIO">Medio (1 reprobada)</option>
-                            <option value="BAJO">Sin riesgo</option>
-                            <option value="ALTO,CRÍTICO">Alto y crítico</option>
-                        </select>
-                    </div>
+            <div class="m3-seccion">
+                <div><h2>Tutorados</h2><p>Riesgo académico por materias reprobadas y avance reticular · <span id="riesgo-contador">…</span></p></div>
+            </div>
+            <section class="m3-card space-y-4">
+                <div class="flex flex-col lg:flex-row lg:items-center gap-3">
+                    <label class="m3-buscar lg:w-80"><i class="fa-solid fa-magnifying-glass"></i><input type="search" id="buscar-tutorado" placeholder="Buscar por nombre o número de control"></label>
+                    <div class="m3-chips" id="riesgo-chips" role="group" aria-label="Filtrar por nivel de riesgo"></div>
+                    <select id="filter-riesgo" class="hidden" aria-hidden="true" tabindex="-1">
+                        <option value="TODOS">Todos</option><option value="CRÍTICO">Crítico</option><option value="ALTO">Alto</option>
+                        <option value="MEDIO">Medio</option><option value="BAJO">Sin riesgo</option><option value="ALTO,CRÍTICO">Alto y crítico</option>
+                    </select>
                 </div>
                 <div class="overflow-x-auto">
-                    <table class="w-full text-left text-xs text-slate-700" id="table-riesgo">
-                        <thead class="tabla-cabeza uppercase font-semibold text-[10px] text-slate-500">
-                            <tr>
-                                <th class="p-3 rounded-l-lg">N° Control</th>
-                                <th class="p-3">Tutorado</th>
-                                <th class="p-3">Semestre</th>
-                                <th class="p-3">Reprobadas</th>
-                                <th class="p-3">Avance</th>
-                                <th class="p-3">Riesgo</th>
-                                <th class="p-3">Tutor</th>
-                                <th class="p-3 rounded-r-lg text-center">Acción</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-slate-100 font-medium" id="tbody-riesgo"></tbody>
+                    <table class="m3-tabla" id="table-riesgo">
+                        <thead><tr><th>Tutorado</th><th>Semestre</th><th>Reprobadas</th><th>Avance</th><th>Riesgo</th><th>Tutor</th><th class="text-center">Acción</th></tr></thead>
+                        <tbody id="tbody-riesgo"></tbody>
                     </table>
                 </div>
-            </div>
+            </section>
         </div>
 
-        <!-- TAB 4: CANALIZACIONES -->
+        <!-- CANALIZACIONES -->
         <div id="tab-canalizaciones" class="tab-content space-y-5">
-            <div class="bg-white p-5 md:p-6 rounded-2xl border border-slate-200">
-                <div class="flex flex-wrap items-baseline justify-between gap-2 mb-4">
-                    <h2 class="text-base font-bold text-slate-800">Canalizaciones</h2>
-                    <p class="text-xs text-slate-500" id="canal-registrados">…</p>
+            <div class="m3-seccion">
+                <div><h2>Canalizaciones</h2><p id="canal-registrados">…</p></div>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3" id="canal-areas"></div>
+            <section class="m3-card space-y-4">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div class="m3-chips" id="canal-chips" role="group" aria-label="Filtrar por estatus"></div>
+                    <p class="text-xs" style="color:var(--m3-texto-3)" id="canal-filtro-texto"></p>
                 </div>
-                <dl class="cifras cifras-5 mb-5">
-                    <div><dt>PALPROG</dt><dd id="canal-activas-PALPROG">…</dd></div>
-                    <div><dt>CIS</dt><dd id="canal-activas-CIS">…</dd></div>
-                    <div><dt>CEPC</dt><dd id="canal-activas-CEPC">…</dd></div>
-                    <div><dt>PAPA's</dt><dd id="canal-activas-PAPAs">…</dd></div>
-                    <div><dt>Psicología / salud</dt><dd id="canal-activas-PSICO">…</dd></div>
-                </dl>
                 <div class="overflow-x-auto">
-                    <table class="w-full text-left text-xs text-slate-700">
-                        <thead class="tabla-cabeza uppercase font-semibold text-[10px] text-slate-500">
-                            <tr>
-                                <th class="p-3 rounded-l-lg">Tutorado</th>
-                                <th class="p-3">Área</th>
-                                <th class="p-3">Diagnóstico</th>
-                                <th class="p-3">Tutor</th>
-                                <th class="p-3">Fecha</th>
-                                <th class="p-3 rounded-r-lg">Estatus</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-slate-100 font-medium" id="tbody-canalizaciones"></tbody>
+                    <table class="m3-tabla">
+                        <thead><tr><th>Tutorado</th><th>Área</th><th>Diagnóstico</th><th>Tutor</th><th>Fecha</th><th>Estatus</th></tr></thead>
+                        <tbody id="tbody-canalizaciones"></tbody>
                     </table>
                 </div>
-            </div>
+            </section>
         </div>
 
         <!-- TAB: EVALUACIÓN DEL TUTOR HACIA EL PIT (GET /api/evaluaciones/resumen) -->
@@ -494,27 +468,28 @@
             </div>
         </div>
 
-        <!-- TAB 5: REPORTES PIT (prototipo) -->
+        <!-- REPORTES -->
         <div id="tab-reportes" class="tab-content space-y-5">
-            <div class="bg-white p-5 md:p-6 rounded-2xl border border-slate-200">
-                <div class="flex flex-wrap items-end justify-between gap-3 mb-4">
-                    <div>
-                        <h2 class="text-base font-bold text-slate-800">Reporte del día</h2>
-                        <p class="text-xs text-slate-500">Tutor que atendió, tutorado y tiempo de cada sesión.</p>
-                    </div>
-                    <div class="flex flex-wrap items-end gap-2">
-                        <div>
-                            <label for="rd-fecha" class="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1">Fecha</label>
-                            <input type="date" id="rd-fecha" class="p-2 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-tecnmGreen outline-none bg-white">
-                        </div>
-                        <button type="button" onclick="imprimirReporteDiario()" class="btn-sec"><i class="fa-solid fa-print"></i> Imprimir</button>
-                    </div>
-                </div>
-                <div id="rd-resumen" class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4"></div>
-                <div id="rd-tabla"><p class="text-xs text-slate-400 text-center py-6">Cargando…</p></div>
+            <div class="m3-seccion">
+                <div><h2>Reporte del día</h2><p>Tutor que atendió, tutorado y tiempo de cada sesión</p></div>
+                <button type="button" onclick="imprimirReporteDiario()" class="m3-btn tonal"><i class="fa-solid fa-print"></i> Imprimir</button>
             </div>
-
+            <section class="m3-card space-y-4">
+                <div class="flex flex-wrap items-center gap-2">
+                    <button type="button" class="m3-btn-icono" onclick="moverDiaReporte(-1)" title="Día anterior" aria-label="Día anterior"><i class="fa-solid fa-chevron-left"></i></button>
+                    <label class="relative">
+                        <span class="sr-only">Fecha</span>
+                        <input type="date" id="rd-fecha" class="h-10 px-4 rounded-full border text-sm font-semibold bg-transparent outline-none" style="border-color:var(--m3-contorno-fuerte);color:var(--m3-texto)">
+                    </label>
+                    <button type="button" class="m3-btn-icono" id="rd-siguiente" onclick="moverDiaReporte(1)" title="Día siguiente" aria-label="Día siguiente"><i class="fa-solid fa-chevron-right"></i></button>
+                    <button type="button" class="m3-chip" id="rd-hoy" onclick="moverDiaReporte(0)">Hoy</button>
+                    <p class="text-xs ml-auto" style="color:var(--m3-texto-3)" id="rd-fecha-texto"></p>
+                </div>
+                <div id="rd-resumen" class="grid grid-cols-2 md:grid-cols-4 gap-3"></div>
+                <div id="rd-tabla"><p class="text-xs text-center py-6" style="color:var(--m3-texto-3)">Cargando…</p></div>
+            </section>
         </div>
+
     </main>
 
     <!-- MODAL DETALLE DE EVALUACIÓN -->

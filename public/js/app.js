@@ -320,10 +320,13 @@ async function poblarTablaRiesgo(nivel = 'TODOS', busqueda = '') {
 
   try {
     const data = await api('/tutorados/riesgo', { query: { nivel, q: busqueda } });
-    if (nivel === 'TODOS' && !busqueda) cacheTutorados = data.tutorados;
+    if (nivel === 'TODOS' && !busqueda) { cacheTutorados = data.tutorados; if (PAGINA === 'coordinacion') pintarChipsRiesgo(); }
 
     if (!data.tutorados.length) {
-      mostrarEstadoTabla(tbody, columnas, 'No hay tutorados con ese criterio.');
+      if (PAGINA === 'coordinacion') {
+        tbody.innerHTML = `<tr><td colspan="${columnas}"><div class="m3-vacio"><span class="m3-icono tono-gris"><i class="fa-solid fa-magnifying-glass"></i></span>No hay tutorados con ese criterio.</div></td></tr>`;
+        setText('riesgo-contador', '0 tutorados');
+      } else mostrarEstadoTabla(tbody, columnas, 'No hay tutorados con ese criterio.');
       return;
     }
     tbody.innerHTML = data.tutorados.map(PAGINA === 'tutor' ? filaTutor : filaCoordinacion).join('');
@@ -357,14 +360,23 @@ function botonesAccion(t, { conCita }) {
 }
 
 function filaCoordinacion(t) {
-  const b = BADGE_RIESGO[t.nivel_riesgo];
-  return `<tr class="hover:bg-slate-50 row-riesgo" data-riesgo="${t.nivel_riesgo}">
-    ${celdasComunes(t)}
-    <td class="p-3">${badgeReprobadas(t)}</td>
-    <td class="p-3 font-bold ${b.texto}">${num(t.avance_reticular_pct)}% (${b.avance})</td>
-    <td class="p-3">${badgeRiesgo(t.nivel_riesgo)}</td>
-    <td class="p-3 text-[11px] text-slate-500">${escapeHtml(t.tutor_nombre || 'Sin asignar')}</td>
-    <td class="p-3 text-center space-x-1 whitespace-nowrap">${botonesAccion(t, { conCita: false })}</td>
+  const nombre = escapeHtml(JSON.stringify(t.nombre_completo));
+  const tono = (NIVELES.find(([k]) => k === t.nivel_riesgo) || NIVELES[3])[2];
+  const n = Number(t.materias_reprobadas);
+  return `<tr class="row-riesgo" data-riesgo="${t.nivel_riesgo}">
+    <td><div class="flex items-center gap-2.5"><span class="m3-avatar chico ${tono}">${escapeHtml(iniciales(t.nombre_completo))}</span>
+      <span class="min-w-0"><b class="block font-semibold" style="color:var(--m3-texto)">${escapeHtml(t.nombre_completo)}</b>
+      <span class="text-[11px]" style="color:var(--m3-texto-3)">${escapeHtml(t.no_control)}</span>
+      ${t.canalizaciones_activas.length ? `<span class="flex flex-wrap gap-1 mt-1">${t.canalizaciones_activas.map((a) => `<span class="m3-etiqueta ${AREA_TONO[a] || 'tono-gris'}">${escapeHtml(AREA_NOMBRE[a] || a)}</span>`).join('')}</span>` : ''}</span></div></td>
+    <td>${t.semestre}°</td>
+    <td class="font-semibold ${n ? '' : 'opacity-60'}">${n ? plural(n, 'materia', 'materias') : 'Ninguna'}</td>
+    <td class="${tono}" style="min-width:7rem"><div class="flex items-center gap-2"><span class="m3-progreso flex-1"><span style="width:${Math.min(100, Number(t.avance_reticular_pct) || 0)}%"></span></span><span class="text-xs font-semibold tabular-nums">${num(t.avance_reticular_pct)}%</span></div></td>
+    <td>${etiquetaRiesgo(t.nivel_riesgo)}</td>
+    <td class="text-[11px]">${escapeHtml(t.tutor_nombre || 'Sin asignar')}</td>
+    <td class="text-center whitespace-nowrap">
+      <button type="button" onclick="mostrarPerfilTutorado(${t.tutorado_id})" class="m3-btn texto chico">Perfil</button>
+      ${t.nivel_riesgo !== 'BAJO' ? `<button type="button" onclick='openModalCanalizacion(${nombre}, "${AREA_SUGERIDA[t.nivel_riesgo]}", ${t.tutorado_id})' class="m3-btn tonal chico">Canalizar</button>` : ''}
+    </td>
   </tr>`;
 }
 
@@ -996,7 +1008,13 @@ async function cargarTablaCanalizaciones() {
   const columnas = tbody.closest('table').querySelectorAll('thead th').length;
   try {
     const { canalizaciones, total } = await api('/canalizaciones');
-    setText('canal-registrados', PAGINA === 'coordinacion' ? `Casos activos por área · ${total} registrados` : `${total} Casos Registrados`);
+    if (PAGINA === 'coordinacion') {
+      listaCanal = canalizaciones;
+      setText('canal-registrados', `${plural(total, 'caso registrado', 'casos registrados')} · toca un área para filtrar`);
+      pintarTablaCanal();
+      return;
+    }
+    setText('canal-registrados', `${total} Casos Registrados`);
     if (!canalizaciones.length) {
       mostrarEstadoTabla(tbody, columnas, 'Sin canalizaciones registradas.');
       return;
@@ -1242,6 +1260,27 @@ async function cargarReporteDiario() {
   try {
     reporteDiario = await api('/citas/reporte-diario', { query: { fecha: $('rd-fecha').value || hoyLocal() } });
     const { resumen: r, sesiones } = reporteDiario;
+    pintarFechaReporte();
+    if (conTutor) {
+      const tarjeta = (etq, val, tono, icono) => `<div class="m3-card m3-kpi ${tono}" style="padding:.9rem 1rem;gap:.55rem">
+        <span class="m3-icono chico"><i class="fa-solid ${icono}"></i></span><div><p class="etq">${etq}</p><p class="valor" style="font-size:1.5rem">${val}</p></div></div>`;
+      $('rd-resumen').innerHTML = [
+        tarjeta('Sesiones atendidas', r.atendidas, 'tono-verde', 'fa-user-check'),
+        tarjeta('Tiempo de tutoría', fmtMin(r.minutos), 'tono-azul', 'fa-clock'),
+        tarjeta('Inasistencias', r.inasistencias, 'tono-rojo', 'fa-user-xmark'),
+        tarjeta('Tutores que atendieron', r.tutores, 'tono-violeta', 'fa-chalkboard-user'),
+      ].join('');
+      if (!sesiones.length) {
+        cont.innerHTML = '<div class="m3-vacio"><span class="m3-icono tono-azul"><i class="fa-regular fa-calendar"></i></span>No hay sesiones registradas ese día.</div>';
+        return;
+      }
+      cont.innerHTML = `<div class="overflow-x-auto"><table class="m3-tabla"><thead><tr><th>Hora</th><th>Tutor(a)</th><th>Tutorado(a)</th><th>Asistencia</th></tr></thead>
+        <tbody>${sesiones.map((c) => `<tr><td class="tabular-nums font-semibold">${escapeHtml(String(c.fecha_hora_local).slice(11, 16))}</td>
+          <td><div class="flex items-center gap-2"><span class="m3-avatar chico tono-violeta">${escapeHtml(iniciales(c.tutor_nombre))}</span>${escapeHtml(c.tutor_nombre)}</div></td>
+          <td><b class="block font-semibold" style="color:var(--m3-texto)">${escapeHtml(c.tutorado_nombre || `Grupo ${c.grupo || ''}`)}</b><span class="text-[11px]" style="color:var(--m3-texto-3)">${escapeHtml(c.no_control || '')}</span></td>
+          <td>${estadoSesion(c)[1]}</td></tr>`).join('')}</tbody></table></div>`;
+      return;
+    }
     const dato = (etq, val, color = 'text-slate-800') => `<div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
         <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500">${etq}</p><p class="text-lg font-extrabold ${color}">${val}</p></div>`;
     $('rd-resumen').innerHTML = [
@@ -1274,30 +1313,120 @@ async function cargarReporteDiario() {
   }
 }
 
-/* ---- Inicio de la Coordinación ------------------------------------------- */
+/* ---- Coordinación (estilo Material 3) ------------------------------------- */
 const pendientesCoord = {};
+let statsCoord = null;
 const AREA_NOMBRE = { PALPROG: 'PALPROG', CIS: 'CIS', CEPC: 'CEPC', PAPAs: "PAPA's", 'Psicología/Salud': 'Psicología / salud' };
+const AREA_TONO = { PALPROG: 'tono-verde', CIS: 'tono-azul', CEPC: 'tono-violeta', PAPAs: 'tono-ambar', 'Psicología/Salud': 'tono-rojo' };
+const AREA_DESC = {
+  PALPROG: 'Asesoría en lógica y programación', CIS: 'Comunidad de Ingeniería en Sistemas', CEPC: 'Programación competitiva',
+  PAPAs: 'Asesoría par a par', 'Psicología/Salud': 'Orientación y salud integral',
+};
+const AREA_ICONO = { PALPROG: 'fa-code', CIS: 'fa-people-group', CEPC: 'fa-trophy', PAPAs: 'fa-handshake-angle', 'Psicología/Salud': 'fa-heart-pulse' };
+const NIVELES = [
+  ['CRÍTICO', 'Crítico', 'tono-rojo', '#d93a2f'], ['ALTO', 'Alto', 'tono-ambar', '#e08a00'],
+  ['MEDIO', 'Medio', 'tono-amarillo', '#d4b100'], ['BAJO', 'Sin riesgo', 'tono-verde', '#1f9a7a'],
+];
+const plural = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;
+
+function etiquetaRiesgo(nivel) {
+  const n = NIVELES.find(([k]) => k === nivel) || NIVELES[3];
+  return `<span class="m3-etiqueta ${n[2]}"><i class="fa-solid ${ICONO_RIESGO[nivel] || 'fa-circle'}" aria-hidden="true"></i>${escapeHtml(n[1])}</span>`;
+}
+
+function saludoCoord() {
+  const h = new Date().getHours();
+  const nombre = (Sesion.usuario?.nombre || '').split(' ')[0];
+  setText('inicio-saludo', `${h < 12 ? 'Buenos días' : h < 19 ? 'Buenas tardes' : 'Buenas noches'}${nombre ? `, ${nombre}` : ''}`);
+  const f = new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
+  setText('inicio-fecha', f.charAt(0).toUpperCase() + f.slice(1));
+}
 
 function pintarInicioCoord(s) {
+  statsCoord = s;
+  saludoCoord();
   setText('inicio-periodo', s.periodo);
   setText('kpi-total-tutorados', s.total_tutorados);
-  setText('kpi-tutores', `${s.tutores_con_grupo} de ${s.tutores_totales}`);
-  const riesgo = $('kpi-en-riesgo');
-  if (riesgo) riesgo.innerHTML = `${s.en_riesgo} <small>${s.pct_en_riesgo}%</small>`;
+  setText('kpi-total-sub', 'con tutor en el periodo');
+  const k = $('kpi-tutores');
+  if (k) k.innerHTML = `${s.tutores_con_grupo}<small>de ${s.tutores_totales}</small>`;
+  const pctTut = s.tutores_totales ? Math.round((s.tutores_con_grupo / s.tutores_totales) * 100) : 0;
+  if ($('kpi-tutores-barra')) $('kpi-tutores-barra').style.width = `${pctTut}%`;
+  const r = $('kpi-en-riesgo');
+  if (r) r.innerHTML = `${s.en_riesgo}<small>${Math.round(s.pct_en_riesgo)}%</small>`;
+  if ($('kpi-riesgo-barra')) $('kpi-riesgo-barra').style.width = `${Math.min(100, s.pct_en_riesgo)}%`;
   setText('kpi-citas-semana', s.citas_semana);
+  setText('kpi-citas-sub', s.citas_semana_pendientes ? `${s.citas_semana_pendientes} por confirmar` : 'todas confirmadas');
 
-  const areas = s.canalizaciones_por_area || {};
-  Object.entries(areas).forEach(([area, v]) => {
-    setText(`canal-activas-${area === 'Psicología/Salud' ? 'PSICO' : area}`, v.activas);
-  });
-  const lista = $('inicio-canal');
-  if (lista) {
-    const filas = Object.keys(AREA_NOMBRE).map((a) => [a, areas[a] || { total: 0, activas: 0 }]);
-    lista.innerHTML = filas.map(([a, v]) => `<li><span>${escapeHtml(AREA_NOMBRE[a])}</span>
-      <span class="text-slate-500">${v.activas} activa${v.activas === 1 ? '' : 's'} <span class="text-slate-300">/</span> ${v.total}</span></li>`).join('');
-  }
+  pintarDonaRiesgo(s.por_nivel || {}, s.total_tutorados);
+  pintarChipsRiesgo();
+  pintarBarrasCanal(s.canalizaciones_por_area || {});
+  pintarAreasCanal();
   pendientesCoord.riesgo = s.en_riesgo_critico;
   pintarPendientesCoord();
+}
+
+function pintarDonaRiesgo(porNivel, total) {
+  const svg = document.querySelector('#inicio-dona svg');
+  if (!svg) return;
+  setText('inicio-dona-total', total);
+  const R = 46; const C = 2 * Math.PI * R;
+  let acumulado = 0;
+  const arcos = NIVELES.map(([k, , , color]) => {
+    const v = porNivel[k] || 0;
+    const largo = total ? (v / total) * C : 0;
+    const arco = largo ? `<circle cx="60" cy="60" r="${R}" stroke="${color}" stroke-dasharray="${Math.max(0, largo - 2)} ${C}" stroke-dashoffset="${-acumulado}" data-nivel="${k}"></circle>` : '';
+    acumulado += largo;
+    return arco;
+  }).join('');
+  svg.innerHTML = `<circle cx="60" cy="60" r="${R}" stroke="var(--m3-superficie-2)"></circle>${arcos}`;
+  $('inicio-niveles').innerHTML = NIVELES.map(([k, etq, tono, color]) => `<li><button type="button" class="m3-item ${tono}" onclick="filtrarRiesgoDesdeInicio('${k}')"
+      onmouseenter="resaltarDona('${k}')" onmouseleave="resaltarDona()" onfocus="resaltarDona('${k}')" onblur="resaltarDona()">
+      <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background:${color}"></span>
+      <span class="principal"><b>${etq}</b></span><span class="m3-insignia">${porNivel[k] || 0}</span></button></li>`).join('');
+}
+
+function resaltarDona(nivel) {
+  document.querySelectorAll('#inicio-dona circle[data-nivel]').forEach((c) => { c.style.opacity = !nivel || c.dataset.nivel === nivel ? '1' : '.25'; });
+}
+
+function pintarBarrasCanal(areas) {
+  const cont = $('inicio-canal');
+  if (!cont) return;
+  const max = Math.max(1, ...Object.values(areas).map((v) => v.total));
+  cont.innerHTML = Object.keys(AREA_NOMBRE).map((a) => {
+    const v = areas[a] || { total: 0, activas: 0 };
+    return `<button type="button" class="m3-barra-fila ${AREA_TONO[a]}" onclick="verCanalizacionesArea('${a}')" title="${v.activas} activas de ${v.total}">
+      <span class="truncate font-semibold">${escapeHtml(AREA_NOMBRE[a])}</span>
+      <span class="pista"><span class="total" style="width:${(v.total / max) * 100}%"></span><span class="activas" style="width:${(v.activas / max) * 100}%"></span></span>
+      <span class="num">${v.activas}<span style="color:var(--m3-texto-3);font-weight:500"> · ${v.total}</span></span></button>`;
+  }).join('');
+}
+
+function filtrarRiesgoDesdeInicio(nivel) {
+  if ($('filter-riesgo')) $('filter-riesgo').value = nivel;
+  if ($('buscar-tutorado')) $('buscar-tutorado').value = '';
+  pintarChipsRiesgo();
+  poblarTablaRiesgo(nivel);
+  switchTab('riesgo');
+}
+
+function pintarChipsRiesgo() {
+  const cont = $('riesgo-chips');
+  if (!cont) return;
+  const actual = $('filter-riesgo')?.value || 'TODOS';
+  const pn = {};
+  cacheTutorados.forEach((t) => { pn[t.nivel_riesgo] = (pn[t.nivel_riesgo] || 0) + 1; });
+  const opciones = [['TODOS', 'Todos', '', cacheTutorados.length || undefined], ...NIVELES.map(([k, etq, tono]) => [k, etq, tono, cacheTutorados.length ? pn[k] || 0 : undefined])];
+  if (actual === 'ALTO,CRÍTICO') opciones.push(['ALTO,CRÍTICO', 'Alto y crítico', 'tono-rojo', (pn.ALTO || 0) + (pn['CRÍTICO'] || 0)]);
+  cont.innerHTML = opciones.map(([k, etq, tono, n]) => `<button type="button" class="m3-chip ${tono} ${actual === k ? 'activo' : ''}" aria-pressed="${actual === k}" onclick="filtrarRiesgoChip('${k}')">
+      <i class="fa-solid fa-check"></i>${tono ? '<span class="punto"></span>' : ''}${etq}${n === undefined ? '' : ` <span class="cuenta">${n}</span>`}</button>`).join('');
+}
+
+function filtrarRiesgoChip(nivel) {
+  $('filter-riesgo').value = nivel;
+  pintarChipsRiesgo();
+  window.filterRiesgoTable?.();
 }
 
 /** Lista corta de lo que espera a la coordinación; cada fuente llena su parte al cargar. */
@@ -1306,18 +1435,28 @@ function pintarPendientesCoord() {
   if (!ul) return;
   const p = pendientesCoord;
   const items = [
-    [p.sinTutor, 'asignaciones', (n) => `${n} tutorado${n === 1 ? '' : 's'} sin tutor`],
-    [p.fichas, 'fichas', (n) => `${n} ficha${n === 1 ? '' : 's'} por revisar`],
-    [p.evaluaciones, 'evaluaciones', (n) => `${n} tutor${n === 1 ? '' : 'es'} sin evaluar el programa`],
-    [p.riesgo, 'riesgo', (n) => `${n} en riesgo crítico`],
+    [p.sinTutor, "verSinTutor()", 'tono-ambar', 'fa-user-clock', (n) => plural(n, 'tutorado sin tutor', 'tutorados sin tutor'), 'Aún no eligen tutor'],
+    [p.fichas, "switchTab('fichas')", 'tono-azul', 'fa-address-card', (n) => plural(n, 'ficha por revisar', 'fichas por revisar'), 'Enviadas por los tutorados'],
+    [p.evaluaciones, "switchTab('evaluaciones')", 'tono-violeta', 'fa-clipboard-list', (n) => plural(n, 'tutor sin evaluar', 'tutores sin evaluar'), 'Evaluación del programa'],
+    [p.riesgo, "filtrarRiesgoDesdeInicio('CRÍTICO')", 'tono-rojo', 'fa-triangle-exclamation', (n) => plural(n, 'tutorado en riesgo crítico', 'tutorados en riesgo crítico'), '3 o más materias reprobadas'],
   ].filter(([n]) => n > 0);
   if (!items.length) {
     const cargando = ['sinTutor', 'fichas', 'evaluaciones'].some((k) => p[k] === undefined);
-    ul.innerHTML = `<li class="text-slate-400">${cargando ? 'Cargando…' : 'Nada pendiente.'}</li>`;
+    ul.innerHTML = cargando
+      ? '<li class="m3-item text-xs" style="color:var(--m3-texto-3)">Cargando…</li>'
+      : '<li class="m3-vacio"><span class="m3-icono tono-verde"><i class="fa-solid fa-check"></i></span>Todo al día</li>';
     return;
   }
-  ul.innerHTML = items.map(([n, tab, txt]) => `<li><button type="button" onclick="switchTab('${tab}')" class="fila-enlace">
-    <span>${escapeHtml(txt(n))}</span><i class="fa-solid fa-chevron-right text-[10px] text-slate-400"></i></button></li>`).join('');
+  ul.innerHTML = items.map(([n, accion, tono, icono, txt, sub]) => `<li><button type="button" onclick="${accion}" class="m3-item ${tono}">
+    <span class="m3-icono chico"><i class="fa-solid ${icono}"></i></span>
+    <span class="principal"><b>${escapeHtml(txt(n))}</b><span>${sub}</span></span>
+    <i class="fa-solid fa-chevron-right text-[10px]" style="color:var(--m3-texto-3)"></i></button></li>`).join('');
+}
+
+function estadoSesion(c) {
+  if (c.estatus === 'Completada') return ['tono-verde', `<span class="m3-etiqueta tono-verde">${c.duracion_real_min ? `${c.duracion_real_min} min` : 'Asistió'}</span>`];
+  if (c.asistio === false) return ['tono-rojo', '<span class="m3-etiqueta tono-rojo">No asistió</span>'];
+  return ['tono-ambar', '<span class="m3-etiqueta tono-ambar">Por confirmar</span>'];
 }
 
 async function cargarSesionesHoyCoord() {
@@ -1325,22 +1464,129 @@ async function cargarSesionesHoyCoord() {
   if (!cont) return;
   try {
     const { resumen: r, sesiones } = await api('/citas/reporte-diario', { query: { fecha: hoyLocal() } });
-    const linea = `<p class="text-xs text-slate-500 mb-2">${r.atendidas} atendida${r.atendidas === 1 ? '' : 's'} · ${fmtMin(r.minutos)} de tutoría${r.inasistencias ? ` · ${r.inasistencias} inasistencia${r.inasistencias === 1 ? '' : 's'}` : ''}${r.por_confirmar ? ` · ${r.por_confirmar} por confirmar` : ''}</p>`;
+    setText('inicio-hoy-resumen', sesiones.length
+      ? `${plural(r.atendidas, 'atendida', 'atendidas')} · ${fmtMin(r.minutos)} de tutoría${r.por_confirmar ? ` · ${r.por_confirmar} por confirmar` : ''}`
+      : 'Sin sesiones registradas');
     if (!sesiones.length) {
-      cont.innerHTML = '<p class="text-xs text-slate-400 py-6 text-center">No hay sesiones registradas hoy.</p>';
+      cont.innerHTML = `<div class="m3-vacio"><span class="m3-icono tono-azul"><i class="fa-regular fa-calendar"></i></span>
+        <span>Hoy no hay sesiones de tutoría registradas.</span>
+        <button type="button" class="m3-btn texto chico" onclick="moverDiaReporte(-1); switchTab('reportes')">Ver el día anterior</button></div>`;
       return;
     }
-    const estado = (c) => (c.estatus === 'Completada' ? `<span class="text-emerald-700">${c.duracion_real_min ? `${c.duracion_real_min} min` : 'Asistió'}</span>`
-      : c.asistio === false ? '<span class="text-rose-600">No asistió</span>' : '<span class="text-amber-700">Por confirmar</span>');
     const max = 8;
-    cont.innerHTML = linea + `<ul class="lista-simple">${sesiones.slice(0, max).map((c) => `<li>
-      <span class="min-w-0 truncate"><span class="text-slate-400 tabular-nums mr-2">${escapeHtml(String(c.fecha_hora_local).slice(11, 16))}</span>${escapeHtml(c.tutorado_nombre || `Grupo ${c.grupo || ''}`)}
-        <span class="text-slate-400"> · ${escapeHtml(c.tutor_nombre)}</span></span>
-      <span class="shrink-0 text-xs font-semibold">${estado(c)}</span></li>`).join('')}</ul>
-      ${sesiones.length > max ? `<p class="text-[11px] text-slate-400 mt-2">y ${sesiones.length - max} más en el reporte del día.</p>` : ''}`;
+    cont.innerHTML = `<ul class="m3-tiempo">${sesiones.slice(0, max).map((c) => {
+      const [tono, etiqueta] = estadoSesion(c);
+      return `<li class="${tono}"><span class="hora">${escapeHtml(String(c.fecha_hora_local).slice(11, 16))}</span><span class="nodo"></span>
+        <span class="min-w-0"><b class="block truncate font-semibold">${escapeHtml(c.tutorado_nombre || `Grupo ${c.grupo || ''}`)}</b>
+        <span class="block truncate text-[11px]" style="color:var(--m3-texto-3)">${escapeHtml(c.tutor_nombre)}</span></span>${etiqueta}</li>`;
+    }).join('')}</ul>
+      ${sesiones.length > max ? `<p class="text-[11px] mt-2" style="color:var(--m3-texto-3)">y ${sesiones.length - max} más en el reporte del día.</p>` : ''}`;
   } catch (err) {
     cont.innerHTML = `<p class="text-xs text-rose-600 py-4">${escapeHtml(err.message)}</p>`;
   }
+}
+
+function pintarOcupacionInicio(tutores) {
+  const ul = $('inicio-ocupacion');
+  if (!ul) return;
+  const orden = [...tutores].sort((a, b) => (b.total_tutorados / (b.max_tutorados || 1)) - (a.total_tutorados / (a.max_tutorados || 1)));
+  ul.innerHTML = orden.slice(0, 6).map((t) => {
+    const pct = t.max_tutorados ? Math.round((t.total_tutorados / t.max_tutorados) * 100) : 0;
+    const tono = pct >= 100 ? 'tono-rojo' : pct >= 80 ? 'tono-ambar' : 'tono-azul';
+    return `<li><button type="button" class="m3-item ${tono}" onclick="verTutoradosDe(${t.tutor_id})">
+      <span class="m3-avatar chico">${escapeHtml(iniciales(t.nombre))}</span>
+      <span class="principal"><b class="truncate">${escapeHtml(t.nombre)}</b>
+        <span class="m3-progreso mt-1.5"><span style="width:${Math.min(100, pct)}%"></span></span></span>
+      <span class="text-xs font-bold tabular-nums">${t.total_tutorados}<span style="color:var(--m3-texto-3);font-weight:500">/${t.max_tutorados}</span></span></button></li>`;
+  }).join('') || '<li class="m3-vacio">Sin tutores registrados</li>';
+}
+
+function verSinTutor() {
+  switchTab('asignaciones');
+  $('asig-ver-grupo').value = '__sin';
+  pintarIntegrantes();
+  setTimeout(() => $('asig-integrantes')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 250);
+}
+
+/* Canalizaciones: tarjetas por área y chips de estatus filtran la tabla */
+const filtroCanal = { area: '', estatus: '' };
+let listaCanal = [];
+
+function pintarAreasCanal() {
+  const cont = $('canal-areas');
+  if (!cont) return;
+  const areas = statsCoord?.canalizaciones_por_area || {};
+  cont.innerHTML = Object.keys(AREA_NOMBRE).map((a) => {
+    const v = areas[a] || { total: 0, activas: 0 };
+    return `<button type="button" class="m3-card m3-interactiva m3-area ${AREA_TONO[a]} ${filtroCanal.area === a ? 'seleccionada' : ''}" aria-pressed="${filtroCanal.area === a}" onclick="verCanalizacionesArea('${a}', true)">
+      <span class="m3-icono chico"><i class="fa-solid ${AREA_ICONO[a]}"></i></span>
+      <span><span class="nombre block">${escapeHtml(AREA_NOMBRE[a])}</span><span class="desc block">${escapeHtml(AREA_DESC[a])}</span></span>
+      <span class="cifra">${v.activas}<small>activas de ${v.total}</small></span></button>`;
+  }).join('');
+}
+
+function verCanalizacionesArea(area, alternar) {
+  filtroCanal.area = alternar && filtroCanal.area === area ? '' : area;
+  pintarAreasCanal();
+  pintarTablaCanal();
+  if (!alternar) switchTab('canalizaciones');
+}
+
+function filtrarCanalEstatus(estatus) {
+  filtroCanal.estatus = estatus;
+  pintarTablaCanal();
+}
+
+function pintarTablaCanal() {
+  const tbody = $('tbody-canalizaciones');
+  if (!tbody) return;
+  const chips = $('canal-chips');
+  if (chips) {
+    const estatus = ['Pendiente', 'En Proceso', 'Aceptado', 'Atendido', 'Cerrado'];
+    const base = listaCanal.filter((c) => !filtroCanal.area || c.area_destino === filtroCanal.area);
+    chips.innerHTML = [['', 'Todos', base.length], ...estatus.map((e) => [e, e, base.filter((c) => c.estatus_canalizacion === e).length])]
+      .filter(([e, , n]) => !e || n)
+      .map(([e, etq, n]) => `<button type="button" class="m3-chip ${filtroCanal.estatus === e ? 'activo' : ''}" aria-pressed="${filtroCanal.estatus === e}" onclick="filtrarCanalEstatus('${e}')"><i class="fa-solid fa-check"></i>${etq} <span class="cuenta">${n}</span></button>`).join('');
+    setText('canal-filtro-texto', filtroCanal.area ? `Área: ${AREA_NOMBRE[filtroCanal.area]}` : '');
+  }
+  const filas = listaCanal.filter((c) => (!filtroCanal.area || c.area_destino === filtroCanal.area) && (!filtroCanal.estatus || c.estatus_canalizacion === filtroCanal.estatus));
+  if (!filas.length) {
+    tbody.innerHTML = '<tr><td colspan="6"><div class="m3-vacio"><span class="m3-icono tono-gris"><i class="fa-solid fa-filter"></i></span>No hay canalizaciones con este filtro.</div></td></tr>';
+    return;
+  }
+  const tonoEstatus = { Pendiente: 'tono-gris', 'En Proceso': 'tono-ambar', Aceptado: 'tono-verde', Atendido: 'tono-azul', Cerrado: 'tono-gris' };
+  tbody.innerHTML = filas.map((c) => `<tr>
+      <td><div class="flex items-center gap-2.5"><span class="m3-avatar chico ${AREA_TONO[c.area_destino] || 'tono-azul'}">${escapeHtml(iniciales(c.tutorado_nombre))}</span>
+        <span><b class="block font-semibold" style="color:var(--m3-texto)">${escapeHtml(c.tutorado_nombre)}</b><span class="text-[11px]" style="color:var(--m3-texto-3)">${escapeHtml(c.no_control)}</span></span></div></td>
+      <td><span class="m3-etiqueta ${AREA_TONO[c.area_destino] || 'tono-gris'}">${escapeHtml(AREA_NOMBRE[c.area_destino] || c.area_destino)}</span></td>
+      <td class="max-w-xs">${escapeHtml(c.diagnostico_inicial)}</td>
+      <td class="whitespace-nowrap">${escapeHtml(c.tutor_nombre)}</td>
+      <td class="whitespace-nowrap" style="color:var(--m3-texto-3)">${fmtFecha(c.fecha_registro)}</td>
+      <td><span class="m3-etiqueta ${tonoEstatus[c.estatus_canalizacion] || 'tono-gris'}">${escapeHtml(c.estatus_canalizacion)}</span></td>
+    </tr>`).join('');
+}
+
+/* Reporte del día: navegación por días */
+function moverDiaReporte(dias) {
+  const input = $('rd-fecha');
+  if (!input) return;
+  if (dias === 0) input.value = hoyLocal();
+  else {
+    const d = new Date(`${input.value || hoyLocal()}T12:00:00`);
+    d.setDate(d.getDate() + dias);
+    const v = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    if (input.max && v > input.max) return;
+    input.value = v;
+  }
+  cargarReporteDiario();
+}
+
+function pintarFechaReporte() {
+  const v = $('rd-fecha')?.value;
+  if (!v || !$('rd-fecha-texto')) return;
+  const f = new Date(`${v}T12:00:00`).toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  setText('rd-fecha-texto', f.charAt(0).toUpperCase() + f.slice(1));
+  $('rd-hoy')?.classList.toggle('activo', v === hoyLocal());
 }
 
 function htmlReporteDiario(rep) {
@@ -3197,9 +3443,9 @@ async function guardarPerfilTutor(event) {
 let datosAsig = null;
 
 async function cargarAsignaciones() {
-  const tbody = $('tbody-asig-tutores');
-  if (!tbody) return;
-  mostrarEstadoTabla(tbody, 7, 'Cargando…');
+  const cont = $('tutores-tarjetas');
+  if (!cont) return;
+  if (!datosAsig) cont.innerHTML = '<p class="text-xs" style="color:var(--m3-texto-3)">Cargando…</p>';
   try {
     datosAsig = await api('/asignaciones');
     directorioTutores = []; // se recarga al abrir un perfil, con los cambios de cupo
@@ -3208,32 +3454,47 @@ async function cargarAsignaciones() {
     $('asig-alerta').classList.toggle('hidden', sinTutor === 0);
     pendientesCoord.sinTutor = sinTutor;
     pintarPendientesCoord();
-    setText('asig-alerta-texto', `${sinTutor} tutorado(s) aún no eligen tutor en ${periodo}.`);
+    pintarOcupacionInicio(tutores);
+    setText('asig-alerta-texto', `${plural(sinTutor, 'tutorado aún no elige tutor', 'tutorados aún no eligen tutor')} en ${periodo}.`);
 
-    tbody.innerHTML = tutores.map((t) => {
+    cont.innerHTML = tutores.map((t) => {
       const pct = t.max_tutorados ? Math.round((t.total_tutorados / t.max_tutorados) * 100) : 0;
-      return `<tr class="hover:bg-slate-50">
-        <td class="p-3 font-bold text-slate-800">${escapeHtml(t.nombre)}<div class="text-[10px] text-slate-400 font-medium">${escapeHtml(t.rfc)} · ${escapeHtml(t.cubiculo || '')}</div></td>
-        <td class="p-3">${t.formacion_tutorial ? chip(t.formacion_tutorial, /Diplomado/i.test(t.formacion_tutorial) ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800') : '—'}</td>
-        <td class="p-3 text-center">${t.bloques_horario ? `${t.bloques_horario} bloque(s)` : '<span class="text-amber-700 font-bold">Sin publicar</span>'}</td>
-        <td class="p-3 text-center">
-          <span class="font-bold ${pct >= 100 ? 'text-rose-600' : 'text-tecnmGreen'}">${t.total_tutorados}</span>
-          <div class="w-16 mx-auto bg-slate-100 h-1.5 rounded-full mt-1 overflow-hidden"><div class="${pct >= 90 ? 'bg-rose-500' : 'bg-tecnmGreen'} h-full" style="width:${Math.min(pct, 100)}%"></div></div>
-        </td>
-        <td class="p-3 text-center whitespace-nowrap">
-          <input type="number" id="cupo-${t.tutor_id}" min="${Math.max(1, t.total_tutorados)}" max="60" value="${t.max_tutorados}" aria-label="Cupo de ${escapeHtml(t.nombre)}" class="w-16 p-1.5 rounded-lg border border-slate-300 text-center">
-          <button onclick="guardarCupoTutor(${t.tutor_id})" class="ml-1 bg-slate-200 hover:bg-slate-300 text-slate-700 px-2 py-1 rounded-lg text-[11px] font-bold" title="Guardar cupo"><i class="fa-solid fa-floppy-disk"></i></button>
-        </td>
-        <td class="p-3 text-center">
-          <label class="inline-flex items-center gap-1.5 cursor-pointer font-semibold ${t.acepta_tutorados ? 'text-emerald-700' : 'text-slate-500'}">
-            <input type="checkbox" ${t.acepta_tutorados ? 'checked' : ''} onchange="cambiarAceptaTutor(${t.tutor_id}, this.checked)"> ${t.acepta_tutorados ? 'Sí' : 'No'}
+      const tono = pct >= 100 ? 'tono-rojo' : pct >= 80 ? 'tono-ambar' : 'tono-azul';
+      const diplomado = /Diplomado/i.test(t.formacion_tutorial || '');
+      return `<article class="m3-card m3-tutor">
+        <div class="cabeza">
+          <span class="m3-avatar ${t.acepta_tutorados ? 'tono-azul' : 'tono-gris'}">${escapeHtml(iniciales(t.nombre))}</span>
+          <div class="min-w-0 flex-1"><b>${escapeHtml(t.nombre)}</b><span>${escapeHtml(t.rfc)}${t.cubiculo ? ` · ${escapeHtml(/^cub/i.test(t.cubiculo) ? t.cubiculo : `Cubículo ${t.cubiculo}`)}` : ''}</span></div>
+          <button type="button" class="m3-btn-icono" onclick="verPerfilTutor(${t.tutor_id})" title="Ver perfil" aria-label="Ver perfil de ${escapeHtml(t.nombre)}"><i class="fa-regular fa-id-card"></i></button>
+        </div>
+        <div class="flex flex-wrap gap-1.5">
+          ${t.formacion_tutorial ? `<span class="m3-etiqueta ${diplomado ? 'tono-verde' : 'tono-ambar'}"><i class="fa-solid ${diplomado ? 'fa-award' : 'fa-hourglass-half'}"></i>${escapeHtml(t.formacion_tutorial)}</span>` : ''}
+          ${t.bloques_horario ? `<span class="m3-etiqueta tono-azul"><i class="fa-regular fa-clock"></i>${plural(t.bloques_horario, 'bloque de horario', 'bloques de horario')}</span>` : '<span class="m3-etiqueta tono-rojo"><i class="fa-regular fa-clock"></i>Horario sin publicar</span>'}
+        </div>
+        <div class="${tono}">
+          <div class="flex items-baseline justify-between mb-1.5 text-xs"><span style="color:var(--m3-texto-2)">Ocupación</span>
+            <span class="font-bold tabular-nums" style="color:var(--m3-texto)">${t.total_tutorados} <span style="color:var(--m3-texto-3);font-weight:500">de ${t.max_tutorados}</span></span></div>
+          <div class="m3-progreso"><span style="width:${Math.min(pct, 100)}%"></span></div>
+        </div>
+        <div class="control">
+          <span>Cupo</span>
+          <span class="flex items-center gap-1.5">
+            <span class="m3-paso">
+              <button type="button" onclick="pasoCupo(${t.tutor_id}, -1)" aria-label="Reducir cupo"><i class="fa-solid fa-minus text-[10px]"></i></button>
+              <input type="number" id="cupo-${t.tutor_id}" data-original="${t.max_tutorados}" min="${Math.max(1, t.total_tutorados)}" max="60" value="${t.max_tutorados}" aria-label="Cupo de ${escapeHtml(t.nombre)}" oninput="pasoCupo(${t.tutor_id}, 0)">
+              <button type="button" onclick="pasoCupo(${t.tutor_id}, 1)" aria-label="Aumentar cupo"><i class="fa-solid fa-plus text-[10px]"></i></button>
+            </span>
+            <button type="button" id="cupo-guardar-${t.tutor_id}" onclick="guardarCupoTutor(${t.tutor_id})" class="m3-btn lleno chico hidden">Guardar</button>
+          </span>
+        </div>
+        <div class="control" style="padding-top:0;border:0">
+          <label class="m3-switch gap-2.5" for="acepta-${t.tutor_id}">
+            <input type="checkbox" id="acepta-${t.tutor_id}" ${t.acepta_tutorados ? 'checked' : ''} onchange="cambiarAceptaTutor(${t.tutor_id}, this.checked)"><span class="riel"></span>
+            <span>${t.acepta_tutorados ? 'Recibe tutorados' : 'No recibe tutorados'}</span>
           </label>
-        </td>
-        <td class="p-3 text-center whitespace-nowrap">
-          <button onclick="verPerfilTutor(${t.tutor_id})" class="bg-sky-50 text-sky-800 hover:bg-sky-100 px-2.5 py-1 rounded-lg text-[11px] font-bold"><i class="fa-solid fa-id-card mr-1"></i>Perfil</button>
-          <button onclick="verTutoradosDe(${t.tutor_id})" class="bg-tecnmGreen text-white px-2.5 py-1 rounded-lg text-[11px] font-bold hover:bg-tecnmDark"><i class="fa-solid fa-users mr-1"></i>Tutorados</button>
-        </td>
-      </tr>`;
+          <button type="button" onclick="verTutoradosDe(${t.tutor_id})" class="m3-btn tonal chico"><i class="fa-solid fa-users"></i> Tutorados</button>
+        </div>
+      </article>`;
     }).join('');
 
     const sel = $('asig-ver-grupo');
@@ -3247,14 +3508,22 @@ async function cargarAsignaciones() {
     }
     pintarIntegrantes();
   } catch (err) {
-    mostrarEstadoTabla(tbody, 7, err.message, 'error');
+    cont.innerHTML = `<p class="text-xs text-rose-600">${escapeHtml(err.message)}</p>`;
   }
+}
+
+function pasoCupo(tutorId, delta) {
+  const input = $(`cupo-${tutorId}`);
+  const v = Math.min(Number(input.max), Math.max(Number(input.min), (Number(input.value) || 0) + delta));
+  if (delta) input.value = v;
+  $(`cupo-guardar-${tutorId}`).classList.toggle('hidden', String(input.value) === input.dataset.original);
 }
 
 function verTutoradosDe(tutorId) {
   $('asig-ver-grupo').value = `t${tutorId}`;
   pintarIntegrantes();
-  $('tbody-asig-integrantes').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  if (PAGINA === 'coordinacion' && !$('tab-asignaciones').classList.contains('active')) switchTab('asignaciones');
+  setTimeout(() => $('asig-integrantes')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 250);
 }
 
 function pintarIntegrantes() {
@@ -3263,20 +3532,20 @@ function pintarIntegrantes() {
   const lista = datosAsig.tutorados.filter((t) =>
     filtro === '__sin' ? !t.asignacion_id : filtro ? `t${t.tutor_id}` === filtro : true);
   tbody.innerHTML = lista.length
-    ? lista.map((t) => `<tr class="hover:bg-slate-50">
-        <td class="p-3 font-bold text-slate-800">${escapeHtml(t.no_control)}</td>
-        <td class="p-3 font-semibold text-slate-800">${escapeHtml(t.nombre_completo)}</td>
-        <td class="p-3">${t.semestre}°</td>
-        <td class="p-3">${badgeRiesgo(t.nivel_riesgo)}</td>
-        <td class="p-3 text-slate-600">${t.tutor_nombre ? escapeHtml(t.tutor_nombre) : '<span class="text-amber-700 font-bold">Sin elegir</span>'}
-          ${t.origen ? `<div class="text-[10px] text-slate-400">${escapeHtml(t.origen)}</div>` : ''}</td>
-        <td class="p-3 text-slate-500">${t.fecha_asignacion ? fmtFecha(t.fecha_asignacion) : '—'}</td>
-        <td class="p-3 text-center whitespace-nowrap">
-          <button onclick="mostrarPerfilTutorado(${t.tutorado_id})" class="bg-sky-50 text-sky-800 hover:bg-sky-100 px-2.5 py-1 rounded-lg text-[11px] font-bold"><i class="fa-solid fa-id-badge mr-1"></i>Perfil</button>
-          ${t.asignacion_id ? `<button onclick='quitarDeGrupo(${t.asignacion_id}, ${escapeHtml(JSON.stringify(t.nombre_completo))})' class="bg-rose-50 hover:bg-rose-100 text-rose-700 px-2.5 py-1 rounded-lg text-[11px] font-bold"><i class="fa-solid fa-user-minus mr-1"></i>Retirar</button>` : ''}
+    ? lista.map((t) => `<tr>
+        <td><div class="flex items-center gap-2.5"><span class="m3-avatar chico">${escapeHtml(iniciales(t.nombre_completo))}</span>
+          <span><b class="block font-semibold" style="color:var(--m3-texto)">${escapeHtml(t.nombre_completo)}</b><span class="text-[11px]" style="color:var(--m3-texto-3)">${escapeHtml(t.no_control)}</span></span></div></td>
+        <td>${t.semestre}°</td>
+        <td>${etiquetaRiesgo(t.nivel_riesgo)}</td>
+        <td>${t.tutor_nombre ? escapeHtml(t.tutor_nombre) : '<span class="m3-etiqueta tono-ambar">Sin elegir</span>'}
+          ${t.origen ? `<div class="text-[10px]" style="color:var(--m3-texto-3)">${escapeHtml(t.origen)}</div>` : ''}</td>
+        <td class="whitespace-nowrap" style="color:var(--m3-texto-3)">${t.fecha_asignacion ? fmtFecha(t.fecha_asignacion) : '—'}</td>
+        <td class="text-center whitespace-nowrap">
+          <button type="button" onclick="mostrarPerfilTutorado(${t.tutorado_id})" class="m3-btn texto chico">Perfil</button>
+          ${t.asignacion_id ? `<button type="button" onclick='quitarDeGrupo(${t.asignacion_id}, ${escapeHtml(JSON.stringify(t.nombre_completo))})' class="m3-btn texto chico" style="color:var(--t-rojo)">Retirar</button>` : ''}
         </td>
       </tr>`).join('')
-    : '<tr><td colspan="7" class="p-6 text-center text-slate-400">Sin tutorados en esta vista.</td></tr>';
+    : '<tr><td colspan="6"><div class="m3-vacio"><span class="m3-icono tono-verde"><i class="fa-solid fa-check"></i></span>Sin tutorados en esta vista.</div></td></tr>';
 }
 
 async function guardarCupoTutor(tutorId) {
