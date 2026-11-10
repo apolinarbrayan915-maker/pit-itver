@@ -1214,6 +1214,7 @@ async function iniciarTutor() {
   cargarTablaCanalizaciones();
   cargarReporteTutor();
   iniciarReporteDiario();
+  restaurarInforme();
 }
 
 /* ---- Reporte del día (tutor: sus sesiones · coordinación: todos) --------- */
@@ -1308,36 +1309,157 @@ async function cargarReporteTutor() {
     reporteTutor = await api('/tutores/mi-reporte');
     const { resumen: r, periodo, sesiones } = reporteTutor;
     setText('rep-periodo', periodo.nombre);
-    const kpi = (icono, valor, etq, sub = '', extra = '') => `<div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 ${extra}">
-        <div class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wide text-slate-500"><i class="fa-solid ${icono} text-tecnmGreen"></i>${etq}</div>
-        <p class="text-2xl font-extrabold text-slate-800 mt-1">${valor}</p>
-        ${sub ? `<p class="text-[10px] text-slate-400">${sub}</p>` : ''}
-      </div>`;
-    $('rep-kpis').innerHTML = [
-      kpi('fa-users', r.tutorados, 'Tutorados', `${r.en_riesgo} en riesgo alto o crítico`),
-      kpi('fa-circle-check', r.atendidas, 'Sesiones atendidas', `${r.programadas} programadas · ${r.canceladas} canceladas`),
-      kpi('fa-user-check', r.tutorados_atendidos, 'Tutorados atendidos', r.tutorados ? `${Math.round((r.tutorados_atendidos / r.tutorados) * 100)}% de tu grupo` : ''),
-      kpi('fa-file-signature', r.minutas, 'Minutas', 'registradas en la agenda'),
-      kpi('fa-share-nodes', r.canalizaciones, 'Canalizaciones', 'en el periodo', 'col-span-2 md:col-span-1'),
-    ].join('');
+    pintarInformePeriodo(reporteTutor);
     if (!sesiones.length) {
       cont.innerHTML = '<p class="text-xs text-slate-400 text-center py-6 border border-dashed border-slate-200 rounded-xl">Aún no hay sesiones atendidas en este periodo. Cuando marques una cita como atendida aparecerá aquí.</p>';
       return;
     }
     cont.innerHTML = `<div class="overflow-x-auto"><table class="w-full text-xs text-left">
       <thead class="text-[10px] uppercase tracking-wide text-slate-500 border-b border-slate-200">
-        <tr><th class="py-2 pr-3">Fecha</th><th class="py-2 pr-3">Tutorado</th><th class="py-2 pr-3">Motivo</th><th class="py-2 text-center">Minuta</th></tr>
+        <tr><th class="py-2 pr-3">Fecha</th><th class="py-2 pr-3">Tutorado</th><th class="py-2 pr-3">Motivo</th><th class="py-2 pr-3">Tiempo</th><th class="py-2 text-center">Minuta</th></tr>
       </thead>
-      <tbody class="divide-y divide-slate-100">${sesiones.slice(0, 8).map((x) => `<tr>
+      <tbody class="divide-y divide-slate-100">${sesiones.map((x) => `<tr>
         <td class="py-2 pr-3 whitespace-nowrap text-slate-600">${escapeHtml(partesCita(x).corta)}</td>
         <td class="py-2 pr-3 font-semibold text-slate-800">${escapeHtml(x.tutorado_nombre || `Grupo ${x.grupo || ''}`)}</td>
         <td class="py-2 pr-3 text-slate-600">${escapeHtml(x.motivo)}</td>
+        <td class="py-2 pr-3 whitespace-nowrap text-slate-600">${x.duracion_real_min ? `${x.duracion_real_min} min` : '—'}</td>
         <td class="py-2 text-center">${x.con_minuta ? '<i class="fa-solid fa-circle-check text-emerald-600" title="Con minuta"></i>' : '<span class="text-slate-300">—</span>'}</td>
       </tr>`).join('')}</tbody></table></div>
-      ${sesiones.length > 8 ? `<p class="text-[11px] text-slate-500 mt-2">Y ${sesiones.length - 8} sesión(es) más; el reporte impreso incluye el detalle.</p>` : ''}`;
+`;
   } catch (err) {
     cont.innerHTML = `<p class="text-xs text-rose-600 text-center py-6">${escapeHtml(err.message)}</p>`;
   }
+}
+
+/* Secciones de Informes: una a la vez */
+function verInforme(nombre) {
+  document.querySelectorAll('.informe-btn').forEach((b) => {
+    const activo = b.dataset.informe === nombre;
+    b.classList.toggle('activo', activo);
+    b.setAttribute('aria-selected', String(activo));
+  });
+  document.querySelectorAll('.informe-seccion').forEach((sec) => sec.classList.toggle('hidden', sec.id !== `informe-${nombre}`));
+  try { localStorage.setItem('pit_informe', nombre); } catch { /* sin almacenamiento */ }
+}
+
+function restaurarInforme() {
+  let nombre = 'periodo';
+  try { nombre = localStorage.getItem('pit_informe') || 'periodo'; } catch { /* sin almacenamiento */ }
+  if ($(`informe-${nombre}`)) verInforme(nombre);
+}
+
+const pct = (a, b) => (b ? Math.round((a / b) * 100) : 0);
+const RIESGO_ESTILO_INF = { 'CRÍTICO': 'bg-rose-100 text-rose-700', ALTO: 'bg-orange-100 text-orange-700', MEDIO: 'bg-amber-100 text-amber-800', BAJO: 'bg-emerald-100 text-emerald-800' };
+
+function pintarInformePeriodo(rep) {
+  const cont = $('inf-periodo-cuerpo');
+  if (!cont || !rep?.informe) return;
+  const { citas: c, tutorados, riesgo, canalizaciones_por_estatus: canalEst, evaluacion_pit: ev } = rep.informe;
+  const r = rep.resumen;
+  const atendidosN = tutorados.filter((t) => t.sesiones > 0).length;
+  const sinAtender = tutorados.filter((t) => t.sesiones === 0);
+  const fila = (etq, val, nota = '') => `<div class="flex items-baseline justify-between gap-3 py-1.5 border-b border-slate-100 last:border-0">
+      <dt class="text-slate-600">${etq}</dt><dd class="text-right"><b class="text-slate-800">${val}</b>${nota ? `<span class="block text-[10px] text-slate-400">${nota}</span>` : ''}</dd></div>`;
+  const bloque = (icono, titulo, filas) => `<div class="p-4 rounded-xl border border-slate-200">
+      <h4 class="text-xs font-bold text-slate-800 mb-2"><i class="fa-solid ${icono} text-tecnmGreen mr-1"></i>${titulo}</h4><dl class="text-xs">${filas}</dl></div>`;
+  const pendientes = [];
+  if (c.sin_confirmar) pendientes.push(`${c.sin_confirmar} cita(s) ya pasaron y falta confirmar la asistencia.`);
+  if (c.sin_minuta) pendientes.push(`${c.sin_minuta} sesión(es) atendida(s) sin minuta.`);
+  if (sinAtender.length) pendientes.push(`${sinAtender.length} tutorado(s) sin ninguna sesión atendida en el periodo.`);
+  if (!ev.enviada) pendientes.push('Falta enviar la Evaluación del PIT.');
+  const sinFicha = tutorados.filter((t) => !t.con_ficha).length;
+  if (sinFicha) pendientes.push(`${sinFicha} tutorado(s) sin Ficha de Identificación.`);
+  cont.innerHTML = `
+    ${pendientes.length ? `<div class="mb-4 p-3 rounded-xl border border-amber-200 bg-amber-50 text-amber-900 text-xs">
+        <p class="font-bold mb-1"><i class="fa-solid fa-list-check mr-1"></i>Pendientes antes de entregar</p>
+        <ul class="list-disc pl-5 space-y-0.5">${pendientes.map((x) => `<li>${escapeHtml(x)}</li>`).join('')}</ul></div>`
+      : '<div class="mb-4 p-3 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 text-xs font-semibold"><i class="fa-solid fa-circle-check mr-1"></i>Sin pendientes: tu informe está completo.</div>'}
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+      ${bloque('fa-users', 'Grupo tutorado', [
+        fila('Tutorados asignados', r.tutorados),
+        fila('Atendidos al menos una vez', `${atendidosN} (${pct(atendidosN, r.tutorados)}%)`),
+        fila('Riesgo crítico / alto', `${riesgo['CRÍTICO']} / ${riesgo.ALTO}`),
+        fila('Riesgo medio / bajo', `${riesgo.MEDIO} / ${riesgo.BAJO}`),
+        fila('Con Ficha de Identificación', `${r.tutorados - sinFicha} de ${r.tutorados}`),
+      ].join(''))}
+      ${bloque('fa-calendar-check', 'Citas y asistencia', [
+        fila('Citas registradas', c.total),
+        fila('Sesiones atendidas', c.atendidas, `${c.presenciales} presenciales · ${c.en_linea} en línea`),
+        fila('Inasistencias', c.inasistencias, c.atendidas + c.inasistencias ? `${pct(c.atendidas, c.atendidas + c.inasistencias)}% de asistencia` : ''),
+        fila('Canceladas', c.canceladas),
+        fila('Pendientes / confirmadas', `${c.pendientes} / ${c.confirmadas}`),
+      ].join(''))}
+      ${bloque('fa-clock', 'Tiempo y minutas', [
+        fila('Tiempo total de tutoría', fmtMin(c.minutos)),
+        fila('Promedio por sesión', c.atendidas ? `${Math.round(c.minutos / c.atendidas)} min` : '—'),
+        fila('Minutas registradas', c.minutas),
+        fila('Atendidas sin minuta', c.sin_minuta),
+        fila('Con fecha de seguimiento', c.con_seguimiento),
+      ].join(''))}
+      ${bloque('fa-share-nodes', 'Canalizaciones', [
+        fila('Total en el periodo', r.canalizaciones),
+        ...rep.canalizaciones_por_area.map((x) => fila(escapeHtml(x.area), x.total)),
+        ...canalEst.map((x) => fila(`Estatus: ${escapeHtml(x.estatus)}`, x.total)),
+        fila('Evaluación del PIT', ev.enviada ? 'Enviada' : 'Pendiente'),
+      ].join(''))}
+    </div>
+    <h4 class="text-xs font-bold text-slate-800 mt-5 mb-2"><i class="fa-solid fa-user-graduate text-tecnmGreen mr-1"></i>Seguimiento por tutorado</h4>
+    <div class="overflow-x-auto"><table class="w-full text-xs text-left">
+      <thead class="text-[10px] uppercase tracking-wide text-slate-500 border-b border-slate-200"><tr>
+        <th class="py-2 pr-3">Tutorado</th><th class="py-2 pr-3">Riesgo</th><th class="py-2 pr-3">Promedio</th><th class="py-2 pr-3">Sesiones</th><th class="py-2 pr-3">Tiempo</th><th class="py-2 pr-3">Inasistencias</th><th class="py-2 pr-3">Última sesión</th><th class="py-2 pr-3">Canalizado</th><th class="py-2">Ficha</th>
+      </tr></thead>
+      <tbody class="divide-y divide-slate-100">${tutorados.map((t) => `<tr>
+        <td class="py-2 pr-3"><b class="text-slate-800">${escapeHtml(t.nombre)}</b><span class="block text-[10px] text-slate-400">${escapeHtml(t.no_control)} · ${escapeHtml(t.semestre)}° sem.</span></td>
+        <td class="py-2 pr-3">${chip(t.nivel_riesgo, RIESGO_ESTILO_INF[t.nivel_riesgo])}</td>
+        <td class="py-2 pr-3 text-slate-600">${t.promedio ?? '—'}</td>
+        <td class="py-2 pr-3 font-semibold ${t.sesiones ? 'text-slate-800' : 'text-rose-600'}">${t.sesiones}</td>
+        <td class="py-2 pr-3 text-slate-600">${t.minutos ? fmtMin(t.minutos) : '—'}</td>
+        <td class="py-2 pr-3 text-slate-600">${t.inasistencias}</td>
+        <td class="py-2 pr-3 text-slate-600 whitespace-nowrap">${t.ultima_sesion ? escapeHtml(partesCita({ fecha_hora_local: `${t.ultima_sesion}T00:00` }).corta) : '—'}</td>
+        <td class="py-2 pr-3 text-slate-600">${t.canalizaciones ? `Sí (${t.canalizaciones})` : 'No'}</td>
+        <td class="py-2">${t.con_ficha ? '<i class="fa-solid fa-circle-check text-emerald-600" title="Entregada"></i>' : '<span class="text-rose-600 font-semibold">Falta</span>'}</td>
+      </tr>`).join('')}</tbody></table></div>`;
+}
+
+function htmlInformePeriodo(rep) {
+  const { citas: c, tutorados, riesgo, canalizaciones_por_estatus: canalEst, evaluacion_pit: ev } = rep.informe;
+  const r = rep.resumen;
+  const fmt = (ymd) => partesCita({ fecha_hora_local: `${ymd}T00:00` }).larga;
+  const atendidosN = tutorados.filter((t) => t.sesiones > 0).length;
+  const sinFicha = tutorados.filter((t) => !t.con_ficha).length;
+  const par = (a, va, b, vb) => `<tr><th>${a}</th><td>${va}</td><th>${b}</th><td>${vb}</td></tr>`;
+  const area = rep.canalizaciones_por_area.map((x) => `${escapeHtml(x.area)} (${x.total})`).join(', ') || 'Ninguna';
+  const est = canalEst.map((x) => `${escapeHtml(x.estatus)} (${x.total})`).join(', ') || '—';
+  const filas = tutorados.map((t, i) => `<tr><td>${i + 1}</td><td>${escapeHtml(t.nombre)}</td><td>${escapeHtml(t.no_control)}</td><td>${escapeHtml(t.nivel_riesgo)}</td><td>${t.sesiones}</td><td>${t.minutos ? fmtMin(t.minutos) : '—'}</td><td>${t.canalizaciones ? 'Sí' : 'No'}</td></tr>`).join('');
+  return `${encabezadoHoja('Informe del periodo de acción tutorial', `<p>Veracruz, Ver., a ${escapeHtml(fechaLargaHoy())}</p>`)}
+    <div class="hd-campos">
+      ${campoHoja('Nombre del tutor(a):', rep.tutor?.nombre)}
+      <div class="hd-fila">${campoHoja('Periodo:', `${fmt(rep.periodo.inicio)} al ${fmt(rep.periodo.fin)}`, 'hd-ancho')}${campoHoja('Ciclo:', rep.periodo_escolar)}</div>
+    </div>
+    <div class="hd-bloque"><span>Resumen de la acción tutorial:</span></div>
+    <table class="hd-tabla hd-resumen"><tbody>
+      ${par('Tutorados asignados', r.tutorados, 'Tutorados atendidos', `${atendidosN} (${pct(atendidosN, r.tutorados)}%)`)}
+      ${par('Riesgo crítico / alto', `${riesgo['CRÍTICO']} / ${riesgo.ALTO}`, 'Riesgo medio / bajo', `${riesgo.MEDIO} / ${riesgo.BAJO}`)}
+      ${par('Citas registradas', c.total, 'Sesiones atendidas', `${c.atendidas} (${c.presenciales} pres. · ${c.en_linea} en línea)`)}
+      ${par('Inasistencias', c.inasistencias, 'Citas canceladas', c.canceladas)}
+      ${par('Tiempo total de tutoría', fmtMin(c.minutos), 'Promedio por sesión', c.atendidas ? `${Math.round(c.minutos / c.atendidas)} min` : '—')}
+      ${par('Minutas registradas', c.minutas, 'Atendidas sin minuta', c.sin_minuta)}
+      ${par('Canalizaciones', r.canalizaciones, 'Fichas de identificación', `${r.tutorados - sinFicha} de ${r.tutorados}`)}
+    </tbody></table>
+    <p class="hd-linea-texto"><b>Canalizaciones por área:</b> ${area}. <b>Por estatus:</b> ${est}.</p>
+    <p class="hd-linea-texto"><b>Evaluación del PIT:</b> ${ev.enviada ? 'enviada' : 'pendiente'}.</p>
+    <div class="hd-bloque"><span>Seguimiento por tutorado:</span></div>
+    <table class="hd-tabla"><thead><tr><th>No.</th><th>Tutorado(a)</th><th>No. de control</th><th>Riesgo</th><th>Sesiones</th><th>Tiempo</th><th>Canalizado</th></tr></thead><tbody>${filas || '<tr><td colspan="7">Sin tutorados asignados.</td></tr>'}</tbody></table>
+    <table class="hd-firmas"><tr>
+      <td><span class="hd-linea"></span><b>${escapeHtml(rep.tutor?.nombre || '')}</b>Nombre y firma del tutor(a)</td>
+      <td><span class="hd-linea"></span><b>&nbsp;</b>Vo. Bo. Coordinación de Tutorías</td>
+    </tr></table>`;
+}
+
+async function imprimirInformePeriodo() {
+  if (!reporteTutor) await cargarReporteTutor();
+  if (!reporteTutor?.informe) return toast('No se pudo cargar el informe.', 'error');
+  await imprimirHoja(htmlInformePeriodo(reporteTutor), `Informe del periodo ${reporteTutor.periodo.nombre}`);
 }
 
 function htmlReporteSemestral(rep) {
@@ -1416,6 +1538,7 @@ function pintarEstadoEvaluacion(evaluacion, periodo) {
   const estado = $('eval-estado');
   const btnPanel = $('btn-panel-eval-tutor');
   if (btnPanel) btnPanel.querySelector('span').textContent = evaluacion ? 'Ver o actualizar mi evaluación' : 'Responder evaluación';
+  setText('eval-menu-estado', evaluacion ? 'Enviada' : 'Pendiente');
   if (evaluacion) {
     estado.className = 'mb-4 p-3 rounded-xl border text-xs font-semibold bg-emerald-50 border-emerald-200 text-emerald-800';
     estado.innerHTML = `<i class="fa-solid fa-circle-check mr-1"></i> Evaluación del periodo ${escapeHtml(periodo)} enviada el
@@ -4202,6 +4325,8 @@ Object.assign(window, {
   imprimirComprobante,
   imprimirReporteSemestral,
   imprimirReporteDiario,
+  imprimirInformePeriodo,
+  verInforme,
   alternarTipoCita,
   verEvaluacionTutor,
   cambiarVistaEvaluacion,

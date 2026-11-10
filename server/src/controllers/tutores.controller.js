@@ -210,6 +210,7 @@ async function miReporte(req, res) {
          WHERE a.tutor_id = $1 AND a.periodo_escolar = $5 AND a.estatus_asignacion = 'Activa'
      )
      SELECT (SELECT count(*) FROM asig)::int AS tutorados,
+            (SELECT COALESCE(sum(duracion_real_min), 0) FROM c WHERE estatus = 'Completada')::int AS minutos,
             (SELECT count(*) FROM asig WHERE nivel_riesgo IN ('ALTO','CRÍTICO'))::int AS en_riesgo,
             (SELECT count(*) FROM c WHERE estatus = 'Completada')::int AS atendidas,
             (SELECT count(*) FROM c WHERE estatus = 'Completada' AND tipo = 'Individual')::int AS individuales,
@@ -224,7 +225,7 @@ async function miReporte(req, res) {
   );
   const { rows: sesiones } = await db.query(
     `SELECT c.id, to_char(c.fecha_hora AT TIME ZONE $4, 'YYYY-MM-DD"T"HH24:MI') AS fecha_hora_local,
-            c.tipo, c.modalidad, c.motivo, c.grupo, (c.minuta IS NOT NULL) AS con_minuta,
+            c.tipo, c.modalidad, c.motivo, c.grupo, (c.minuta IS NOT NULL) AS con_minuta, c.duracion_real_min,
             ua.apellidos || ' ' || ua.nombre AS tutorado_nombre, ua.no_control_o_rfc AS no_control
        FROM citas_tutorias c
   LEFT JOIN tutorados t ON t.id = c.tutorado_id
@@ -244,7 +245,70 @@ async function miReporte(req, res) {
     `SELECT u.nombre || ' ' || u.apellidos AS nombre, tu.departamento FROM tutores tu JOIN usuarios u ON u.id = tu.usuario_id WHERE tu.id = $1`,
     [tutorId]
   );
-  res.json({ ok: true, periodo, periodo_escolar: config.periodoActual, tutor: t[0], resumen: r[0], sesiones, canalizaciones_por_area: canal });
+  // Informe del periodo para la Coordinación
+  const { rows: inf } = await db.query(
+    `WITH c AS (
+        SELECT * FROM citas_tutorias
+         WHERE tutor_id = $1 AND (fecha_hora AT TIME ZONE $4)::date BETWEEN $2::date AND $3::date
+     )
+     SELECT
+       (SELECT count(*) FROM c)::int AS total,
+       (SELECT count(*) FROM c WHERE estatus = 'Pendiente')::int AS pendientes,
+       (SELECT count(*) FROM c WHERE estatus = 'Confirmada')::int AS confirmadas,
+       (SELECT count(*) FROM c WHERE estatus = 'Completada')::int AS atendidas,
+       (SELECT count(*) FROM c WHERE asistio = false)::int AS inasistencias,
+       (SELECT count(*) FROM c WHERE estatus = 'Cancelada' AND asistio IS NULL)::int AS canceladas,
+       (SELECT count(*) FROM c WHERE estatus = 'Confirmada' AND fecha_hora < now())::int AS sin_confirmar,
+       (SELECT COALESCE(sum(duracion_real_min), 0) FROM c WHERE estatus = 'Completada')::int AS minutos,
+       (SELECT count(*) FROM c WHERE estatus = 'Completada' AND modalidad = 'Presencial')::int AS presenciales,
+       (SELECT count(*) FROM c WHERE estatus = 'Completada' AND modalidad = 'Línea')::int AS en_linea,
+       (SELECT count(*) FROM c WHERE minuta IS NOT NULL)::int AS minutas,
+       (SELECT count(*) FROM c WHERE estatus = 'Completada' AND minuta IS NULL AND tipo = 'Individual')::int AS sin_minuta,
+       (SELECT count(*) FROM c WHERE (minuta->>'seguimiento') IS NOT NULL)::int AS con_seguimiento,
+       (SELECT count(*) FROM c WHERE creado_por IN (SELECT usuario_id FROM tutores WHERE id = $1))::int AS agendadas_tutor`,
+    params.slice(0, 4)
+  );
+  const { rows: porTutorado } = await db.query(
+    `SELECT t.id, ua.apellidos || ' ' || ua.nombre AS nombre, ua.no_control_o_rfc AS no_control, t.semestre,
+            t.nivel_riesgo, t.promedio, t.materias_reprobadas,
+            (SELECT count(*) FROM citas_tutorias c WHERE c.tutorado_id = t.id AND c.tutor_id = $1 AND c.estatus = 'Completada'
+               AND (c.fecha_hora AT TIME ZONE $4)::date BETWEEN $2::date AND $3::date)::int AS sesiones,
+            (SELECT COALESCE(sum(c.duracion_real_min), 0) FROM citas_tutorias c WHERE c.tutorado_id = t.id AND c.tutor_id = $1 AND c.estatus = 'Completada'
+               AND (c.fecha_hora AT TIME ZONE $4)::date BETWEEN $2::date AND $3::date)::int AS minutos,
+            (SELECT count(*) FROM citas_tutorias c WHERE c.tutorado_id = t.id AND c.tutor_id = $1 AND c.asistio = false
+               AND (c.fecha_hora AT TIME ZONE $4)::date BETWEEN $2::date AND $3::date)::int AS inasistencias,
+            (SELECT to_char(max(c.fecha_hora) AT TIME ZONE $4, 'YYYY-MM-DD') FROM citas_tutorias c
+              WHERE c.tutorado_id = t.id AND c.tutor_id = $1 AND c.estatus = 'Completada') AS ultima_sesion,
+            (SELECT count(*) FROM canalizaciones k WHERE k.tutorado_id = t.id AND k.tutor_id = $1)::int AS canalizaciones,
+            EXISTS (SELECT 1 FROM fichas_identificacion f WHERE f.tutorado_id = t.id) AS con_ficha
+       FROM asignaciones_tutoria a
+       JOIN tutorados t ON t.id = a.tutorado_id
+       JOIN usuarios ua ON ua.id = t.usuario_id
+      WHERE a.tutor_id = $1 AND a.periodo_escolar = $5 AND a.estatus_asignacion = 'Activa'
+   ORDER BY array_position(ARRAY['CRÍTICO','ALTO','MEDIO','BAJO']::nivel_riesgo[], t.nivel_riesgo), nombre`,
+    params
+  );
+  const { rows: canalEstatus } = await db.query(
+    `SELECT estatus_canalizacion AS estatus, count(*)::int AS total FROM canalizaciones
+      WHERE tutor_id = $1 AND (fecha_registro AT TIME ZONE $4)::date BETWEEN $2::date AND $3::date
+   GROUP BY 1 ORDER BY 1`,
+    params.slice(0, 4)
+  );
+  const { rows: ev } = await db.query(
+    'SELECT fecha_envio FROM evaluaciones_tutor WHERE tutor_id = $1 AND periodo = $2', [tutorId, config.periodoActual]);
+  const riesgo = { BAJO: 0, MEDIO: 0, ALTO: 0, 'CRÍTICO': 0 };
+  porTutorado.forEach((x) => { riesgo[x.nivel_riesgo] += 1; });
+  res.json({
+    ok: true, periodo, periodo_escolar: config.periodoActual, tutor: t[0], resumen: r[0], sesiones,
+    canalizaciones_por_area: canal,
+    informe: {
+      citas: inf[0],
+      tutorados: porTutorado,
+      riesgo,
+      canalizaciones_por_estatus: canalEstatus,
+      evaluacion_pit: ev[0] ? { enviada: true, fecha: ev[0].fecha_envio } : { enviada: false },
+    },
+  });
 }
 
 /** GET /api/tutores/mi-perfil   (tutor) */
