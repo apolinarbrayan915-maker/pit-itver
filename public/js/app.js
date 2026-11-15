@@ -533,8 +533,7 @@ async function cargarPerfilAlumno() {
     setText('tutor-badge', t.tutor_nombre ? 'Elegido por ti' : 'Pendiente de elegir');
     if ($('tutor-badge')) $('tutor-badge').className = `inline-block mt-1 text-[9px] px-2 py-0.5 rounded font-medium ${t.tutor_nombre ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`;
     setText('btn-cambiar-tutor', t.tutor_nombre ? 'Cambiar de tutor' : 'Elegir tutor');
-    const formCita = $('cita-form');
-    if (formCita) formCita.querySelector('button[type="submit"]').disabled = !t.tutor_nombre;
+    actualizarBotonCita();
     if (t.tutor_nombre) {
       setText('tutor-iniciales', iniciales(t.tutor_nombre));
       setText('tutor-nombre', t.tutor_nombre);
@@ -563,7 +562,13 @@ async function cargarMisCitas() {
   try {
     const { citas } = await api('/citas/mias');
     const proxima = citas.find((c) => ['Pendiente', 'Confirmada'].includes(c.estatus) && new Date(c.fecha_hora) > new Date());
-    setText('kpi-proxima-cita', proxima ? fmtFechaHora(proxima.fecha_hora) : 'Sin citas próximas');
+    citaActivaAlumno = proxima || null;
+    const aviso = $('cita-activa');
+    if (aviso) {
+      aviso.classList.toggle('hidden', !proxima);
+      if (proxima) aviso.innerHTML = `<i class="fa-solid fa-calendar-check mr-1"></i> Ya tienes una cita activa el <strong>${escapeHtml(fmtFechaHora(proxima.fecha_hora))}</strong> (${escapeHtml(proxima.estatus.toLowerCase())}). Solo puedes tener una cita activa a la vez: podrás agendar otra cuando se realice o si la cancelas.`;
+    }
+    actualizarBotonCita();
 
     if (!citas.length) {
       cont.innerHTML = '<p class="text-xs text-slate-400 text-center py-6">Aún no tienes citas registradas.</p>';
@@ -589,6 +594,13 @@ async function cargarMisCitas() {
   } catch (err) {
     cont.innerHTML = `<p class="text-xs text-rose-600 text-center py-6">${escapeHtml(err.message)}</p>`;
   }
+}
+
+let citaActivaAlumno = null;
+function actualizarBotonCita() {
+  const btn = $('cita-form')?.querySelector('button[type="submit"]');
+  if (btn) btn.disabled = !window.PIT_MI_TUTOR || Boolean(citaActivaAlumno);
+  $('cita-form')?.classList.toggle('opacity-60', Boolean(citaActivaAlumno));
 }
 
 async function cancelarCitaAlumno(id) {
@@ -1435,6 +1447,7 @@ function pintarPendientesCoord() {
   if (!ul) return;
   const p = pendientesCoord;
   const items = [
+    [p.solicitudes, "verSolicitudesCambio()", 'tono-azul', 'fa-right-left', (n) => plural(n, 'solicitud de cambio de tutor', 'solicitudes de cambio de tutor'), 'Esperan tu respuesta'],
     [p.sinTutor, "verSinTutor()", 'tono-ambar', 'fa-user-clock', (n) => plural(n, 'tutorado sin tutor', 'tutorados sin tutor'), 'Aún no eligen tutor'],
     [p.fichas, "switchTab('fichas')", 'tono-azul', 'fa-address-card', (n) => plural(n, 'ficha por revisar', 'fichas por revisar'), 'Enviadas por los tutorados'],
     [p.evaluaciones, "switchTab('evaluaciones')", 'tono-violeta', 'fa-clipboard-list', (n) => plural(n, 'tutor sin evaluar', 'tutores sin evaluar'), 'Evaluación del programa'],
@@ -1499,6 +1512,59 @@ function pintarOcupacionInicio(tutores) {
         <span class="m3-progreso mt-1.5"><span style="width:${Math.min(100, pct)}%"></span></span></span>
       <span class="text-xs font-bold tabular-nums">${t.total_tutorados}<span style="color:var(--m3-texto-3);font-weight:500">/${t.max_tutorados}</span></span></button></li>`;
   }).join('') || '<li class="m3-vacio">Sin tutores registrados</li>';
+}
+
+/* Solicitudes de cambio de tutor (las aprueba o rechaza la coordinación) */
+async function cargarSolicitudesCambio() {
+  const sec = $('solicitudes-cambio');
+  if (!sec) return;
+  try {
+    const { solicitudes, ventana } = await api('/tutores/solicitudes');
+    pendientesCoord.solicitudes = solicitudes.length;
+    pintarPendientesCoord();
+    sec.classList.toggle('hidden', !solicitudes.length);
+    setText('solicitudes-ventana', `Los tutorados pueden pedir cambio del ${fechaVentana(ventana.inicio)} al ${fechaVentana(ventana.fin)}${ventana.abierta ? ' (abierto ahora)' : ''}`);
+    $('lista-solicitudes').innerHTML = solicitudes.map((x) => {
+      const lleno = x.nuevo_ocupados >= x.nuevo_cupo;
+      return `<li class="m3-item tono-azul" style="align-items:flex-start;flex-wrap:wrap">
+        <span class="m3-avatar chico">${escapeHtml(iniciales(x.tutorado_nombre))}</span>
+        <span class="principal" style="min-width:14rem">
+          <b>${escapeHtml(x.tutorado_nombre)} <span style="color:var(--m3-texto-3);font-weight:500">· ${escapeHtml(x.no_control)} · ${x.semestre}° sem.</span></b>
+          <span style="white-space:normal">${escapeHtml(x.tutor_actual)} <i class="fa-solid fa-arrow-right text-[9px] mx-1"></i> <strong style="color:var(--m3-texto)">${escapeHtml(x.tutor_nuevo)}</strong>
+            · ${x.nuevo_ocupados}/${x.nuevo_cupo} lugares${lleno ? ' <span style="color:var(--t-rojo)">(sin cupo)</span>' : ''} · ${fmtFecha(x.creada_en)}</span>
+          <span class="mt-1 italic" style="white-space:normal;color:var(--m3-texto-2)">“${escapeHtml(x.motivo)}”</span>
+        </span>
+        <span class="flex gap-1.5 shrink-0 ml-auto">
+          <button type="button" class="m3-btn texto chico" style="color:var(--t-rojo)" onclick="resolverSolicitudCambio(${x.id}, 'rechazar')">Rechazar</button>
+          <button type="button" class="m3-btn lleno chico" ${lleno ? 'disabled style="opacity:.5"' : ''} onclick="resolverSolicitudCambio(${x.id}, 'aprobar')">Aprobar</button>
+        </span></li>`;
+    }).join('');
+  } catch (err) {
+    sec.classList.remove('hidden');
+    $('lista-solicitudes').innerHTML = `<li class="text-xs text-rose-600">${escapeHtml(err.message)}</li>`;
+  }
+}
+
+async function resolverSolicitudCambio(id, accion) {
+  let respuesta;
+  if (accion === 'rechazar') {
+    respuesta = prompt('Motivo del rechazo (lo verá el tutorado):');
+    if (respuesta === null) return;
+    if (!respuesta.trim()) return toast('Escribe el motivo del rechazo.', 'error');
+  } else if (!confirm('¿Aprobar el cambio de tutor? Las citas vigentes con el tutor anterior se cancelarán.')) return;
+  try {
+    const r = await api(`/tutores/solicitudes/${id}`, { method: 'PATCH', body: { accion, respuesta } });
+    toast(r.mensaje);
+    await Promise.all([cargarSolicitudesCambio(), cargarAsignaciones()]);
+    if (accion === 'aprobar') { cargarMetricasDashboard(); poblarTablaRiesgo($('filter-riesgo')?.value || 'TODOS'); }
+  } catch (err) {
+    toast(err.message, 'error');
+  }
+}
+
+function verSolicitudesCambio() {
+  switchTab('asignaciones');
+  setTimeout(() => $('solicitudes-cambio')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 250);
 }
 
 function verSinTutor() {
@@ -2125,19 +2191,35 @@ function pintarEstadoEvalAlumno(evaluacion, periodo) {
   }
 }
 
-async function cargarEvaluacionAlumno() {
+let evalTutorId = null;
+
+async function cargarEvaluacionAlumno(tutorId) {
   const cont = $('evalal-secciones');
   if (!cont) return;
   try {
-    const { secciones, escala, evaluacion, periodo, tutor_nombre: tutor } = await api('/evaluaciones/alumno/mia');
+    const r = await api('/evaluaciones/alumno/mia', { query: tutorId ? { tutor_id: tutorId } : {} });
+    const { secciones, escala, evaluacion, periodo, tutor_nombre: tutor, tutores = [] } = r;
+    evalTutorId = r.tutor_id;
     setText('evalal-tutor', tutor || 'Sin tutor asignado');
     setText('evalal-periodo', periodo);
+    const sel = $('evalal-selector');
+    if (sel) {
+      sel.classList.toggle('hidden', tutores.length < 2);
+      sel.innerHTML = tutores.length < 2 ? '' : `<p class="font-bold text-slate-700 mb-2">Este semestre tuviste ${tutores.length} tutores; evalúa a cada uno:</p>
+        <div class="flex flex-wrap gap-2">${tutores.map((t) => `<button type="button" onclick="cargarEvaluacionAlumno(${t.tutor_id})"
+          class="area-bloque ${t.tutor_id === evalTutorId ? 'activa' : ''}"><i class="fa-solid ${t.evaluado ? 'fa-circle-check' : 'fa-hourglass-half'}"></i>
+          ${escapeHtml(t.tutor_nombre)}${t.actual ? '' : ' (anterior)'} · ${t.evaluado ? 'evaluado' : 'pendiente'}</button>`).join('')}</div>`;
+    }
+    const pendientes = tutores.filter((t) => !t.evaluado).length;
+    const chipE = $('evalal-chip');
     if (!tutor) {
       cont.innerHTML = '<p class="text-slate-500 text-center py-6">Cuando elijas a tu tutor podrás evaluarlo aquí.</p>';
       $('evalal-boton').disabled = true;
       $('evalal-estado').classList.add('hidden');
       return;
     }
+    $('evalal-boton').disabled = false;
+    $('evalal-estado').classList.remove('hidden');
     cont.innerHTML = secciones
       .map((s) => `
         <section class="space-y-3 mb-6">
@@ -2149,8 +2231,12 @@ async function cargarEvaluacionAlumno() {
         </section>`)
       .join('');
     $('evalal-comentarios').value = evaluacion?.comentarios || '';
-    cont.addEventListener('change', actualizarProgresoEvalAlumno);
+    if (!cont.dataset.conectado) { cont.dataset.conectado = '1'; cont.addEventListener('change', actualizarProgresoEvalAlumno); }
     pintarEstadoEvalAlumno(evaluacion, periodo);
+    if (chipE && tutores.length > 1) {
+      chipE.textContent = pendientes ? `${pendientes} pendiente${pendientes === 1 ? '' : 's'}` : 'Enviadas';
+      chipE.className = `text-[9px] font-bold px-2 py-0.5 rounded uppercase ${pendientes ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}`;
+    }
     actualizarProgresoEvalAlumno();
   } catch (err) {
     cont.innerHTML = `<p class="text-rose-600 text-center py-6">${escapeHtml(err.message)}</p>`;
@@ -2179,7 +2265,7 @@ async function enviarEvaluacionAlumno(event) {
   let guardada = null;
   await conBotonOcupado($('evalal-boton'), 'Enviando…', async () => {
     try {
-      const r = await api('/evaluaciones/alumno', { method: 'POST', body: { respuestas, comentarios } });
+      const r = await api('/evaluaciones/alumno', { method: 'POST', body: { tutor_id: evalTutorId, respuestas, comentarios } });
       ok.querySelector('span').textContent = r.mensaje;
       ok.classList.remove('hidden');
       guardada = r;
@@ -2188,7 +2274,7 @@ async function enviarEvaluacionAlumno(event) {
       error.classList.remove('hidden');
     }
   });
-  if (guardada) pintarEstadoEvalAlumno(guardada.evaluacion, guardada.periodo);
+  if (guardada) { pintarEstadoEvalAlumno(guardada.evaluacion, guardada.periodo); cargarEvaluacionAlumno(evalTutorId); }
 }
 
 /* ---- Coordinador --------------------------------------------------------- */
@@ -2658,6 +2744,8 @@ function personaCardHtml(p) {
         <div><h4 class="text-sm font-extrabold text-slate-800 mb-2">Frustraciones</h4>${lista(p.frustraciones, 'Sin frustraciones registradas')}</div>
       </div>
       <div class="p-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 leading-relaxed" style="overflow-wrap:anywhere">${p.biografia ? escapeHtml(p.biografia) : '<span class="text-slate-400">Sin descripción.</span>'}</div>
+      <div><h4 class="text-sm font-extrabold text-slate-800 mb-2">Intereses y temas de apoyo</h4>
+        ${(p.intereses || []).length ? `<div class="flex flex-wrap gap-1.5">${p.intereses.map((x) => `<span class="area-bloque activa" style="cursor:default"><i class="fa-solid fa-lightbulb"></i>${escapeHtml(x)}</span>`).join('')}</div>` : '<p class="text-slate-400 italic">Sin intereses registrados</p>'}</div>
       ${sinDatos ? '<p class="text-[11px] text-amber-700 font-semibold"><i class="fa-solid fa-circle-info mr-1"></i>Este perfil aún no tiene información personal.</p>' : ''}
       <p class="text-[10px] text-slate-400 text-right">Riesgo: ${escapeHtml(p.nivel_riesgo)} · Promedio ${num(p.promedio)} · Tutor(a): ${escapeHtml(p.tutor_nombre || 'sin elegir')}</p>
     </div>
@@ -2673,6 +2761,8 @@ async function cargarPersonaAlumno() {
     if (opciones) opcionesPerfil = opciones;
     cont.innerHTML = personaCardHtml(perfil);
     setText('perfil-telefono', perfil.telefono ? formatearTelefono(perfil.telefono) : 'No registrado');
+    pintarAvatarNav(perfil.foto);
+    pintarRecomendaciones();
   } catch (err) {
     cont.innerHTML = `<p class="text-xs text-rose-600 text-center py-6">${escapeHtml(err.message)}</p>`;
   }
@@ -2797,6 +2887,9 @@ function abrirEditorPerfil() {
     listaEditableHtml($(id), id === 'pf-objetivos' ? (p.objetivos || []) : (p.frustraciones || []));
     conectarListaEditable($(id));
   });
+  interesesEditor = [...(p.intereses || [])];
+  pintarInteresesEditor();
+  conectarInteresesEditor();
   pintarPreviewFoto(p.foto);
   // La tarjeta y el editor no se muestran juntos
   $('persona-card').classList.add('hidden');
@@ -2843,6 +2936,50 @@ function quitarFotoPerfil() {
   pintarPreviewFoto(null);
 }
 
+/* ---- Intereses del tutorado (bloques, máx. 8) ---- */
+let interesesEditor = [];
+const INTERESES_SUGERIDOS = [
+  'Programación', 'Matemáticas', 'Bases de datos', 'Redes', 'Retícula y carga académica', 'Hábitos de estudio',
+  'Orientación vocacional', 'Servicio social y residencias', 'Titulación', 'Inglés', 'Becas y trámites', 'Manejo del estrés',
+];
+
+function pintarInteresesEditor() {
+  const todos = [...new Set([...INTERESES_SUGERIDOS, ...interesesEditor])];
+  $('pf-intereses').innerHTML = todos.map((a) => {
+    const on = interesesEditor.includes(a);
+    return `<button type="button" data-interes="${escapeHtml(a)}" aria-pressed="${on}" class="area-bloque ${on ? 'activa' : ''}">${on ? '<i class="fa-solid fa-check"></i>' : '<i class="fa-solid fa-plus"></i>'} ${escapeHtml(a)}</button>`;
+  }).join('');
+  setText('pf-intereses-cuenta', `${interesesEditor.length} / 8`);
+}
+
+function conectarInteresesEditor() {
+  const cont = $('pf-intereses');
+  if (!cont || cont.dataset.conectado) return;
+  cont.dataset.conectado = '1';
+  cont.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-interes]');
+    if (!btn) return;
+    const x = btn.dataset.interes;
+    if (interesesEditor.includes(x)) interesesEditor = interesesEditor.filter((y) => y !== x);
+    else if (interesesEditor.length >= 8) return toast('Elige máximo 8 intereses.', 'error');
+    else interesesEditor.push(x);
+    pintarInteresesEditor();
+  });
+  $('pf-interes-nuevo').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); agregarInteres(); } });
+}
+
+function agregarInteres() {
+  const input = $('pf-interes-nuevo');
+  const x = input.value.trim().replace(/\s+/g, ' ');
+  if (!x) return;
+  const existente = [...INTERESES_SUGERIDOS, ...interesesEditor].find((a) => a.toLowerCase() === x.toLowerCase());
+  if (existente && interesesEditor.includes(existente)) { input.value = ''; return; }
+  if (interesesEditor.length >= 8) return toast('Elige máximo 8 intereses.', 'error');
+  interesesEditor.push(existente || x);
+  input.value = '';
+  pintarInteresesEditor();
+}
+
 async function guardarPerfilTutorado(event) {
   event.preventDefault();
   const conFicha = Boolean(personaActual?.tiene_ficha);
@@ -2856,6 +2993,7 @@ async function guardarPerfilTutorado(event) {
     objetivos: leerListaEditable($('pf-objetivos')),
     frustraciones: leerListaEditable($('pf-frustraciones')),
     biografia: $('pf-bio').value,
+    intereses: interesesEditor,
   };
   if (!revisarTelefonoPerfil({ obligatorio: conFicha })) return $('pf-telefono').focus();
   const tope = opcionesPerfil.tope_palabra || 25;
@@ -2872,6 +3010,8 @@ async function guardarPerfilTutorado(event) {
       personaActual = r.perfil;
       $('persona-card').innerHTML = personaCardHtml(r.perfil);
       setText('perfil-telefono', r.perfil.telefono ? formatearTelefono(r.perfil.telefono) : 'No registrado');
+      pintarAvatarNav(r.perfil.foto);
+      pintarRecomendaciones();
       fotoPendiente = undefined;
       toast(r.mensaje);
       cerrarEditorPerfil();
@@ -2936,7 +3076,7 @@ function tarjetaTutorHtml(t, { conBoton = true } = {}) {
     if (t.es_mi_tutor) boton = '<span class="block text-center bg-emerald-100 text-emerald-800 font-bold py-2 rounded-lg"><i class="fa-solid fa-circle-check mr-1"></i>Es tu tutor(a)</span>';
     else if (!t.acepta_tutorados) boton = '<span class="block text-center bg-slate-100 text-slate-500 font-bold py-2 rounded-lg">No recibe tutorados</span>';
     else if (!t.lugares_disponibles) boton = '<span class="block text-center bg-slate-100 text-slate-500 font-bold py-2 rounded-lg">Sin lugares disponibles</span>';
-    else boton = `<button onclick='elegirTutor(${t.tutor_id}, ${escapeHtml(JSON.stringify(t.nombre))})' class="w-full bg-tecnmGreen hover:bg-tecnmDark text-white font-bold py-2 rounded-lg transition"><i class="fa-solid fa-user-check mr-1"></i>Elegir como mi tutor(a)</button>`;
+    else boton = botonElegirTutor(t);
   }
   return `<div class="p-4 rounded-2xl border ${t.es_mi_tutor ? 'border-tecnmGreen ring-2 ring-emerald-100' : 'border-slate-200'} bg-slate-50 flex flex-col gap-3 text-xs">
     <div class="flex items-center gap-3">
@@ -3074,7 +3214,7 @@ async function verPerfilTutor(tutorId) {
     pie = t.es_mi_tutor
       ? '<p class="mt-4 text-center text-xs font-bold text-tecnmGreen"><i class="fa-solid fa-circle-check mr-1"></i>Es tu tutor(a)</p>'
       : t.disponible
-        ? `<button onclick='cerrarModal("modal-perfil-tutor"); elegirTutor(${t.tutor_id}, ${escapeHtml(JSON.stringify(t.nombre))})' class="mt-4 w-full bg-tecnmGreen hover:bg-tecnmDark text-white font-bold py-2.5 rounded-xl text-xs"><i class="fa-solid fa-user-check mr-1"></i>Elegir como mi tutor(a)</button>`
+        ? `<div class="mt-4" onclick="cerrarModal('modal-perfil-tutor')">${botonElegirTutor(t)}</div>`
         : '<p class="mt-4 text-center text-xs font-bold text-slate-500">Este tutor no tiene lugares disponibles.</p>';
   }
   modalSimple('modal-perfil-tutor', 'Perfil del Tutor', tutorPersonaHtml(t) + pie);
@@ -3082,18 +3222,171 @@ async function verPerfilTutor(tutorId) {
 
 let directorioTutores = [];
 
+let estadoCambio = { ventana: null, solicitud: null };
+const fechaVentana = (ymd) => (ymd ? new Date(`${ymd}T12:00:00`).toLocaleDateString('es-MX', { day: 'numeric', month: 'long' }) : '');
+
+/** Botón de acción sobre un tutor: elegir (sin tutor) o solicitar cambio (con tutor, en la ventana). */
+function botonElegirTutor(t) {
+  const nombre = escapeHtml(JSON.stringify(t.nombre));
+  const tieneTutor = directorioTutores.some((x) => x.es_mi_tutor);
+  if (!tieneTutor) {
+    return `<button onclick='elegirTutor(${t.tutor_id}, ${nombre})' class="w-full bg-tecnmGreen hover:bg-tecnmDark text-white font-bold py-2 rounded-lg transition text-xs"><i class="fa-solid fa-user-check mr-1"></i>Elegir como mi tutor(a)</button>`;
+  }
+  const sol = estadoCambio.solicitud;
+  if (sol?.estatus === 'Pendiente') {
+    return sol.tutor_nuevo_id === t.tutor_id
+      ? '<span class="block text-center bg-amber-100 text-amber-800 font-bold py-2 rounded-lg text-xs"><i class="fa-solid fa-hourglass-half mr-1"></i>Solicitud de cambio enviada</span>'
+      : '';
+  }
+  if (!estadoCambio.ventana?.abierta) return '';
+  return `<button onclick='abrirSolicitudCambio(${t.tutor_id}, ${nombre})' class="w-full bg-white border border-tecnmGreen text-tecnmGreen hover:bg-tecnmGreen hover:text-white font-bold py-2 rounded-lg transition text-xs"><i class="fa-solid fa-right-left mr-1"></i>Solicitar cambio a este tutor</button>`;
+}
+
+function pintarEstadoCambio() {
+  const cont = $('tutores-solicitud');
+  if (!cont) return;
+  const { ventana: w, solicitud: sol } = estadoCambio;
+  const tieneTutor = directorioTutores.some((x) => x.es_mi_tutor);
+  const nota = $('tutores-nota-cambio');
+  if (nota && w) {
+    nota.textContent = `El cambio de tutor solo se solicita en las primeras ${w.semanas} semanas del semestre (del ${fechaVentana(w.inicio)} al ${fechaVentana(w.fin)}) y lo aprueba la Coordinación de Tutorías.`;
+  }
+  if (!sol || !tieneTutor && sol.estatus !== 'Aprobada') { cont.innerHTML = ''; return; }
+  const caja = (clase, icono, html) => `<div class="p-3 rounded-xl border text-xs font-semibold flex flex-col sm:flex-row sm:items-center justify-between gap-2 ${clase}"><span><i class="fa-solid ${icono} mr-1"></i>${html}</span>`;
+  if (sol.estatus === 'Pendiente') {
+    cont.innerHTML = `${caja('border-amber-200 bg-amber-50 text-amber-900', 'fa-hourglass-half', `Solicitaste cambiar a <strong>${escapeHtml(sol.tutor_nuevo)}</strong>. La coordinación revisará tu solicitud.`)}
+      <button type="button" onclick="cancelarSolicitudCambio()" class="shrink-0 bg-white border border-amber-300 hover:bg-amber-100 px-3 py-1.5 rounded-lg font-bold">Cancelar solicitud</button></div>`;
+  } else if (sol.estatus === 'Rechazada') {
+    cont.innerHTML = `${caja('border-rose-200 bg-rose-50 text-rose-800', 'fa-circle-xmark', `La coordinación rechazó tu cambio a ${escapeHtml(sol.tutor_nuevo)}${sol.respuesta ? `: “${escapeHtml(sol.respuesta)}”` : '.'}`)}</div>`;
+  } else if (sol.estatus === 'Aprobada') {
+    cont.innerHTML = `${caja('border-emerald-200 bg-emerald-50 text-emerald-800', 'fa-circle-check', `La coordinación aprobó tu cambio a ${escapeHtml(sol.tutor_nuevo)}.`)}</div>`;
+  } else cont.innerHTML = '';
+}
+
+function abrirSolicitudCambio(tutorId, nombre) {
+  const actual = directorioTutores.find((t) => t.es_mi_tutor);
+  modalSimple('modal-solicitud-cambio', 'Solicitar cambio de tutor', `
+    <form onsubmit="enviarSolicitudCambio(event, ${tutorId})" class="space-y-4 text-xs max-w-xl">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div class="p-3 rounded-xl bg-slate-50 border border-slate-200"><span class="block text-slate-400 font-semibold">Tutor actual</span><strong class="text-slate-800">${escapeHtml(actual?.nombre || '—')}</strong></div>
+        <div class="p-3 rounded-xl bg-emerald-50 border border-emerald-200"><span class="block text-emerald-700 font-semibold">Nuevo tutor</span><strong class="text-slate-800">${escapeHtml(nombre)}</strong></div>
+      </div>
+      <div>
+        <label for="solicitud-motivo" class="block font-bold text-slate-700 mb-1">¿Por qué quieres cambiar de tutor?</label>
+        <textarea id="solicitud-motivo" required minlength="10" maxlength="600" rows="4" placeholder="Ej. Necesito apoyo en bases de datos y su horario coincide con mis clases." class="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-tecnmGreen outline-none"></textarea>
+        <p class="text-[10px] text-slate-500 mt-1">La coordinación revisará tu solicitud. Si la aprueba, tus citas vigentes con tu tutor actual se cancelarán.</p>
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <button type="button" onclick="cerrarModal('modal-solicitud-cambio')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 rounded-xl">Cancelar</button>
+        <button type="submit" class="bg-tecnmGreen hover:bg-tecnmDark text-white font-bold py-2.5 rounded-xl">Enviar solicitud</button>
+      </div>
+    </form>`);
+  setTimeout(() => $('solicitud-motivo')?.focus(), 50);
+}
+
+async function enviarSolicitudCambio(event, tutorId) {
+  event.preventDefault();
+  await conBotonOcupado(event.target.querySelector('button[type="submit"]'), 'Enviando…', async () => {
+    try {
+      const r = await api('/tutores/solicitar-cambio', { method: 'POST', body: { tutor_id: tutorId, motivo: $('solicitud-motivo').value.trim() } });
+      toast(r.mensaje);
+      cerrarModal('modal-solicitud-cambio');
+      cargarDirectorioTutores();
+    } catch (err) {
+      toast(err.message, 'error');
+    }
+  });
+}
+
+async function cancelarSolicitudCambio() {
+  if (!confirm('¿Cancelar tu solicitud de cambio de tutor?')) return;
+  try {
+    const r = await api('/tutores/mi-solicitud/cancelar', { method: 'PATCH' });
+    toast(r.mensaje);
+    cargarDirectorioTutores();
+  } catch (err) {
+    toast(err.message, 'error');
+  }
+}
+
+/* ---- Recomendación de tutores según los intereses del tutorado ---- */
+const normalizarTexto = (x) => String(x || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+const PALABRAS_VACIAS = new Set(['para', 'como', 'sobre', 'entre', 'desde', 'hasta', 'con', 'del', 'las', 'los', 'una', 'uno', 'que', 'por', 'mis', 'tus']);
+
+function coincidenciasTutor(t, intereses) {
+  const areas = (t.areas_apoyo || []).map(normalizarTexto);
+  const texto = normalizarTexto([t.especialidad, t.presentacion, ...(t.enfoque || [])].join(' '));
+  const coinciden = [];
+  let puntos = 0;
+  intereses.forEach((i) => {
+    const n = normalizarTexto(i);
+    const palabras = n.split(/[^a-z0-9]+/).filter((w) => w.length >= 4 && !PALABRAS_VACIAS.has(w));
+    let p = 0;
+    if (areas.includes(n)) p = 3;
+    else if (areas.some((a) => a.includes(n) || n.includes(a) || palabras.some((w) => a.includes(w)))) p = 2;
+    else if (palabras.some((w) => texto.includes(w))) p = 1;
+    if (p) { puntos += p; coinciden.push(i); }
+  });
+  return { puntos, coinciden };
+}
+
+function pintarRecomendaciones() {
+  const cont = $('tutores-recomendados');
+  if (!cont || !directorioTutores.length || !personaActual) return;
+  const intereses = personaActual.intereses || [];
+  if (!intereses.length) {
+    cont.innerHTML = `<div class="p-4 rounded-2xl border border-dashed border-tecnmGold bg-blue-50/50 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <span class="text-slate-700"><i class="fa-solid fa-lightbulb text-tecnmBlue mr-1"></i><strong>¿No sabes qué tutor elegir?</strong> Agrega en tu perfil los temas en los que necesitas apoyo y te recomendaremos a los tutores que los cubren.</span>
+      <button type="button" onclick="switchTab('perfil'); abrirEditorPerfil(); setTimeout(() => $('pf-intereses')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)" class="shrink-0 bg-tecnmGreen hover:bg-tecnmDark text-white font-bold px-4 py-2 rounded-lg">Agregar mis intereses</button></div>`;
+    return;
+  }
+  const ranking = directorioTutores.filter((t) => !t.es_mi_tutor)
+    .map((t) => ({ t, ...coincidenciasTutor(t, intereses) }))
+    .filter((x) => x.puntos > 0)
+    .sort((a, b) => (b.t.disponible - a.t.disponible) || (b.puntos - a.puntos) || (b.t.lugares_disponibles - a.t.lugares_disponibles))
+    .slice(0, 3);
+  const misIntereses = `<div class="flex flex-wrap items-center gap-1.5 text-[11px] text-slate-500"><span>Tus intereses:</span>${intereses.map((x) => `<span class="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 font-semibold">${escapeHtml(x)}</span>`).join('')}
+    <button type="button" onclick="switchTab('perfil'); abrirEditorPerfil()" class="text-tecnmBlue font-bold hover:underline ml-1">Editar</button></div>`;
+  if (!ranking.length) {
+    cont.innerHTML = `<h4 class="text-sm font-bold text-slate-800 mb-2"><i class="fa-solid fa-wand-magic-sparkles text-tecnmBlue mr-1"></i>Recomendados para ti</h4>${misIntereses}
+      <p class="text-xs text-slate-500 mt-3">Ningún tutor menciona todavía esos temas. Revisa la lista completa o agrega otros intereses.</p>`;
+    return;
+  }
+  cont.innerHTML = `<h4 class="text-sm font-bold text-slate-800 mb-2"><i class="fa-solid fa-wand-magic-sparkles text-tecnmBlue mr-1"></i>Recomendados para ti</h4>${misIntereses}
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">${ranking.map(({ t, coinciden }) => {
+      const pct = Math.round((coinciden.length / intereses.length) * 100);
+      return `<div class="p-4 rounded-2xl border border-tecnmGold/60 bg-gradient-to-b from-blue-50/70 to-white flex flex-col gap-3 text-xs">
+        <div class="flex items-center gap-3">${avatarTutor(t, 'w-11 h-11')}
+          <div class="min-w-0"><p class="font-bold text-slate-800 truncate">${escapeHtml(t.nombre)}</p>
+          <p class="text-[10px] ${t.lugares_disponibles ? 'text-emerald-700' : 'text-rose-600'} font-semibold">${t.disponible ? `${t.lugares_disponibles} lugares disponibles` : 'Sin lugares disponibles'}</p></div>
+          <span class="ml-auto shrink-0 text-[11px] font-extrabold text-tecnmBlue bg-white border border-tecnmGold/60 rounded-full px-2 py-0.5" title="Intereses que cubre">${pct}%</span></div>
+        <div><p class="text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1">Coincide en</p>
+          <div class="flex flex-wrap gap-1">${coinciden.map((x) => `<span class="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 font-semibold"><i class="fa-solid fa-check text-[9px] mr-1"></i>${escapeHtml(x)}</span>`).join('')}</div></div>
+        <div class="mt-auto space-y-2">
+          <button onclick="verPerfilTutor(${t.tutor_id})" class="w-full bg-white border border-slate-300 hover:border-tecnmGreen text-slate-700 font-bold py-2 rounded-lg transition"><i class="fa-solid fa-id-card mr-1"></i>Ver perfil</button>
+          ${t.disponible ? botonElegirTutor(t) : ''}
+        </div></div>`;
+    }).join('')}</div>`;
+}
+
 async function cargarDirectorioTutores() {
   const cont = $('lista-tutores');
   if (!cont) return;
   try {
-    const { tutores } = await api('/tutores/disponibles');
+    const [{ tutores, ventana_cambio: ventana }, sol] = await Promise.all([
+      api('/tutores/disponibles'),
+      api('/tutores/mi-solicitud').catch(() => ({ solicitud: null })),
+    ]);
     directorioTutores = tutores;
+    estadoCambio = { ventana, solicitud: sol.solicitud };
     const mio = tutores.find((t) => t.es_mi_tutor);
     $('tutores-mi-tutor').innerHTML = mio
-      ? `<div class="p-3 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 text-xs font-semibold"><i class="fa-solid fa-circle-check mr-1"></i> Tu tutor(a) actual es <strong>${escapeHtml(mio.nombre)}</strong>. Puedes cambiarlo eligiendo a otro docente.</div>`
+      ? `<div class="p-3 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 text-xs font-semibold"><i class="fa-solid fa-circle-check mr-1"></i> Tu tutor(a) actual es <strong>${escapeHtml(mio.nombre)}</strong>.${ventana?.abierta ? ' Si necesitas otro, puedes solicitar el cambio a la coordinación.' : ''}</div>`
       : '<div class="p-3 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 text-xs font-semibold"><i class="fa-solid fa-hand-pointer mr-1"></i> Aún no eliges tutor. Elige al que mejor se adapte a tus necesidades y horario.</div>';
     cont.innerHTML = tutores.length ? tutores.map((t) => tarjetaTutorHtml(t)).join('')
       : '<p class="text-xs text-slate-400 text-center py-8 col-span-full">No hay tutores registrados.</p>';
+    pintarEstadoCambio();
+    pintarRecomendaciones();
     pintarHorarioTutorEnCita();
   } catch (err) {
     cont.innerHTML = `<p class="text-xs text-rose-600 text-center py-8 col-span-full">${escapeHtml(err.message)}</p>`;
@@ -3101,11 +3394,7 @@ async function cargarDirectorioTutores() {
 }
 
 async function elegirTutor(tutorId, nombre) {
-  const actual = directorioTutores.find((t) => t.es_mi_tutor);
-  const texto = actual
-    ? `¿Cambiar a tu tutor(a) ${actual.nombre} por ${nombre}?`
-    : `¿Elegir a ${nombre} como tu tutor(a) para este periodo?`;
-  if (!confirm(texto)) return;
+  if (!confirm(`¿Elegir a ${nombre} como tu tutor(a) para este periodo?`)) return;
   try {
     const r = await api('/tutores/elegir', { method: 'POST', body: { tutor_id: tutorId } });
     toast(r.mensaje);
@@ -3596,6 +3885,7 @@ function iniciarCoordinacion() {
 
   cargarMetricasDashboard();
   cargarSesionesHoyCoord();
+  cargarSolicitudesCambio();
   poblarTablaRiesgo('TODOS');
   cargarTablaCanalizaciones();
   cargarResumenEvaluaciones();

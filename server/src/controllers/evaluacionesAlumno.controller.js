@@ -23,38 +23,59 @@ const periodoDe = (req) =>
   /^\d{4}-[12]$/.test(req.query.periodo || '') ? req.query.periodo : config.periodoActual;
 
 /**
- * GET /api/evaluaciones/alumno/mia   (alumno)
- * Instrumento + tutor a evaluar + respuestas previas del propio alumno.
+ * Tutores que el tutorado debe evaluar en el periodo: su tutor actual y, si cambió de
+ * tutor, el anterior siempre que haya tenido al menos una sesión atendida con él.
  */
-async function miEvaluacion(req, res) {
-  const periodo = config.periodoActual;
-  const { rows: asig } = await db.query(
-    `SELECT a.tutor_id, u.nombre || ' ' || u.apellidos AS tutor_nombre
+async function tutoresAEvaluar(tutoradoId, periodo) {
+  const { rows } = await db.query(
+    `SELECT DISTINCT ON (a.tutor_id) a.tutor_id, u.nombre || ' ' || u.apellidos AS tutor_nombre,
+            a.estatus_asignacion = 'Activa' AS actual,
+            (SELECT count(*) FROM citas_tutorias c WHERE c.tutorado_id = a.tutorado_id AND c.tutor_id = a.tutor_id
+                AND c.estatus = 'Completada')::int AS sesiones
        FROM asignaciones_tutoria a
        JOIN tutores tu ON tu.id = a.tutor_id
        JOIN usuarios u ON u.id = tu.usuario_id
-      WHERE a.tutorado_id = $1 AND a.periodo_escolar = $2 AND a.estatus_asignacion = 'Activa'`,
-    [req.user.tutoradoId, periodo]
+      WHERE a.tutorado_id = $1 AND a.periodo_escolar = $2 AND a.estatus_asignacion IN ('Activa', 'Reasignada')
+   ORDER BY a.tutor_id, (a.estatus_asignacion = 'Activa') DESC`,
+    [tutoradoId, periodo]
   );
-  const { rows } = await db.query(
-    `SELECT id, respuestas, comentarios, fecha_envio, updated_at
+  return rows.filter((t) => t.actual || t.sesiones > 0).sort((x, y) => y.actual - x.actual);
+}
+
+/**
+ * GET /api/evaluaciones/alumno/mia?tutor_id=   (alumno)
+ * Instrumento, tutores por evaluar (con su estado) y respuestas previas del tutor elegido.
+ */
+async function miEvaluacion(req, res) {
+  const periodo = config.periodoActual;
+  const tutoradoId = req.user.tutoradoId;
+  const tutores = await tutoresAEvaluar(tutoradoId, periodo);
+  const { rows: hechas } = await db.query(
+    `SELECT id, tutor_id, respuestas, comentarios, fecha_envio, updated_at
        FROM evaluaciones_alumno WHERE tutorado_id = $1 AND periodo = $2`,
-    [req.user.tutoradoId, periodo]
+    [tutoradoId, periodo]
   );
+  const porTutor = new Map(hechas.map((e) => [e.tutor_id, e]));
+  const pedido = Number(req.query.tutor_id) || null;
+  const elegido = tutores.find((t) => t.tutor_id === pedido)
+    || tutores.find((t) => !porTutor.has(t.tutor_id)) || tutores[0] || null;
+  const ev = elegido ? porTutor.get(elegido.tutor_id) : null;
   res.json({
     ok: true,
     periodo,
-    tutor_nombre: asig[0]?.tutor_nombre || null,
+    tutores: tutores.map((t) => ({ ...t, evaluado: porTutor.has(t.tutor_id) })),
+    tutor_id: elegido?.tutor_id || null,
+    tutor_nombre: elegido?.tutor_nombre || null,
     secciones: SECCIONES_ALUMNO,
     escala: ESCALA_ALUMNO,
-    evaluacion: rows[0] ? { ...rows[0], promedio: promedioDe(rows[0].respuestas) } : null,
+    evaluacion: ev ? { ...ev, promedio: promedioDe(ev.respuestas) } : null,
   });
 }
 
 /**
  * POST /api/evaluaciones/alumno   (alumno)
- * Body: { respuestas: { s4a: 1..5, … }, comentarios? }
- * Evalúa al tutor asignado en el periodo vigente. Se puede actualizar.
+ * Body: { tutor_id?, respuestas: { s4a: 1..5, … }, comentarios? }
+ * Evalúa a uno de los tutores del periodo (por omisión, el actual). Se puede actualizar.
  */
 async function guardar(req, res) {
   const entrada = req.body.respuestas || {};
@@ -73,28 +94,25 @@ async function guardar(req, res) {
     ? v.texto(req.body.comentarios, 'comentarios', { min: 1, max: 2000 })
     : null;
 
-  const { rows: asig } = await db.query(
-    `SELECT tutor_id FROM asignaciones_tutoria
-      WHERE tutorado_id = $1 AND periodo_escolar = $2 AND estatus_asignacion = 'Activa'`,
-    [req.user.tutoradoId, config.periodoActual]
-  );
-  if (!asig[0]) throw conflict('No tienes un tutor asignado en este periodo; no hay a quién evaluar.');
+  const tutores = await tutoresAEvaluar(req.user.tutoradoId, config.periodoActual);
+  if (!tutores.length) throw conflict('No tienes un tutor asignado en este periodo; no hay a quién evaluar.');
+  const tutor = req.body.tutor_id ? tutores.find((t) => t.tutor_id === Number(req.body.tutor_id)) : tutores[0];
+  if (!tutor) throw badRequest('Solo puedes evaluar a los tutores que te atendieron en este periodo.');
 
   const { rows } = await db.query(
     `INSERT INTO evaluaciones_alumno (tutorado_id, tutor_id, periodo, respuestas, comentarios)
      VALUES ($1, $2, $3, $4::jsonb, $5)
-     ON CONFLICT (tutorado_id, periodo)
-     DO UPDATE SET respuestas = EXCLUDED.respuestas, comentarios = EXCLUDED.comentarios,
-                   tutor_id = EXCLUDED.tutor_id
-     RETURNING id, respuestas, comentarios, fecha_envio, updated_at, (xmax <> 0) AS actualizada`,
-    [req.user.tutoradoId, asig[0].tutor_id, config.periodoActual, JSON.stringify(respuestas), comentarios]
+     ON CONFLICT (tutorado_id, tutor_id, periodo)
+     DO UPDATE SET respuestas = EXCLUDED.respuestas, comentarios = EXCLUDED.comentarios
+     RETURNING id, tutor_id, respuestas, comentarios, fecha_envio, updated_at, (xmax <> 0) AS actualizada`,
+    [req.user.tutoradoId, tutor.tutor_id, config.periodoActual, JSON.stringify(respuestas), comentarios]
   );
   const fila = rows[0];
   res.status(fila.actualizada ? 200 : 201).json({
     ok: true,
     mensaje: fila.actualizada
-      ? 'Tu evaluación se actualizó correctamente.'
-      : 'Gracias. Tu evaluación se envió de forma confidencial a la Coordinación de Tutorías.',
+      ? `Tu evaluación de ${tutor.tutor_nombre} se actualizó correctamente.`
+      : `Gracias. Tu evaluación de ${tutor.tutor_nombre} se envió de forma confidencial a la Coordinación de Tutorías.`,
     periodo: config.periodoActual,
     evaluacion: { ...fila, promedio: promedioDe(fila.respuestas) },
   });

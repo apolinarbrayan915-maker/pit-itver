@@ -8,7 +8,14 @@ const db = require('../db');
 const config = require('../config');
 const { badRequest, notFound, conflict } = require('../utils/errores');
 const v = require('../utils/validaciones');
-const { diaDeClases } = require('../utils/calendarioEscolar');
+const { diaDeClases, ventanaCambioTutor } = require('../utils/calendarioEscolar');
+
+const hoyYmd = () => new Intl.DateTimeFormat('en-CA', { timeZone: config.tz }).format(new Date());
+/** Ventana de cambio de tutor; CAMBIO_TUTOR_ABIERTO=1 la abre siempre (pruebas). */
+const ventanaActual = () => {
+  const w = ventanaCambioTutor(hoyYmd());
+  return process.env.CAMBIO_TUTOR_ABIERTO === '1' ? { ...w, abierta: true } : w;
+};
 
 const DIAS = ['', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
 const HORA = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -61,7 +68,7 @@ async function directorio(req, res) {
   const tutores = rows.map((t) => completar(t, actual?.tutor_id));
   // El tutor actual primero, luego los que tienen lugar
   tutores.sort((a, b) => (b.es_mi_tutor - a.es_mi_tutor) || (b.disponible - a.disponible));
-  res.json({ ok: true, periodo: config.periodoActual, mi_tutor_id: actual?.tutor_id || null, tutores });
+  res.json({ ok: true, periodo: config.periodoActual, mi_tutor_id: actual?.tutor_id || null, ventana_cambio: ventanaActual(), tutores });
 }
 
 /**
@@ -86,6 +93,8 @@ async function elegir(req, res) {
 
     const actual = await tutorActualDe(client, tutoradoId);
     if (actual?.tutor_id === tutorId) throw conflict(`${t[0].nombre} ya es tu tutor(a).`);
+    // Con tutor asignado, el cambio se solicita y lo aprueba la coordinación
+    if (actual) throw conflict('Ya tienes tutor. Para cambiarlo envía una solicitud de cambio a la coordinación.');
 
     const { rows: ocupados } = await client.query(
       `SELECT count(*)::int AS n FROM asignaciones_tutoria
@@ -450,7 +459,125 @@ async function esTutorDe(tutorId, tutoradoId) {
   return Boolean(rows[0]);
 }
 
+/* ---------- Cambio de tutor: solicitud del tutorado y resolución de la coordinación ---- */
+const SELECT_SOLICITUD = `
+  SELECT s.id, s.tutorado_id, s.tutor_actual_id, s.tutor_nuevo_id, s.periodo, s.motivo, s.estatus, s.respuesta,
+         s.creada_en, s.resuelta_en,
+         ua.nombre || ' ' || ua.apellidos AS tutorado_nombre, ua.no_control_o_rfc AS no_control, t.semestre, t.nivel_riesgo,
+         u1.nombre || ' ' || u1.apellidos AS tutor_actual, u2.nombre || ' ' || u2.apellidos AS tutor_nuevo,
+         (SELECT count(*) FROM asignaciones_tutoria a WHERE a.tutor_id = s.tutor_nuevo_id
+             AND a.periodo_escolar = s.periodo AND a.estatus_asignacion = 'Activa')::int AS nuevo_ocupados,
+         tn.max_tutorados AS nuevo_cupo
+    FROM solicitudes_cambio_tutor s
+    JOIN tutorados t ON t.id = s.tutorado_id JOIN usuarios ua ON ua.id = t.usuario_id
+    JOIN tutores ta ON ta.id = s.tutor_actual_id JOIN usuarios u1 ON u1.id = ta.usuario_id
+    JOIN tutores tn ON tn.id = s.tutor_nuevo_id JOIN usuarios u2 ON u2.id = tn.usuario_id`;
+
+/** GET /api/tutores/mi-solicitud   (alumno) — última solicitud del periodo y ventana de cambio. */
+async function miSolicitud(req, res) {
+  const { rows } = await db.query(
+    `${SELECT_SOLICITUD} WHERE s.tutorado_id = $1 AND s.periodo = $2 ORDER BY s.creada_en DESC LIMIT 1`,
+    [req.user.tutoradoId, config.periodoActual]
+  );
+  res.json({ ok: true, ventana: ventanaActual(), solicitud: rows[0] || null });
+}
+
+/** POST /api/tutores/solicitar-cambio   (alumno)   Body: { tutor_id, motivo } */
+async function solicitarCambio(req, res) {
+  const tutorId = v.idPositivo(req.body.tutor_id, 'tutor_id');
+  const motivo = v.texto(req.body.motivo, 'motivo', { min: 10, max: 600 });
+  const ventana = ventanaActual();
+  if (!ventana.abierta) {
+    throw conflict(`El cambio de tutor solo se solicita en las primeras ${ventana.semanas} semanas del semestre (del ${ventana.inicio} al ${ventana.fin}).`);
+  }
+  const tutoradoId = req.user.tutoradoId;
+  const actual = await tutorActualDe(db, tutoradoId);
+  if (!actual) throw conflict('Aún no tienes tutor: elígelo directamente.');
+  if (actual.tutor_id === tutorId) throw conflict('Ese docente ya es tu tutor(a).');
+  const { rows: t } = await db.query(
+    `${SELECT_TUTORES} WHERE tu.id = $2`, [config.periodoActual, tutorId]);
+  if (!t[0]) throw notFound('Tutor no encontrado.');
+  if (!t[0].acepta_tutorados || t[0].tutorados >= t[0].max_tutorados) throw conflict(`${t[0].nombre} no tiene lugares disponibles.`);
+  try {
+    await db.query(
+      `INSERT INTO solicitudes_cambio_tutor (tutorado_id, tutor_actual_id, tutor_nuevo_id, periodo, motivo)
+       VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+      [tutoradoId, actual.tutor_id, tutorId, config.periodoActual, motivo]
+    );
+  } catch (err) {
+    if (err.code === '23505') throw conflict('Ya tienes una solicitud de cambio pendiente. Espera la respuesta de la coordinación o cancélala.');
+    throw err;
+  }
+  res.status(201).json({ ok: true, mensaje: `Solicitud enviada. La coordinación revisará tu cambio a ${t[0].nombre}.` });
+}
+
+/** PATCH /api/tutores/mi-solicitud/cancelar   (alumno) */
+async function cancelarSolicitud(req, res) {
+  const { rowCount } = await db.query(
+    `UPDATE solicitudes_cambio_tutor SET estatus = 'Cancelada', resuelta_en = now()
+      WHERE tutorado_id = $1 AND estatus = 'Pendiente'`, [req.user.tutoradoId]);
+  if (!rowCount) throw notFound('No tienes una solicitud pendiente.');
+  res.json({ ok: true, mensaje: 'Cancelaste tu solicitud de cambio de tutor.' });
+}
+
+/** GET /api/tutores/solicitudes?estatus=Pendiente   (coordinador) */
+async function listarSolicitudes(req, res) {
+  const estatus = ['Pendiente', 'Aprobada', 'Rechazada', 'Cancelada'].includes(req.query.estatus) ? req.query.estatus : 'Pendiente';
+  const { rows } = await db.query(
+    `${SELECT_SOLICITUD} WHERE s.periodo = $1 AND s.estatus = $2 ORDER BY s.creada_en`, [config.periodoActual, estatus]);
+  res.json({ ok: true, ventana: ventanaActual(), solicitudes: rows });
+}
+
+/** PATCH /api/tutores/solicitudes/:id   (coordinador)   Body: { accion: 'aprobar'|'rechazar', respuesta? } */
+async function resolverSolicitud(req, res) {
+  const id = v.idPositivo(req.params.id, 'id');
+  const accion = req.body.accion;
+  if (!['aprobar', 'rechazar'].includes(accion)) throw badRequest('Indica si apruebas o rechazas la solicitud.');
+  const respuesta = req.body.respuesta ? v.texto(req.body.respuesta, 'respuesta', { min: 1, max: 600 }) : null;
+  if (accion === 'rechazar' && !respuesta) throw badRequest('Escribe el motivo del rechazo para el tutorado.');
+
+  const r = await db.withTransaction(async (client) => {
+    const { rows: s } = await client.query(
+      `SELECT * FROM solicitudes_cambio_tutor WHERE id = $1 FOR UPDATE`, [id]);
+    if (!s[0]) throw notFound('Solicitud no encontrada.');
+    if (s[0].estatus !== 'Pendiente') throw conflict(`La solicitud ya está ${s[0].estatus.toLowerCase()}.`);
+    let canceladas = 0;
+    if (accion === 'aprobar') {
+      const { rows: t } = await client.query(
+        `SELECT tu.max_tutorados, u.nombre || ' ' || u.apellidos AS nombre FROM tutores tu JOIN usuarios u ON u.id = tu.usuario_id
+          WHERE tu.id = $1 FOR UPDATE OF tu`, [s[0].tutor_nuevo_id]);
+      const { rows: oc } = await client.query(
+        `SELECT count(*)::int AS n FROM asignaciones_tutoria WHERE tutor_id = $1 AND periodo_escolar = $2 AND estatus_asignacion = 'Activa'`,
+        [s[0].tutor_nuevo_id, s[0].periodo]);
+      if (oc[0].n >= t[0].max_tutorados) throw conflict(`${t[0].nombre} ya no tiene lugares. Amplía su cupo o rechaza la solicitud.`);
+      const actual = await tutorActualDe(client, s[0].tutorado_id);
+      if (actual) {
+        const c = await client.query(
+          `UPDATE citas_tutorias SET estatus = 'Cancelada'
+            WHERE tutorado_id = $1 AND tutor_id = $2 AND estatus IN ('Pendiente','Confirmada') AND fecha_hora >= now()`,
+          [s[0].tutorado_id, actual.tutor_id]);
+        canceladas = c.rowCount;
+        await client.query(`UPDATE asignaciones_tutoria SET estatus_asignacion = 'Reasignada' WHERE id = $1`, [actual.id]);
+      }
+      await client.query(
+        `INSERT INTO asignaciones_tutoria (tutor_id, tutorado_id, periodo_escolar, origen) VALUES ($1, $2, $3, 'Coordinación')`,
+        [s[0].tutor_nuevo_id, s[0].tutorado_id, s[0].periodo]);
+    }
+    await client.query(
+      `UPDATE solicitudes_cambio_tutor SET estatus = $2, respuesta = $3, resuelta_en = now(), resuelta_por = $4 WHERE id = $1`,
+      [id, accion === 'aprobar' ? 'Aprobada' : 'Rechazada', respuesta, req.user.id]);
+    return { canceladas };
+  });
+  res.json({
+    ok: true,
+    mensaje: accion === 'aprobar'
+      ? `Cambio aprobado.${r.canceladas ? ` Se cancelaron ${r.canceladas} cita(s) vigente(s) con el tutor anterior.` : ''}`
+      : 'Solicitud rechazada. El tutorado verá tu respuesta.',
+  });
+}
+
 module.exports = {
+  miSolicitud, solicitarCambio, cancelarSolicitud, listarSolicitudes, resolverSolicitud,
   miReporte,
   directorio, elegir, disponibilidad, miPerfil, guardarMiPerfil, actualizarCupo,
   dentroDeHorario, esTutorDe,

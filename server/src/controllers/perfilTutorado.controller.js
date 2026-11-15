@@ -26,6 +26,7 @@ async function cargar(tutoradoId) {
             date_part('year', age(p.fecha_nacimiento))::int AS edad,
             p.ciudad_natal, p.familia, p.ocupacion, p.frase,
             COALESCE(p.objetivos, '{}') AS objetivos, COALESCE(p.frustraciones, '{}') AS frustraciones,
+            COALESCE(p.intereses, '{}') AS intereses,
             p.biografia, p.updated_at AS perfil_actualizado,
             ut.nombre || ' ' || ut.apellidos AS tutor_nombre,
             EXISTS (SELECT 1 FROM fichas_identificacion f WHERE f.tutorado_id = t.id) AS tiene_ficha
@@ -48,7 +49,7 @@ async function miPerfil(req, res) {
   res.json({
     ok: true,
     perfil: await cargar(req.user.tutoradoId),
-    opciones: { familia: FAMILIA, tope_frase: TOPE_FRASE, tope_elemento: TOPE_ELEMENTO, tope_lista: TOPE_LISTA, tope_palabra: TOPE_PALABRA },
+    opciones: { tope_intereses: TOPE_INTERESES, familia: FAMILIA, tope_frase: TOPE_FRASE, tope_elemento: TOPE_ELEMENTO, tope_lista: TOPE_LISTA, tope_palabra: TOPE_PALABRA },
   });
 }
 
@@ -70,6 +71,21 @@ const TOPE_FRASE = 100;
 const TOPE_ELEMENTO = 80;
 const TOPE_PALABRA = 25; // evita textos sin espacios que rompen la tarjeta
 const TOPE_LISTA = 6;
+const TOPE_INTERESES = 8;
+
+/** Intereses o áreas de apoyo: máximo 8, de hasta 40 caracteres, sin repetir. */
+function intereses(valor) {
+  const vistos = new Set();
+  const items = (Array.isArray(valor) ? valor : []).map((x) => String(x).trim().replace(/\s+/g, ' ')).filter((x) => {
+    const k = x.toLowerCase();
+    if (!x || vistos.has(k)) return false;
+    vistos.add(k);
+    return true;
+  });
+  if (items.length > TOPE_INTERESES) throw badRequest(`Elige máximo ${TOPE_INTERESES} intereses.`);
+  if (items.some((x) => x.length > 40)) throw badRequest('Cada interés debe tener máximo 40 caracteres.');
+  return items;
+}
 
 const palabraLarga = (t) => String(t || '').split(/\s+/).some((w) => w.length > TOPE_PALABRA);
 
@@ -143,6 +159,7 @@ async function guardar(req, res) {
     lista(b.objetivos, 'objetivos'),
     lista(b.frustraciones, 'frustraciones'),
     opcional(b.biografia, 'biografia', 1500),
+    intereses(b.intereses),
   ];
 
   let fichaActualizada = false;
@@ -181,13 +198,13 @@ async function guardar(req, res) {
     }
     await client.query(
       `INSERT INTO perfiles_tutorado
-              (tutorado_id, fecha_nacimiento, ciudad_natal, familia, ocupacion, frase, objetivos, frustraciones, biografia)
-       VALUES ($1, $2::date, $3, $4, $5, $6, $7::text[], $8::text[], $9)
+              (tutorado_id, fecha_nacimiento, ciudad_natal, familia, ocupacion, frase, objetivos, frustraciones, biografia, intereses)
+       VALUES ($1, $2::date, $3, $4, $5, $6, $7::text[], $8::text[], $9, $10::text[])
        ON CONFLICT (tutorado_id) DO UPDATE SET
               fecha_nacimiento = EXCLUDED.fecha_nacimiento, ciudad_natal = EXCLUDED.ciudad_natal,
               familia = EXCLUDED.familia, ocupacion = EXCLUDED.ocupacion, frase = EXCLUDED.frase,
               objetivos = EXCLUDED.objetivos, frustraciones = EXCLUDED.frustraciones,
-              biografia = EXCLUDED.biografia
+              biografia = EXCLUDED.biografia, intereses = EXCLUDED.intereses
        RETURNING tutorado_id`,
       valores
     );

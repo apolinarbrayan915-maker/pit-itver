@@ -78,6 +78,17 @@ async function reservar(req, res) {
       const asig = await asignacionActiva(client, tutoradoId);
       if (!asig) throw conflict('Primero elige a tu tutor en la sección "Elegir Tutor".');
       tutorId = asig.tutor_id;
+      // Una sola cita activa por tutorado, para no acaparar horarios
+      const { rows: activa } = await client.query(
+        `SELECT to_char(fecha_hora AT TIME ZONE $2, 'DD/MM/YYYY "a las" HH24:MI') AS cuando
+           FROM citas_tutorias
+          WHERE tutorado_id = $1 AND estatus IN ('Pendiente','Confirmada') AND fecha_hora >= now()
+          ORDER BY fecha_hora LIMIT 1`,
+        [tutoradoId, config.tz]
+      );
+      if (activa[0]) {
+        throw conflict(`Ya tienes una cita activa el ${activa[0].cuando}. Podrás agendar otra cuando se realice o si la cancelas.`);
+      }
     } else if (rol === 'tutor') {
       tutorId = req.user.tutorId;
       if (tipo === 'Individual') {

@@ -92,6 +92,11 @@ router.patch('/asignaciones/:id/finalizar', requiereRol('coordinador'), asignaci
 // Tutores: directorio y elección por el tutorado, horario de atención y cupo
 router.get('/tutores/disponibles', requiereRol('alumno', 'coordinador'), tutores.directorio);
 router.post('/tutores/elegir', requiereRol('alumno'), tutores.elegir);
+router.get('/tutores/mi-solicitud', requiereRol('alumno'), tutores.miSolicitud);
+router.post('/tutores/solicitar-cambio', requiereRol('alumno'), tutores.solicitarCambio);
+router.patch('/tutores/mi-solicitud/cancelar', requiereRol('alumno'), tutores.cancelarSolicitud);
+router.get('/tutores/solicitudes', requiereRol('coordinador'), tutores.listarSolicitudes);
+router.patch('/tutores/solicitudes/:id', requiereRol('coordinador'), tutores.resolverSolicitud);
 router.get('/tutores/mi-perfil', requiereRol('tutor'), tutores.miPerfil);
 router.get('/tutores/mi-reporte', requiereRol('tutor'), tutores.miReporte);
 router.put('/tutores/mi-perfil', requiereRol('tutor'), tutores.guardarMiPerfil);

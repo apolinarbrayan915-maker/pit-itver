@@ -432,3 +432,8 @@ COMMIT;
 -- 13. FICHA DE IDENTIFICACIÓN DEL TUTORADO (ANEXO 6)
 -- =============================================================================
 \ir migracion_007_ficha_identificacion.sql
+
+-- =============================================================================
+-- 14. INTERESES DEL TUTORADO, CAMBIO DE TUTOR Y EVALUACIÓN POR TUTOR
+-- =============================================================================
+\ir migracion_009_intereses_cambio_tutor.sql
