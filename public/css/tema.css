@@ -777,3 +777,73 @@ html.dark .m3-switch input:checked + .riel::after { background: #0d2448; }
 html.dark .tono-amarillo { --tb: #3a3410; --tf: #ecd76a; }
 
 .m3-btn.hidden, .m3-banner.hidden, .m3-card.hidden { display: none !important; }
+
+/* =============================================================================
+ * 12. Formatos PIT del tutorado: lista compacta, detalle enfocado,
+ *     acordeón de la ficha y evaluación en filas
+ * ============================================================================= */
+.formatos-filas { padding: .25rem 0; }
+.formato-fila { display: flex; align-items: center; gap: .9rem; padding: .9rem 1.1rem; }
+.formato-fila + .formato-fila { border-top: 1px solid var(--m3-contorno); }
+.formato-titulo { font-size: .85rem; font-weight: 700; color: var(--m3-texto); }
+.formato-titulo span { font-weight: 500; color: var(--m3-texto-3); }
+.formato-desc { font-size: .72rem; color: var(--m3-texto-3); margin-top: .1rem; line-height: 1.35; }
+@media (max-width: 639px) {
+  .formato-fila { flex-wrap: wrap; gap: .6rem .8rem; padding: .85rem .9rem; }
+  .formato-fila > .min-w-0 { flex-basis: calc(100% - 3.5rem); }
+  .formato-fila > [id$="-chip"] { margin-left: 3.3rem; }
+  .formato-fila > .m3-btn { margin-left: auto; }
+}
+.formato-nota { display: flex; gap: .5rem; align-items: flex-start; font-size: .72rem; color: var(--m3-texto-3); line-height: 1.45; }
+.formato-nota i { margin-top: .15rem; color: var(--m3-primario); }
+.formato-nota strong { color: var(--m3-texto-2); }
+
+/* Acordeón de la ficha */
+.ficha-acordeon { border: 1px solid var(--m3-contorno); border-radius: 1rem; background: var(--m3-superficie); transition: box-shadow .15s, border-color .15s; }
+.ficha-acordeon.abierta { border-color: var(--m3-contorno-fuerte); box-shadow: 0 6px 18px -14px rgba(15,23,42,.35); }
+.ficha-acordeon-cab { width: 100%; display: flex; align-items: center; gap: .75rem; padding: .75rem 1rem; text-align: left; border-radius: 1rem; }
+.ficha-acordeon-cab:hover { background: var(--m3-superficie-2); }
+.ficha-acordeon-cab:focus-visible { outline: 2px solid var(--m3-primario); outline-offset: 2px; }
+.ficha-acordeon-cab .num { flex: 0 0 auto; width: 1.6rem; height: 1.6rem; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; font-size: .7rem; font-weight: 700; background: var(--m3-primario-cont); color: var(--m3-sobre-primario-cont); }
+.ficha-acordeon-cab .tit { flex: 1; min-width: 0; font-size: .8rem; font-weight: 700; color: var(--m3-texto); }
+.ficha-acordeon-cab .tit i { color: var(--m3-texto-3); margin-right: .25rem; font-size: .75rem; }
+.ficha-acordeon-cab .flecha { font-size: .7rem; color: var(--m3-texto-3); transition: transform .2s; }
+.ficha-acordeon.abierta .flecha { transform: rotate(180deg); }
+.ficha-sec-estado { flex: 0 0 auto; font-size: .66rem; font-weight: 700; padding: .15rem .55rem; border-radius: 999px; white-space: nowrap; }
+.ficha-sec-estado.lista { background: #dcf5e6; color: #146c3a; }
+.ficha-sec-estado.pendiente { background: #fdf0d5; color: #8a5300; }
+html.dark .ficha-sec-estado.lista { background: #12361f; color: #9ee3b5; }
+html.dark .ficha-sec-estado.pendiente { background: #3a2a0d; color: #f4c875; }
+.ficha-acordeon:not(.abierta) > .ficha-acordeon-cuerpo { display: none !important; }
+.ficha-acordeon-cuerpo { padding: .35rem 1rem 1.1rem; border-top: 1px solid var(--m3-contorno); padding-top: 1rem; }
+
+/* Evaluación: una fila por pregunta, escala 1–5 como control segmentado */
+.escala-likert { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .5rem; font-size: .7rem; color: var(--m3-texto-2); padding: .55rem .8rem; border-radius: .75rem; background: var(--m3-superficie-2); }
+.escala-likert > span { font-weight: 700; text-transform: uppercase; letter-spacing: .04em; font-size: .62rem; color: var(--m3-texto-3); margin-right: .25rem; }
+.escala-likert i { font-style: normal; white-space: nowrap; display: inline-flex; align-items: center; gap: .3rem; margin-right: .35rem; }
+.escala-likert b { display: inline-flex; width: 1.25rem; height: 1.25rem; border-radius: .4rem; align-items: center; justify-content: center; background: var(--m3-superficie); border: 1px solid var(--m3-contorno-fuerte); font-size: .65rem; }
+.evalal-seccion { margin-bottom: 1.25rem; }
+.evalal-seccion > div:first-child { margin-bottom: .25rem; }
+.reactivo { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: .5rem 1.25rem; padding: .7rem .5rem; border-bottom: 1px solid var(--m3-contorno); border-radius: 0; transition: background .15s; }
+.reactivo:last-child { border-bottom: 0; }
+.reactivo:hover { background: var(--m3-superficie-2); }
+.reactivo.falta { background: #fff4f4; box-shadow: inset 3px 0 0 #e11d48; }
+html.dark .reactivo.falta { background: #2a1219; }
+.reactivo-texto { font-size: .78rem; color: var(--m3-texto); line-height: 1.4; display: flex; gap: .55rem; }
+.reactivo-num { flex: 0 0 auto; min-width: 1.4rem; height: 1.4rem; border-radius: .45rem; display: inline-flex; align-items: center; justify-content: center; font-size: .65rem; font-weight: 700; background: var(--m3-superficie-2); color: var(--m3-texto-3); }
+.reactivo.respondida .reactivo-num { background: #dcf5e6; color: #146c3a; }
+html.dark .reactivo.respondida .reactivo-num { background: #12361f; color: #9ee3b5; }
+.reactivo-escala { display: inline-flex; border: 1px solid var(--m3-contorno-fuerte); border-radius: .7rem; overflow: hidden; }
+.reactivo-escala label { cursor: pointer; }
+.reactivo-escala label + label span { border-left: 1px solid var(--m3-contorno-fuerte); }
+.reactivo-escala span { display: inline-flex; align-items: center; justify-content: center; min-width: 2.25rem; height: 2rem; padding: 0 .5rem; font-size: .75rem; font-weight: 600; color: var(--m3-texto-2); background: var(--m3-superficie); transition: background .12s, color .12s; }
+.reactivo-escala label:hover span { background: var(--m3-superficie-2); }
+.reactivo-escala input:checked + span { background: var(--m3-primario); color: #fff; }
+html.dark .reactivo-escala input:checked + span { color: #0d2448; }
+.reactivo-escala input:focus-visible + span { outline: 2px solid var(--m3-primario); outline-offset: -3px; }
+@media (max-width: 767px) {
+  .reactivo { grid-template-columns: 1fr; padding: .75rem .25rem; }
+  .reactivo-escala { width: 100%; }
+  .reactivo-escala label { flex: 1; }
+  .reactivo-escala span { width: 100%; }
+}

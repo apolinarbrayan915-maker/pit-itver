@@ -188,6 +188,14 @@ function abrirPanel(id) {
   }
   panel.classList.remove('hidden');
   document.querySelectorAll(`[aria-controls="${id}"]`).forEach((b) => b.setAttribute('aria-expanded', 'true'));
+  // Vista lista/detalle (Formatos PIT del tutorado): se muestra solo el formato abierto
+  const detalle = panel.closest('[data-lista]');
+  if (detalle) {
+    detalle.classList.remove('hidden');
+    $(detalle.dataset.lista)?.classList.add('hidden');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    return;
+  }
   setTimeout(() => panel.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
 }
 function cerrarPanel(id) {
@@ -196,7 +204,23 @@ function cerrarPanel(id) {
   panel.classList.add('hidden');
   const boton = document.querySelector(`[aria-controls="${id}"]`);
   boton?.setAttribute('aria-expanded', 'false');
+  const detalle = panel.closest('[data-lista]');
+  if (detalle) {
+    detalle.classList.add('hidden');
+    $(detalle.dataset.lista)?.classList.remove('hidden');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    return;
+  }
   boton?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+/** Regresa de un formato abierto a la lista de Formatos PIT. */
+function cerrarDetalleFormatos() {
+  const abierto = document.querySelector('#formatos-detalle [data-grupo-panel]:not(.hidden)');
+  if (abierto) cerrarPanel(abierto.id);
+  else {
+    $('formatos-detalle')?.classList.add('hidden');
+    $('formatos-lista')?.classList.remove('hidden');
+  }
 }
 function alternarPanel(id) {
   if ($(id).classList.contains('hidden')) abrirPanel(id);
@@ -502,6 +526,8 @@ async function cargarPerfilAlumno() {
 
     setText('nav-nombre', nombre);
     setText('nav-iniciales', iniciales(nombre));
+    setText('menu-nombre', nombre);
+    if (u.correo_institucional) setText('menu-correo', u.correo_institucional);
     setText('perfil-iniciales', iniciales(nombre));
     setText('perfil-nombre', nombre);
     setText('perfil-control', u.no_control_o_rfc);
@@ -2134,17 +2160,14 @@ async function verEvaluacionTutor(tutorId, nombre) {
  * ============================================================================= */
 function reactivoLikertHtml(clave, etiqueta, texto, escala, valorActual) {
   return `
-    <fieldset data-reactivo="${clave}" data-numero="${escapeHtml(etiqueta)}" class="p-3 bg-slate-50 rounded-xl space-y-2 border border-transparent transition">
+    <fieldset data-reactivo="${clave}" data-numero="${escapeHtml(etiqueta)}" class="reactivo">
       <legend class="sr-only">Ítem ${escapeHtml(etiqueta)}</legend>
-      <p class="font-bold text-slate-800">${escapeHtml(etiqueta)}${/^\d+$/.test(etiqueta) ? '.' : ''} ${escapeHtml(texto)}</p>
-      <div class="flex flex-wrap gap-2 text-slate-600">
+      <p class="reactivo-texto"><span class="reactivo-num">${escapeHtml(etiqueta)}</span>${escapeHtml(texto)}</p>
+      <div class="reactivo-escala">
         ${escala.map((e) => `
-          <label class="cursor-pointer">
-            <input type="radio" name="${clave}" value="${e.valor}" class="peer sr-only" ${valorActual === e.valor ? 'checked' : ''}>
-            <span class="inline-block px-3 py-1.5 rounded-lg border border-slate-300 bg-white
-              peer-checked:bg-tecnmGreen peer-checked:text-white peer-checked:border-tecnmGreen
-              peer-focus-visible:ring-2 peer-focus-visible:ring-tecnmGold hover:border-tecnmGreen transition">
-              ${e.valor === 0 ? escapeHtml(e.etiqueta) : `${e.valor}: ${escapeHtml(e.etiqueta)}`}</span>
+          <label title="${escapeHtml(e.etiqueta)}">
+            <input type="radio" name="${clave}" value="${e.valor}" class="peer sr-only" ${valorActual === e.valor ? 'checked' : ''} aria-label="${e.valor}: ${escapeHtml(e.etiqueta)}">
+            <span>${e.valor === 0 ? escapeHtml(e.etiqueta) : e.valor}</span>
           </label>`).join('')}
       </div>
     </fieldset>`;
@@ -2156,12 +2179,12 @@ function actualizarProgresoEvalAlumno() {
   const hechas = [...bloques].filter((b) => b.querySelector('input:checked'));
   const chipP = $('evalal-progreso');
   chipP.textContent = `${hechas.length} / ${bloques.length} respondidas`;
-  chipP.className = `shrink-0 text-[11px] font-bold px-3 py-1 rounded-full ${
+  chipP.className = `self-start shrink-0 text-[11px] font-bold px-3 py-1 rounded-full ${
     hechas.length === bloques.length ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}`;
   bloques.forEach((b) => {
     const ok = Boolean(b.querySelector('input:checked'));
-    b.classList.toggle('border-emerald-200', ok);
-    b.classList.toggle('border-transparent', !ok);
+    b.classList.toggle('respondida', ok);
+    if (ok) b.classList.remove('falta');
   });
   form.querySelectorAll('[data-seccion-contador]').forEach((c) => {
     const sec = c.closest('section').querySelectorAll('[data-reactivo]');
@@ -2175,9 +2198,9 @@ function pintarEstadoEvalAlumno(evaluacion, periodo) {
   const btnPanel = $('btn-panel-evalal');
   if (chipE) {
     chipE.textContent = evaluacion ? 'Enviada' : 'Pendiente';
-    chipE.className = `text-[9px] font-bold px-2 py-0.5 rounded uppercase ${evaluacion ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`;
+    chipE.className = `text-[10px] font-bold px-2 py-0.5 rounded uppercase whitespace-nowrap ${evaluacion ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`;
   }
-  if (btnPanel) btnPanel.querySelector('span').textContent = evaluacion ? 'Ver o actualizar' : 'Responder evaluación';
+  if (btnPanel) btnPanel.querySelector('span').textContent = evaluacion ? 'Ver o actualizar' : 'Responder';
   setText('acceso-evalal-estado', evaluacion ? 'Ya la enviaste. Puedes actualizarla.' : 'Pendiente: evalúa el acompañamiento de tu tutor.');
   if (evaluacion) {
     estado.className = 'mb-4 p-3 rounded-xl border text-xs font-semibold bg-emerald-50 border-emerald-200 text-emerald-800';
@@ -2222,7 +2245,7 @@ async function cargarEvaluacionAlumno(tutorId) {
     $('evalal-estado').classList.remove('hidden');
     cont.innerHTML = secciones
       .map((s) => `
-        <section class="space-y-3 mb-6">
+        <section class="evalal-seccion">
           ${s.titulo ? `<div class="flex items-center justify-between border-b border-slate-200 pb-2">
             <h4 class="text-sm font-extrabold text-tecnmGreen">${escapeHtml(s.titulo)}</h4>
             <span data-seccion-contador class="text-[10px] font-bold text-slate-500"></span>
@@ -2256,6 +2279,7 @@ async function enviarEvaluacionAlumno(event) {
     error.querySelector('span').textContent =
       `Te faltan ${faltan.length} ítem(s): ${faltan.map((b) => b.dataset.numero).join(', ')}.`;
     error.classList.remove('hidden');
+    faltan.forEach((b) => b.classList.add('falta'));
     faltan[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
     return;
   }
@@ -4107,7 +4131,21 @@ function campoFichaHtml(c, valor, pre) {
     </div>`;
 }
 
-function formularioFichaHtml(datos, pre) {
+function formularioFichaHtml(datos, pre, { acordeon = false } = {}) {
+  if (acordeon) {
+    return FICHA.secciones.map((s, i) => `
+    <section class="ficha-seccion ficha-acordeon" data-seccion="${i}">
+      <button type="button" class="ficha-acordeon-cab" aria-expanded="false" onclick="alternarSeccionFicha(this)">
+        <span class="num">${i + 1}</span>
+        <span class="tit"><i class="fa-solid ${s.icono || 'fa-circle'}"></i> ${escapeHtml(s.titulo)}</span>
+        <span class="ficha-sec-estado"></span>
+        <i class="fa-solid fa-chevron-down flecha"></i>
+      </button>
+      <div class="ficha-acordeon-cuerpo grid grid-cols-1 md:grid-cols-6 gap-4 text-xs">
+        ${s.campos.map((c) => campoFichaHtml(c, datos[c.clave], pre)).join('')}
+      </div>
+    </section>`).join('');
+  }
   return FICHA.secciones.map((s, i) => `
     <fieldset class="ficha-seccion border border-slate-200 rounded-2xl p-4 md:p-5">
       <legend class="px-2 text-xs font-bold text-tecnmGreen flex items-center gap-2">
@@ -4168,6 +4206,41 @@ function progresoFicha(form, pre) {
   return { total, llenos };
 }
 
+/** Acordeón de la ficha (tutorado): pendientes por sección y abrir/cerrar. */
+function alternarSeccionFicha(boton, abrir) {
+  const sec = boton.closest('.ficha-acordeon');
+  const mostrar = abrir ?? !sec.classList.contains('abierta');
+  sec.classList.toggle('abierta', mostrar);
+  boton.setAttribute('aria-expanded', String(mostrar));
+}
+function pendientesSeccionesFicha(form, pre) {
+  const datos = leerFormularioFicha(form, pre);
+  return FICHA.secciones.map((s) => s.campos.filter((c) => {
+    if (!c.requerido || c.fijo) return false;
+    if (c.si && datos[c.si.campo] !== c.si.valor) return false;
+    if (c.no && datos[c.no.campo] === c.no.valor) return false;
+    const v = datos[c.clave];
+    return !(Array.isArray(v) ? v.length : v !== '' && v !== null && v !== undefined);
+  }).length);
+}
+function actualizarSeccionesFicha(form, pre) {
+  const secciones = form.querySelectorAll('.ficha-acordeon');
+  if (!secciones.length) return;
+  const pend = pendientesSeccionesFicha(form, pre);
+  secciones.forEach((sec) => {
+    const n = pend[Number(sec.dataset.seccion)] || 0;
+    const el = sec.querySelector('.ficha-sec-estado');
+    el.className = `ficha-sec-estado ${n ? 'pendiente' : 'lista'}`;
+    el.innerHTML = n ? `${n} pendiente${n === 1 ? '' : 's'}` : '<i class="fa-solid fa-check"></i> Completa';
+  });
+}
+function abrirSeccionesConError(form) {
+  form.querySelectorAll('.ficha-invalido').forEach((el) => {
+    const cab = el.closest('.ficha-acordeon')?.querySelector('.ficha-acordeon-cab');
+    if (cab) alternarSeccionFicha(cab, true);
+  });
+}
+
 function limpiarErroresFicha(form) {
   form.querySelectorAll('.ficha-error').forEach((p) => { p.classList.add('hidden'); p.textContent = ''; });
   form.querySelectorAll('.ficha-invalido').forEach((el) => el.classList.remove('ficha-invalido'));
@@ -4185,6 +4258,7 @@ function mostrarErroresFicha(form, detalles = []) {
     p.classList.remove('hidden');
     primero = primero || cont;
   });
+  abrirSeccionesConError(form);
   primero?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
@@ -4192,11 +4266,12 @@ function mostrarErroresFicha(form, detalles = []) {
 function conectarFormularioFicha(form, pre, idProgreso) {
   const actualizar = () => {
     aplicarCondicionesFicha(form, pre);
+    actualizarSeccionesFicha(form, pre);
     if (idProgreso && $(idProgreso)) {
       const { total, llenos } = progresoFicha(form, pre);
       const el = $(idProgreso);
       el.textContent = `${llenos} / ${total} obligatorios`;
-      el.className = `shrink-0 text-[11px] font-bold px-3 py-1 rounded-full ${llenos === total ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}`;
+      el.className = `self-start shrink-0 text-[11px] font-bold px-3 py-1 rounded-full ${llenos === total ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}`;
     }
   };
   form.addEventListener('input', (e) => {
@@ -4468,11 +4543,11 @@ function pintarTarjetaFicha() {
   const estado = FICHA.ficha?.estado || 'Pendiente';
   const chipEl = $('ficha-chip');
   if (chipEl) {
-    chipEl.className = `${ESTILO_FICHA[estado].chip} text-[9px] font-bold px-2 py-0.5 rounded uppercase`;
+    chipEl.className = `${ESTILO_FICHA[estado].chip} text-[10px] font-bold px-2 py-0.5 rounded uppercase whitespace-nowrap`;
     chipEl.textContent = estado;
   }
   const btn = $('btn-panel-ficha');
-  if (btn) btn.querySelector('span').textContent = FICHA.ficha ? (estado === 'Requiere corrección' ? 'Corregir ficha' : 'Ver / actualizar ficha') : 'Llenar ficha';
+  if (btn) btn.querySelector('span').textContent = FICHA.ficha ? (estado === 'Requiere corrección' ? 'Corregir' : 'Ver o actualizar') : 'Llenar ficha';
 
   // Recordatorio en Inicio cuando falta o hay que corregir
   const aviso = $('ficha-aviso-inicio');
@@ -4514,23 +4589,24 @@ function pintarPanelFichaAlumno() {
       </div>
       <span id="ficha-progreso" class="shrink-0 bg-slate-100 text-slate-600 text-[11px] font-bold px-3 py-1 rounded-full">…</span>
     </div>
-    <div class="mb-4 p-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-600 text-xs flex items-start gap-2">
-      <i class="fa-solid fa-user-shield mt-0.5 text-tecnmGreen"></i>
-      <span><strong>Confidencial.</strong> Tus respuestas serán utilizadas para mejorar el servicio que puede brindar la Institución; contesta con la mayor sinceridad. Solo la Coordinación de Tutorías puede consultarlas.</span>
-    </div>
-    <div class="mb-5 p-3 rounded-xl border text-xs font-medium flex items-start gap-2 ${cls}"><i class="fa-solid ${icono} mt-0.5"></i><span>${texto}</span></div>
-    <form id="form-ficha" novalidate class="space-y-5">
-      ${formularioFichaHtml(datos, 'fa')}
+    <div class="mb-3 p-3 rounded-xl border text-xs font-medium flex items-start gap-2 ${cls}"><i class="fa-solid ${icono} mt-0.5"></i><span>${texto}</span></div>
+    <p class="formato-nota mb-4"><i class="fa-solid fa-user-shield"></i> <span><strong>Confidencial.</strong> Solo la Coordinación de Tutorías puede consultar tus respuestas; contesta con sinceridad. Toca cada sección para abrirla.</span></p>
+    <form id="form-ficha" novalidate class="space-y-2.5">
+      ${formularioFichaHtml(datos, 'fa', { acordeon: true })}
       <p class="text-[11px] text-slate-400"><span class="text-rose-500">*</span> Campos obligatorios.</p>
-      <div class="flex flex-col sm:flex-row gap-3">
-        <button type="submit" id="ficha-boton" class="flex-1 bg-tecnmGreen hover:bg-tecnmDark text-white font-bold py-3 rounded-xl shadow transition text-xs flex items-center justify-center gap-2"><i class="fa-solid fa-paper-plane"></i> <span>${f ? 'Guardar cambios y enviar' : 'Enviar ficha a la Coordinación'}</span></button>
-        ${f ? '<button type="button" onclick="verPdfFicha(this)" class="sm:w-56 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl text-xs transition flex items-center justify-center gap-2"><i class="fa-solid fa-file-pdf"></i> <span>Ver / descargar PDF (Anexo 6)</span></button>' : ''}
+      <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
+        ${f ? '<button type="button" onclick="verPdfFicha(this)" class="m3-btn contorno"><i class="fa-regular fa-file-pdf"></i> <span>Ver PDF (Anexo 6)</span></button>' : ''}
+        <button type="submit" id="ficha-boton" class="m3-btn lleno"><i class="fa-solid fa-paper-plane"></i> <span>${f ? 'Guardar cambios y enviar' : 'Enviar ficha a la Coordinación'}</span></button>
       </div>
     </form>
-    <div id="ficha-error" class="hidden mt-4 p-3 bg-rose-50 text-rose-700 text-xs rounded-xl border border-rose-200 font-bold" role="alert"></div>
-    <button type="button" onclick="cerrarPanel('panel-ficha')" class="mt-4 w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 rounded-xl text-xs transition"><i class="fa-solid fa-chevron-up mr-1"></i> Cerrar ficha</button>`;
+    <div id="ficha-error" class="hidden mt-4 p-3 bg-rose-50 text-rose-700 text-xs rounded-xl border border-rose-200 font-bold" role="alert"></div>`;
   const form = $('form-ficha');
   conectarFormularioFicha(form, 'fa', 'ficha-progreso');
+  // Abre la primera sección con pendientes (si todo está completo, quedan cerradas)
+  const pend = pendientesSeccionesFicha(form, 'fa');
+  const primera = pend.findIndex((n) => n > 0);
+  const cab = primera >= 0 ? form.querySelector(`.ficha-acordeon[data-seccion="${primera}"] .ficha-acordeon-cab`) : null;
+  if (cab) alternarSeccionFicha(cab, true);
   form.addEventListener('submit', enviarFichaAlumno);
 }
 
@@ -4543,6 +4619,7 @@ async function enviarFichaAlumno(event) {
   if (!revisarTelefonosFicha(form, 'fa')) {
     errorBox.innerHTML = '<i class="fa-solid fa-circle-exclamation mr-1"></i> Revisa los números de teléfono marcados en rojo.';
     errorBox.classList.remove('hidden');
+    abrirSeccionesConError(form);
     form.querySelector('.ficha-invalido')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     return;
   }
@@ -4756,6 +4833,7 @@ async function guardarFichaCoord(event) {
   if (!revisarTelefonosFicha(form, 'fc')) {
     errorBox.innerHTML = '<i class="fa-solid fa-circle-exclamation mr-1"></i> Revisa los números de teléfono marcados en rojo.';
     errorBox.classList.remove('hidden');
+    abrirSeccionesConError(form);
     form.querySelector('.ficha-invalido')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     return;
   }

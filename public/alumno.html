@@ -54,25 +54,31 @@
                     <button onclick="switchTab('inicio')" id="btn-inicio" title="Inicio" class="nav-btn activo" role="tab" aria-selected="true">
                         <i class="fa-solid fa-house"></i> <span>Inicio</span><span class="nav-corto">Inicio</span>
                     </button>
-                    <button onclick="switchTab('tutores')" id="btn-tutores" title="Mi tutor" class="nav-btn" role="tab" aria-selected="false">
-                        <i class="fa-solid fa-chalkboard-user"></i> <span>Mi tutor</span><span class="nav-corto">Tutor</span>
-                    </button>
                     <button onclick="switchTab('citas')" id="btn-citas" title="Citas y Reservas" class="nav-btn" role="tab" aria-selected="false">
                         <i class="fa-solid fa-calendar-days"></i> <span>Citas y Reservas</span><span class="nav-corto">Citas</span>
                     </button>
-                    <button onclick="switchTab('documentos')" id="btn-documentos" title="Formatos PIT" class="nav-btn" role="tab" aria-selected="false">
-                        <i class="fa-solid fa-folder-open"></i> <span>Formatos PIT</span><span class="nav-corto">Formatos</span>
-                    </button>
                 </div>
-                <div class="pit-user shrink-0 flex items-center gap-2 md:gap-3 pl-3 md:pl-4 border-l border-white/20 my-2.5">
-                    <button type="button" id="btn-miperfil" onclick="switchTab('perfil')" title="Mi perfil y avance académico" aria-label="Mi perfil y avance académico" class="btn-perfil flex items-center gap-2 rounded-full pl-1 pr-1 xl:pr-3 py-1 hover:bg-white/10 transition">
-                        <span class="shrink-0 w-8 h-8 rounded-full bg-tecnmGold flex items-center justify-center font-bold text-tecnmDark text-xs overflow-hidden ring-2 ring-white/40" id="nav-iniciales">--</span>
-                        <span class="text-left hidden xl:block max-w-[14rem] leading-tight">
+                <div class="pit-user shrink-0 flex items-center pl-3 md:pl-4 border-l border-white/20 my-2.5 relative">
+                    <button type="button" id="btn-menu-alumno" onclick="alternarMenuAlumno()" aria-haspopup="menu" aria-expanded="false" aria-controls="menu-alumno" title="Mi cuenta"
+                        class="btn-perfil flex items-center gap-2 rounded-full pl-1 pr-2 xl:pr-3 py-1 transition">
+                        <span class="shrink-0 w-8 h-8 rounded-full bg-tecnmGold flex items-center justify-center font-bold text-tecnmDark text-xs overflow-hidden" id="nav-iniciales">--</span>
+                        <span class="text-left hidden xl:block max-w-[13rem] leading-tight">
                             <span class="block text-xs font-bold truncate" id="nav-nombre">Tutorado</span>
-                            <span class="block text-[10px] text-tecnmSand">Mi perfil y avance</span>
+                            <span class="block text-[10px] text-tecnmSand">Tutorado · ISC</span>
                         </span>
+                        <i class="fa-solid fa-chevron-down text-[10px] text-tecnmSand"></i>
                     </button>
-                    <button id="btn-logout" title="Cerrar sesión" class="text-tecnmSand hover:text-white"><i class="fa-solid fa-right-from-bracket"></i></button>
+                    <div id="menu-alumno" class="menu-perfil hidden" role="menu" aria-labelledby="btn-menu-alumno">
+                        <div class="menu-perfil-cabeza">
+                            <p class="font-bold text-slate-800 truncate" id="menu-nombre">Tutorado</p>
+                            <p class="text-[11px] text-slate-500 truncate" id="menu-correo">Programa Institucional de Tutorías</p>
+                        </div>
+                        <button type="button" role="menuitem" class="menu-item" data-tab="perfil" onclick="switchTab('perfil')"><i class="fa-regular fa-id-badge"></i> Mi perfil y avance</button>
+                        <button type="button" role="menuitem" class="menu-item" data-tab="tutores" onclick="switchTab('tutores')"><i class="fa-solid fa-chalkboard-user"></i> Mi tutor</button>
+                        <button type="button" role="menuitem" class="menu-item" data-tab="documentos" onclick="switchTab('documentos')"><i class="fa-regular fa-folder-open"></i> Formatos PIT</button>
+                        <div class="menu-perfil-sep"></div>
+                        <button type="button" role="menuitem" class="menu-item menu-salir" id="btn-logout"><i class="fa-solid fa-arrow-right-from-bracket"></i> Cerrar sesión</button>
+                    </div>
                 </div>
             </div>
         </nav>
@@ -369,55 +375,55 @@
         </div>
 
         <!-- TAB 5: FORMATOS PIT -->
-        <div id="tab-documentos" class="tab-content space-y-6">
-            <div class="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200">
-                <h3 class="text-base font-bold text-slate-800 mb-1">Repositorio de Formatos Oficiales PIT</h3>
-                <p class="text-xs text-slate-500 mb-6">Descarga y entrega los formatos institucionales requeridos durante el periodo tutorial en el ITVER.</p>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <!-- Tarjeta: Evaluación del acompañamiento tutorial (se abre en el panel inferior) -->
-                    <div class="p-4 bg-blue-50/60 rounded-xl border border-tecnmGold/40 flex flex-col justify-between">
-                        <div>
-                            <div class="flex items-start justify-between">
-                                <div class="w-10 h-10 bg-tecnmGold/20 text-tecnmDark rounded-lg flex items-center justify-center font-bold mb-3"><i class="fa-solid fa-star-half-stroke"></i></div>
-                                <span id="evalal-chip" class="bg-slate-200 text-slate-600 text-[9px] font-bold px-2 py-0.5 rounded uppercase">…</span>
-                            </div>
-                            <h4 class="text-xs font-bold text-slate-800">Evaluación del Acompañamiento Tutorial</h4>
-                            <p class="text-[11px] text-slate-500 mt-1">Evalúa a tu tutor (23 ítems). Si cambiaste de tutor en el semestre, evalúas a cada uno con el que tuviste sesiones. Confidencial: solo la ve la Coordinación.</p>
+        <div id="tab-documentos" class="tab-content">
+          <div class="formatos max-w-4xl mx-auto">
+            <!-- Lista de formatos -->
+            <div id="formatos-lista" class="space-y-4">
+                <div>
+                    <h2 class="text-lg font-bold text-slate-800">Formatos PIT</h2>
+                    <p class="text-xs text-slate-500 mt-0.5">Se llenan en línea y llegan directo a la Coordinación de Tutorías.</p>
+                </div>
+                <div class="m3-card formatos-filas">
+                    <div class="formato-fila">
+                        <span class="m3-icono tono-azul"><i class="fa-regular fa-address-card"></i></span>
+                        <div class="min-w-0 flex-1">
+                            <p class="formato-titulo">Ficha de Identificación <span>· Anexo 6</span></p>
+                            <p class="formato-desc">Tus datos personales, escolares y familiares. Puedes actualizarla cuando cambie algo.</p>
                         </div>
-                        <button type="button" id="btn-panel-evalal" onclick="alternarPanel('panel-evalal', this)" aria-expanded="false" aria-controls="panel-evalal" class="mt-4 w-full bg-tecnmGold hover:bg-tecnmGoldDark text-slate-900 py-2 rounded-lg text-xs font-bold transition flex items-center justify-center space-x-1"><i class="fa-solid fa-pen-to-square"></i> <span>Responder evaluación</span></button>
+                        <span id="ficha-chip" class="bg-slate-200 text-slate-600 text-[10px] font-bold px-2 py-0.5 rounded uppercase">…</span>
+                        <button type="button" id="btn-panel-ficha" onclick="alternarPanel('panel-ficha')" aria-expanded="false" aria-controls="panel-ficha" class="m3-btn tonal chico"><span>Llenar ficha</span> <i class="fa-solid fa-chevron-right text-[10px]"></i></button>
                     </div>
-                    <!-- Tarjeta: Ficha de Identificación (Anexo 6) — se llena en línea en el panel inferior -->
-                    <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 flex flex-col justify-between">
-                        <div>
-                            <div class="flex items-start justify-between">
-                                <div class="w-10 h-10 bg-tecnmGreen/10 text-tecnmGreen rounded-lg flex items-center justify-center font-bold mb-3"><i class="fa-solid fa-address-card"></i></div>
-                                <span id="ficha-chip" class="bg-slate-200 text-slate-600 text-[9px] font-bold px-2 py-0.5 rounded uppercase">…</span>
-                            </div>
-                            <h4 class="text-xs font-bold text-slate-800">Ficha de Identificación del Tutorado</h4>
-                            <p class="text-[11px] text-slate-500 mt-1">Anexo 6. Llénala en línea; se envía a la Coordinación de Tutorías y puedes actualizarla cuando lo necesites.</p>
+                    <div class="formato-fila">
+                        <span class="m3-icono tono-ambar"><i class="fa-regular fa-star-half-stroke"></i></span>
+                        <div class="min-w-0 flex-1">
+                            <p class="formato-titulo">Evaluación del Acompañamiento Tutorial</p>
+                            <p class="formato-desc">23 preguntas sobre tu tutor. Confidencial: solo la ve la Coordinación.</p>
                         </div>
-                        <button type="button" id="btn-panel-ficha" onclick="alternarPanel('panel-ficha')" aria-expanded="false" aria-controls="panel-ficha" class="mt-4 w-full bg-tecnmGreen hover:bg-tecnmDark text-white py-2 rounded-lg text-xs font-bold transition flex items-center justify-center space-x-1"><i class="fa-solid fa-pen-to-square"></i> <span>Llenar ficha</span></button>
+                        <span id="evalal-chip" class="bg-slate-200 text-slate-600 text-[10px] font-bold px-2 py-0.5 rounded uppercase">…</span>
+                        <button type="button" id="btn-panel-evalal" onclick="alternarPanel('panel-evalal')" aria-expanded="false" aria-controls="panel-evalal" class="m3-btn tonal chico"><span>Responder</span> <i class="fa-solid fa-chevron-right text-[10px]"></i></button>
                     </div>
                 </div>
+            </div>
 
+            <!-- Detalle: un formato a la vez -->
+            <div id="formatos-detalle" data-lista="formatos-lista" class="hidden space-y-3">
+                <button type="button" onclick="cerrarDetalleFormatos()" class="m3-btn texto chico -ml-2"><i class="fa-solid fa-arrow-left"></i> Formatos PIT</button>
+                <div class="m3-card p-5 md:p-7">
                 <!-- Panel plegable: Ficha de Identificación (GET/PUT /api/fichas/mia) -->
-                <div id="panel-ficha" data-grupo-panel="formatos" class="hidden mt-6 pt-6 border-t border-slate-200"><p class="text-xs text-slate-400 text-center py-6">Cargando ficha…</p></div>
+                <div id="panel-ficha" data-grupo-panel="formatos" class="hidden"><p class="text-xs text-slate-400 text-center py-6">Cargando ficha…</p></div>
 
                 <!-- Panel plegable con el cuestionario (POST /api/evaluaciones/alumno) -->
-                <div id="panel-evalal" data-grupo-panel="formatos" class="hidden mt-6 pt-6 border-t border-slate-200">
+                <div id="panel-evalal" data-grupo-panel="formatos" class="hidden">
                 <div class="flex flex-col md:flex-row md:items-start justify-between gap-3 mb-4">
                     <div>
                         <h3 class="text-base font-bold text-slate-800 mb-1">Evaluación del Acompañamiento Tutorial</h3>
                         <p class="text-xs text-slate-500">Evalúa a tu tutor(a): <strong id="evalal-tutor">…</strong> · Periodo <span id="evalal-periodo">…</span></p>
-                        <p class="text-xs text-slate-500 mt-1">Escala: 1 Siempre · 2 Casi siempre · 3 A veces · 4 Casi nunca · 5 Nunca</p>
                     </div>
-                    <span id="evalal-progreso" class="shrink-0 bg-slate-100 text-slate-600 text-[11px] font-bold px-3 py-1 rounded-full">0 / 23 respondidas</span>
+                    <span id="evalal-progreso" class="self-start shrink-0 bg-slate-100 text-slate-600 text-[11px] font-bold px-3 py-1 rounded-full">0 / 23 respondidas</span>
                 </div>
 
-                <div class="mb-4 p-3 rounded-xl border border-sky-200 bg-sky-50 text-sky-900 text-xs font-medium flex items-start gap-2">
-                    <i class="fa-solid fa-user-shield mt-0.5"></i>
-                    <span><strong>Confidencial:</strong> tus respuestas solo las consulta la Coordinación de Tutorías. Tu tutor no tiene acceso a ellas. Responde con honestidad.</span>
-                </div>
+                <p class="formato-nota mb-3"><i class="fa-solid fa-user-shield"></i> <span><strong>Confidencial.</strong> Solo la Coordinación de Tutorías ve tus respuestas; tu tutor no tiene acceso. Responde con honestidad.</span></p>
+                <div class="escala-likert mb-4" aria-hidden="true"><span>Escala</span><i><b>1</b> Siempre</i><i><b>2</b> Casi siempre</i><i><b>3</b> A veces</i><i><b>4</b> Casi nunca</i><i><b>5</b> Nunca</i></div>
 
                 <div id="evalal-selector" class="hidden mb-4"></div>
                 <div id="evalal-estado" class="mb-4 p-3 rounded-xl border text-xs font-semibold bg-amber-50 border-amber-200 text-amber-800">
@@ -430,14 +436,14 @@
                         <label for="evalal-comentarios" class="block font-bold text-slate-700 mb-1">Comentarios o sugerencias (opcional)</label>
                         <textarea id="evalal-comentarios" rows="3" maxlength="2000" placeholder="¿Qué te gustaría que mejorara en la tutoría?" class="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-tecnmGreen outline-none"></textarea>
                     </div>
-                    <button type="submit" id="evalal-boton" class="w-full bg-tecnmGreen hover:bg-tecnmDark text-white font-bold py-3 rounded-xl shadow transition">Enviar Evaluación</button>
+                    <div class="flex justify-end"><button type="submit" id="evalal-boton" class="m3-btn lleno">Enviar Evaluación</button></div>
                 </form>
                 <div id="evalal-success" class="hidden mt-4 p-3 bg-emerald-50 text-emerald-800 text-xs rounded-xl border border-emerald-200 font-bold text-center"><i class="fa-solid fa-circle-check mr-1"></i> <span></span></div>
                 <div id="evalal-error" class="hidden mt-4 p-3 bg-rose-50 text-rose-700 text-xs rounded-xl border border-rose-200 font-bold text-center" role="alert"><i class="fa-solid fa-circle-exclamation mr-1"></i> <span></span></div>
-                    <button type="button" onclick="cerrarPanel('panel-evalal')" class="mt-4 w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 rounded-xl text-xs transition"><i class="fa-solid fa-chevron-up mr-1"></i> Cerrar evaluación</button>
                 </div>
-
+                </div>
             </div>
+          </div>
         </div>
     </main>
 
@@ -465,7 +471,9 @@
     </footer>
 
     <script>
+        const TABS_MENU = ['perfil', 'tutores', 'documentos'];
         function switchTab(tabId) {
+            if (tabId === 'documentos' && typeof cerrarDetalleFormatos === 'function') cerrarDetalleFormatos();
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.nav-btn').forEach(b => { b.classList.remove('activo'); b.setAttribute('aria-selected', 'false'); });
             document.getElementById('tab-' + tabId).classList.add('active');
@@ -475,9 +483,24 @@
                 btn.setAttribute('aria-selected', 'true');
                 btn.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
             }
-            document.getElementById('btn-miperfil')?.classList.toggle('activo', tabId === 'perfil');
+            document.querySelectorAll('#menu-alumno .menu-item[data-tab]').forEach(b => b.classList.toggle('activo', b.dataset.tab === tabId));
+            document.getElementById('btn-menu-alumno').classList.toggle('activo', TABS_MENU.includes(tabId));
+            cerrarMenuAlumno();
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
+        function alternarMenuAlumno(abrir) {
+            const menu = document.getElementById('menu-alumno');
+            const boton = document.getElementById('btn-menu-alumno');
+            const mostrar = abrir ?? menu.classList.contains('hidden');
+            menu.classList.toggle('hidden', !mostrar);
+            boton.setAttribute('aria-expanded', String(mostrar));
+            if (mostrar) menu.querySelector('.menu-item')?.focus();
+        }
+        function cerrarMenuAlumno() { alternarMenuAlumno(false); }
+        document.addEventListener('click', (e) => { if (!e.target.closest('.pit-user')) cerrarMenuAlumno(); });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !document.getElementById('menu-alumno').classList.contains('hidden')) { cerrarMenuAlumno(); document.getElementById('btn-menu-alumno').focus(); }
+        });
     </script>
     <script src="vendor/flatpickr/flatpickr.min.js"></script>
     <script src="vendor/flatpickr/es.js"></script>
