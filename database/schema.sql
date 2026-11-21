@@ -437,3 +437,4 @@ COMMIT;
 -- 14. INTERESES DEL TUTORADO, CAMBIO DE TUTOR Y EVALUACIÓN POR TUTOR
 -- =============================================================================
 \ir migracion_009_intereses_cambio_tutor.sql
+\ir migracion_010_ocupacion_familia_correo.sql

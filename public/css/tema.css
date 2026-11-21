@@ -847,3 +847,69 @@ html.dark .reactivo-escala input:checked + span { color: #0d2448; }
   .reactivo-escala label { flex: 1; }
   .reactivo-escala span { width: 100%; }
 }
+
+/* =============================================================================
+ * 13. Pie de página institucional (igual al del portal del TecNM / gob.mx)
+ * ============================================================================= */
+.tecnm-footer { background: #611232; color: #fff; font-family: 'Barlow', 'Montserrat', sans-serif; font-weight: 300; font-size: 15px; line-height: 1.6; letter-spacing: .01em; margin-top: 3rem; }
+.tecnm-footer a { color: #fff; text-decoration: none; }
+.tecnm-footer a:hover, .tecnm-footer a:focus-visible { text-decoration: underline; }
+.tf-contenedor { max-width: 1170px; margin: 0 auto; padding: 1.25rem 15px 2.75rem; }
+.tf-superior { display: grid; grid-template-columns: 1fr auto 1fr; align-items: start; gap: 1rem; }
+.tf-copy { color: rgba(255,255,255,.35); margin-top: .35rem; }
+.tf-redes { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; }
+.tecnm-footer .tf-redes a { display: inline-flex; align-items: center; gap: .3rem; background: #fff; color: #3d8fd1; border: 1px solid #ddd; border-radius: 3px; padding: 2px 6px; font-size: 15px; line-height: 1.6; }
+.tecnm-footer .tf-redes a:hover { background: #f1f1f1; text-decoration: none; }
+.tf-powered { text-align: right; color: rgba(255,255,255,.35); margin-top: .35rem; }
+.tecnm-footer .tf-powered a { color: #3d6fd8; }
+.tf-inferior { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 30px; margin-top: 4.5rem; }
+.tf-logo img { width: 250px; max-width: 100%; height: auto; display: block; }
+.tf-inferior ul { list-style: none; margin: 0; padding: 0; }
+.tf-inferior li { margin: 0; }
+@media (max-width: 991px) {
+  .tf-superior { grid-template-columns: 1fr; text-align: center; }
+  .tf-powered { text-align: center; }
+  .tf-inferior { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 2.5rem; }
+}
+@media (max-width: 575px) {
+  .tf-inferior { grid-template-columns: 1fr; gap: 1.5rem; }
+  .tecnm-footer { font-size: 14px; }
+}
+
+/* Portada del tutorado: mismo tono que la tarjeta "Tu tutor(a)" para que no se pierda con el fondo */
+:root .hero.hero-tarjeta { background: #fff; border: 1px solid #e2e8f0; box-shadow: 0 1px 2px 0 rgba(0,0,0,.05); }
+html.dark .hero.hero-tarjeta { background: #111b2e; border-color: #22324a; }
+
+/* Mis citas (tutorado) */
+.mis-citas .citas-etq { font-size: .66rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--m3-texto-3); margin-bottom: .5rem; }
+.cita-proxima { display: flex; gap: .9rem; padding: 1rem; border-radius: 1rem; background: color-mix(in srgb, var(--tb) 55%, var(--m3-superficie)); border: 1px solid color-mix(in srgb, var(--tf) 18%, transparent); }
+.cita-fecha { flex: 0 0 auto; width: 3.4rem; border-radius: .85rem; background: var(--m3-superficie); border: 1px solid var(--m3-contorno); text-align: center; overflow: hidden; align-self: flex-start; }
+.cita-fecha span { display: block; background: var(--tf); color: var(--m3-superficie); font-size: .62rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; padding: .15rem 0; }
+.cita-fecha b { display: block; font-size: 1.35rem; font-weight: 800; color: var(--m3-texto); padding: .2rem 0 .3rem; line-height: 1.2; }
+.cita-fecha.chica { width: 2.6rem; border-radius: .65rem; }
+.cita-fecha.chica span { font-size: .55rem; padding: .1rem 0; }
+.cita-fecha.chica b { font-size: .95rem; padding: .1rem 0 .2rem; }
+.cita-cuando { font-size: .68rem; font-weight: 600; color: var(--m3-texto-3); }
+.cita-hora { font-size: .9rem; font-weight: 700; color: var(--m3-texto); margin-top: .35rem; text-transform: capitalize; }
+.cita-motivo { font-size: .74rem; color: var(--m3-texto-2); margin-top: .2rem; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.cita-datos { list-style: none; margin: .6rem 0 0; padding: 0; display: grid; gap: .25rem; font-size: .7rem; color: var(--m3-texto-2); }
+.cita-datos i { width: 1rem; color: var(--tf); margin-right: .35rem; text-align: center; }
+.mis-citas .cita-cancelar { color: #be123c; }
+.mis-citas .cita-cancelar:hover { background: #fff1f2; }
+html.dark .mis-citas .cita-cancelar { color: #fda4af; }
+html.dark .mis-citas .cita-cancelar:hover { background: #3b1220; }
+.cita-vacia { display: flex; align-items: center; gap: .8rem; padding: 1rem; border-radius: 1rem; border: 1px dashed var(--m3-contorno-fuerte); font-size: .72rem; color: var(--m3-texto-3); }
+.cita-vacia .font-bold { color: var(--m3-texto); font-size: .8rem; }
+.citas-hist-cab { display: flex; align-items: center; justify-content: space-between; margin: 1.4rem 0 .35rem; }
+.citas-hist-cab p { font-size: .66rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--m3-texto-3); }
+.citas-hist-cab span { font-size: .65rem; font-weight: 700; color: var(--m3-texto-3); background: var(--m3-superficie-2); border-radius: 999px; padding: .05rem .5rem; }
+.citas-hist { list-style: none; margin: 0; padding: 0; }
+.citas-hist li { display: flex; align-items: center; gap: .7rem; padding: .6rem .25rem; border-bottom: 1px solid var(--m3-contorno); }
+.citas-hist li:last-child { border-bottom: 0; }
+.citas-hist li.extra { display: none; }
+.citas-hist.todas li.extra { display: flex; }
+.citas-hist .cita-fecha span { background: var(--m3-texto-3); }
+.cita-hist-motivo { font-size: .74rem; font-weight: 600; color: var(--m3-texto); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cita-hist-meta { font-size: .66rem; color: var(--m3-texto-3); margin-top: .05rem; }
+.cita-estado { flex: 0 0 auto; display: inline-flex; align-items: center; gap: .35rem; font-size: .66rem; font-weight: 600; color: var(--tf); white-space: nowrap; }
+.cita-estado i { width: .45rem; height: .45rem; border-radius: 999px; background: currentColor; }

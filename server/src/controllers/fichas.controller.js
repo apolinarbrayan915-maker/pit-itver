@@ -70,13 +70,13 @@ function camposFijos(r) {
     semestre: r.semestre,
     ...partirApellidos(r.apellidos),
     nombres: r.nombre,
+    correo: r.correo_institucional,
   };
 }
 
 /** Valores sugeridos para una ficha nueva, tomados del registro escolar. */
 function prellenado(r) {
   return {
-    correo: r.correo_institucional,
     celular1: r.telefono || '',
     fecha_nacimiento: r.perfil_nacimiento || '',
     lugar_nacimiento: r.perfil_ciudad || '',

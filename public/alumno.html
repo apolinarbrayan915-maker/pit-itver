@@ -6,7 +6,7 @@
     <title>Sistema de Gestión de Tutorías - ITVER</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="js/tailwind.config.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,300&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,300&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body { font-family: 'Montserrat', sans-serif; }
@@ -89,7 +89,7 @@
         <!-- TAB 1: INICIO -->
         <div id="tab-inicio" class="tab-content active space-y-6">
             <div id="ficha-aviso-inicio"></div>
-            <div class="hero bg-gradient-to-r from-tecnmGreen to-tecnmDark text-white p-6 md:p-8 rounded-2xl shadow-lg relative overflow-hidden">
+            <div class="hero hero-tarjeta bg-gradient-to-r from-tecnmGreen to-tecnmDark text-white p-6 md:p-8 rounded-2xl shadow-lg relative overflow-hidden">
                 <div class="absolute right-0 bottom-0 opacity-10 translate-x-10 translate-y-10"><i class="fa-solid fa-laptop-code text-9xl"></i></div>
                 <div class="relative z-10 max-w-2xl">
                     <span class="bg-tecnmGold text-slate-900 text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider">Ciclo Escolar 2026-2</span>
@@ -168,13 +168,13 @@
                                     <div class="sm:col-span-2"><label for="pf-ciudad-estado" class="block font-bold text-slate-700 mb-1">Ciudad natal</label>
                                         <div id="pf-ciudad-cont"></div></div>
                                     <div class="sm:col-span-2"><label for="pf-ocupacion" class="block font-bold text-slate-700 mb-1">Ocupación</label>
-                                        <input type="text" id="pf-ocupacion" maxlength="120" placeholder="Ej. Estudiante ISC; trabaja medio tiempo" class="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-tecnmGreen outline-none bg-white"></div>
+                                        <select id="pf-ocupacion" class="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-tecnmGreen outline-none bg-white"><option value="">Selecciona tu ocupación</option></select></div>
                                 </div>
                             </fieldset>
 
                             <fieldset class="ficha-seccion border border-slate-200 rounded-2xl p-4">
                                 <legend class="px-2 font-bold text-tecnmGreen"><i class="fa-solid fa-people-roof mr-1"></i> Familia</legend>
-                                <p class="text-[11px] text-slate-500 mb-3">Marca a los integrantes de tu familia.</p>
+                                <p class="text-[11px] text-slate-500 mb-3">Marca con quiénes cuentas en tu familia.</p>
                                 <div id="pf-familia" class="flex flex-wrap gap-2" role="group" aria-label="Familia"></div>
                             </fieldset>
 
@@ -360,17 +360,16 @@
                     </div>
                 </div>
 
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between">
-                    <div>
-                        <h3 class="text-base font-bold text-slate-800 mb-4">Próximas Citas y Estatus</h3>
-                        <div class="space-y-3" id="lista-citas-alumno">
-                            <p class="text-xs text-slate-400 text-center py-6">Cargando…</p>
-                        </div>
+                <aside class="mis-citas bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col">
+                    <div class="flex items-center justify-between gap-2 mb-4">
+                        <h3 class="text-base font-bold text-slate-800">Mis citas</h3>
+                        <button type="button" onclick="cargarMisCitas()" class="m3-btn texto chico" title="Actualizar"><i class="fa-solid fa-rotate-right"></i></button>
                     </div>
-                    <div class="mt-6 p-4 bg-slate-100 rounded-xl text-center">
-                        <p class="text-[11px] text-slate-600 font-medium">Puedes cancelar una cita vigente desde esta lista. Para reprogramar, agenda una nueva.</p>
+                    <div id="lista-citas-alumno" class="flex-1">
+                        <p class="text-xs text-slate-400 text-center py-6">Cargando…</p>
                     </div>
-                </div>
+                    <p class="formato-nota mt-5"><i class="fa-solid fa-circle-info"></i> <span>Puedes cancelar tu cita vigente aquí. Para reprogramar, cancélala y agenda una nueva.</span></p>
+                </aside>
             </div>
         </div>
 
@@ -447,26 +446,43 @@
         </div>
     </main>
 
-    <footer class="pit-footer bg-tecnmDark text-white mt-12 border-t-4 border-tecnmGold">
-        <div class="max-w-7xl mx-auto px-4 md:px-12 py-10">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 pb-8 border-b border-white/10">
-                <div>
-                    <h3 class="text-xs font-bold tracking-wider text-tecnmGold uppercase mb-3">Instituto Tecnológico de Veracruz</h3>
-                    <p class="text-xs text-slate-300 leading-relaxed">Calz. Miguel Ángel de Quevedo 2779, Formando Hogar, Ver., C.P. 91897.<br>Departamento de Sistemas y Computación.<br>Programa Institucional de Tutorías (PIT).</p>
+    <footer class="tecnm-footer" role="contentinfo">
+        <div class="tf-contenedor">
+            <div class="tf-superior">
+                <p class="tf-copy">© <span data-anio>2026</span></p>
+                <div class="tf-redes">
+                    <a href="https://twitter.com/TecNM_Veracruz" target="_blank" rel="noopener"><i class="fa-brands fa-twitter"></i> Twitter</a>
+                    <a href="https://www.facebook.com/ITVeracruz" target="_blank" rel="noopener"><i class="fa-brands fa-facebook-f"></i> Facebook</a>
+                    <a href="http://www.veracruz.tecnm.mx/index.php/enlaces/blog/radiotec-2019" target="_blank" rel="noopener"><i class="fa-solid fa-rss"></i> Radiotec en Vivo</a>
+                    <a href="https://www.youtube.com/channel/UCVBkOP_rj5ulvlriG88jTzA" target="_blank" rel="noopener"><i class="fa-brands fa-youtube"></i> Youtube</a>
+                    <a href="https://www.facebook.com/radiotecitver/" target="_blank" rel="noopener"><i class="fa-brands fa-facebook-f"></i> Face Radiotec</a>
                 </div>
-                <div>
-                    <h3 class="text-xs font-bold tracking-wider text-tecnmGold uppercase mb-3">Enlaces de Interés TecNM</h3>
-                    <ul class="space-y-1.5 text-xs text-slate-300">
-                        <li><a href="https://www.tecnm.mx" target="_blank" rel="noopener" class="hover:underline">Portal Oficial TecNM</a></li>
-                        <li><a href="https://www.veracruz.tecnm.mx" target="_blank" rel="noopener" class="hover:underline">Sitio Web ITVER</a></li>
-                    </ul>
-                </div>
-                <div>
-                    <h3 class="text-xs font-bold tracking-wider text-tecnmGold uppercase mb-3">Contacto Webmaster</h3>
-                    <p class="text-xs text-slate-300 mb-2">Correo: soporte.tutorias@veracruz.tecnm.mx</p>
-                </div>
+                <p class="tf-powered">Powered by<br><a href="https://www.veracruz.tecnm.mx/index.php" target="_blank" rel="noopener">TecNM Campus<br>Veracruz</a></p>
             </div>
-            <div class="pt-6 text-[10px] text-slate-400"><p>© 2026 Tecnológico Nacional de México - Todos los derechos reservados.</p></div>
+            <div class="tf-inferior">
+                <a href="https://www.gob.mx" target="_blank" rel="noopener" class="tf-logo" aria-label="Gobierno de México"><img src="img/gobierno-mexico.png" alt="Gobierno de México" width="262" height="90"></a>
+                <ul>
+                    <li class="tf-titulo">Enlaces</li>
+                    <li><a href="https://participa.gob.mx/" target="_blank" rel="noopener">Participa</a></li>
+                    <li><a href="https://www.gob.mx/publicaciones" target="_blank" rel="noopener">Publicaciones Oficiales</a></li>
+                    <li><a href="http://www.ordenjuridico.gob.mx/" target="_blank" rel="noopener">Marco Jurídico</a></li>
+                    <li><a href="https://consultapublicamx.inai.org.mx/vut-web/faces/view/consultaPublica.xhtml#inicio" target="_blank" rel="noopener">Plataforma Nacional de Transparencia</a></li>
+                </ul>
+                <ul>
+                    <li><a href="https://www.gob.mx/que-es-gobmx" target="_blank" rel="noopener">¿Qué es gob.mx?</a></li>
+                    <li>Es el portal único de trámites, información y participación ciudadana. <a href="https://www.gob.mx/que-es-gobmx" target="_blank" rel="noopener">Leer más</a></li>
+                    <li><a href="https://datos.gob.mx/" target="_blank" rel="noopener">Portal de datos abiertos</a></li>
+                    <li><a href="https://www.gob.mx/accesibilidad" target="_blank" rel="noopener">Declaración de accesibilidad</a></li>
+                    <li><a href="https://www.veracruz.tecnm.mx/index.php/enlaces/articulos/1694-aviso-de-privacidad" target="_blank" rel="noopener">Aviso de privacidad integral</a></li>
+                    <li><a href="https://www.veracruz.tecnm.mx/index.php/enlaces/articulos/1694-aviso-de-privacidad" target="_blank" rel="noopener">Aviso de privacidad simplificado</a></li>
+                    <li><a href="https://www.gob.mx/terminos" target="_blank" rel="noopener">Términos y Condiciones</a></li>
+                    <li><a href="https://www.gob.mx/terminos#medidas-seguridad-informacion" target="_blank" rel="noopener">Política de seguridad</a></li>
+                    <li><a href="https://www.gob.mx/sitemap" target="_blank" rel="noopener">Mapa de sitio</a></li>
+                </ul>
+                <ul>
+                    <li><a href="https://www.gob.mx/tramites/ficha/presentacion-de-quejas-y-denuncias-en-la-sfp/SFP54" target="_blank" rel="noopener">Denuncia contra servidores públicos</a></li>
+                </ul>
+            </div>
         </div>
     </footer>
 

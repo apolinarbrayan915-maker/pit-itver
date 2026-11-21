@@ -49,7 +49,7 @@ async function miPerfil(req, res) {
   res.json({
     ok: true,
     perfil: await cargar(req.user.tutoradoId),
-    opciones: { tope_intereses: TOPE_INTERESES, familia: FAMILIA, tope_frase: TOPE_FRASE, tope_elemento: TOPE_ELEMENTO, tope_lista: TOPE_LISTA, tope_palabra: TOPE_PALABRA },
+    opciones: { tope_intereses: TOPE_INTERESES, familia: FAMILIA, ocupaciones: OCUPACIONES, tope_frase: TOPE_FRASE, tope_elemento: TOPE_ELEMENTO, tope_lista: TOPE_LISTA, tope_palabra: TOPE_PALABRA },
   });
 }
 
@@ -66,7 +66,25 @@ const opcional = (valor, campo, max) =>
   valor === undefined || valor === null || String(valor).trim() === '' ? null : v.texto(String(valor), campo, { min: 1, max });
 
 /** Integrantes de la familia que el tutorado puede marcar (se guardan como "Padre, Madre, …"). */
-const FAMILIA = ['Padre', 'Madre', 'Hermano(s)', 'Hermana(s)', 'Abuelo(s)', 'Pareja', 'Hijo(s)', 'Otros familiares'];
+const FAMILIA = ['Padre', 'Madre', 'Hermanos'];
+
+/** Ocupación: se elige de una lista para mantener los datos consistentes. */
+const OCUPACIONES = [
+  'Solo estudiante',
+  'Estudiante y trabajo de medio tiempo',
+  'Estudiante y trabajo de tiempo completo',
+  'Estudiante y trabajo por mi cuenta',
+  'Estudiante y apoyo en el negocio familiar',
+  'Estudiante y cuido a familiares u hogar',
+  'Estudiante y deportista de alto rendimiento',
+];
+
+function ocupacion(valor) {
+  if (valor === undefined || valor === null || String(valor).trim() === '') return null;
+  const v = String(valor).trim();
+  if (!OCUPACIONES.includes(v)) throw badRequest('Ocupación: elige una opción de la lista.');
+  return v;
+}
 const TOPE_FRASE = 100;
 const TOPE_ELEMENTO = 80;
 const TOPE_PALABRA = 25; // evita textos sin espacios que rompen la tarjeta
@@ -154,7 +172,7 @@ async function guardar(req, res) {
     nacimiento || null,
     ciudad || null,
     familia(b.familia),
-    opcional(b.ocupacion, 'ocupacion', 120),
+    ocupacion(b.ocupacion),
     frase,
     lista(b.objetivos, 'objetivos'),
     lista(b.frustraciones, 'frustraciones'),

@@ -450,9 +450,9 @@ async function enviarReservaCita(event) {
 
   await conBotonOcupado(form.querySelector('button[type="submit"]'), 'Registrando…', async () => {
     try {
-      const { cita } = await api('/citas/reservar', { method: 'POST', body: payload });
+      const { cita, correo } = await api('/citas/reservar', { method: 'POST', body: payload });
       ok.querySelector('span').textContent =
-        `¡Cita agendada para el ${fmtFechaHora(cita.fecha_hora)}! Queda pendiente de confirmación por ${cita.tutor_nombre}.`;
+        `¡Cita agendada para el ${fmtFechaHora(cita.fecha_hora)}! Queda pendiente de confirmación por ${cita.tutor_nombre}.${correo?.enviado ? ' Le avisamos por correo.' : ''}`;
       ok.classList.remove('hidden');
       form.reset();
       calendarioCita?.clear();
@@ -596,30 +596,70 @@ async function cargarMisCitas() {
     }
     actualizarBotonCita();
 
-    if (!citas.length) {
-      cont.innerHTML = '<p class="text-xs text-slate-400 text-center py-6">Aún no tienes citas registradas.</p>';
-      return;
-    }
-    cont.innerHTML = citas
-      .slice(0, 6)
-      .map((c) => {
-        const vigente = ['Pendiente', 'Confirmada'].includes(c.estatus) && new Date(c.fecha_hora) > new Date();
-        return `<div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs ${vigente ? '' : 'opacity-75'}">
-          <div class="flex justify-between items-center mb-1">
-            <span class="font-bold ${vigente ? 'text-tecnmGreen' : 'text-slate-600'}">${escapeHtml(c.tipo)} · ${escapeHtml(c.modalidad)}</span>
-            ${chip(c.estatus, ESTATUS_CITA_ESTILO[c.estatus])}
-          </div>
-          <p class="text-slate-700 font-medium">${escapeHtml(c.motivo)}</p>
-          <div class="flex justify-between items-center mt-1">
-            <p class="text-slate-400 text-[10px]"><i class="fa-regular fa-calendar mr-1"></i>${fmtFechaHora(c.fecha_hora)}</p>
-            ${vigente ? `<button onclick="cancelarCitaAlumno(${c.id})" class="text-[10px] text-rose-600 font-bold hover:underline">Cancelar</button>` : ''}
-          </div>
-        </div>`;
-      })
-      .join('');
+    const otras = citas.filter((c) => c !== proxima);
+    const destacada = proxima ? tarjetaCitaProxima(proxima) : `
+      <div class="cita-vacia">
+        <span class="m3-icono tono-azul"><i class="fa-regular fa-calendar-plus"></i></span>
+        <div><p class="font-bold">No tienes citas próximas</p><p>Agenda una sesión con tu tutor en el formulario.</p></div>
+      </div>`;
+    const historial = otras.length ? `
+      <div class="citas-hist-cab"><p>Historial</p><span>${otras.length}</span></div>
+      <ul class="citas-hist">${otras.map((c, i) => filaCitaHistorial(c, i >= 4)).join('')}</ul>
+      ${otras.length > 4 ? `<button type="button" class="m3-btn texto chico w-full justify-center mt-1" onclick="this.previousElementSibling.classList.add('todas'); this.remove();">Ver todas (${otras.length})</button>` : ''}` : '';
+    cont.innerHTML = `<p class="citas-etq">Próxima cita</p>${destacada}${historial}`;
   } catch (err) {
     cont.innerHTML = `<p class="text-xs text-rose-600 text-center py-6">${escapeHtml(err.message)}</p>`;
   }
+}
+
+/* ---- Mis citas (tutorado): próxima cita destacada + historial compacto ---- */
+const CITA_TONO = { Pendiente: 'tono-ambar', Confirmada: 'tono-azul', Completada: 'tono-verde', Cancelada: 'tono-gris' };
+const MESES_CORTOS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+const DIAS_LARGOS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+function partesCitaAlumno(c) {
+  const [f, h] = (c.fecha_hora_local || '').split('T');
+  const [y, m, d] = (f || '').split('-').map(Number);
+  const dia = new Date(Date.UTC(y, m - 1, d, 12)).getUTCDay();
+  const [hh, mm] = (h || '00:00').split(':').map(Number);
+  const fin = hh * 60 + mm + (c.duracion_min || 60);
+  const hora = (min) => `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
+  return { d, mes: MESES_CORTOS[m - 1], anio: y, dia: DIAS_LARGOS[dia], inicio: hora(hh * 60 + mm), fin: hora(fin) };
+}
+function estadoCitaTexto(c) {
+  if (c.estatus === 'Completada' && c.asistio === false) return 'No asistió';
+  if (['Pendiente', 'Confirmada'].includes(c.estatus) && new Date(c.fecha_hora) <= new Date()) return 'Por confirmar asistencia';
+  return c.estatus;
+}
+function tarjetaCitaProxima(c) {
+  const p = partesCitaAlumno(c);
+  const faltan = Math.ceil((new Date(c.fecha_hora) - new Date()) / 86400000);
+  const cuando = faltan <= 0 ? 'Hoy' : faltan === 1 ? 'Mañana' : `En ${faltan} días`;
+  return `<article class="cita-proxima ${CITA_TONO[c.estatus] || 'tono-azul'}">
+      <div class="cita-fecha"><span>${p.mes}</span><b>${p.d}</b></div>
+      <div class="min-w-0 flex-1">
+        <div class="flex items-center gap-2 flex-wrap"><span class="m3-insignia">${escapeHtml(c.estatus)}</span><span class="cita-cuando">${cuando}</span></div>
+        <p class="cita-hora">${p.dia}, ${p.inicio} – ${p.fin}</p>
+        <p class="cita-motivo">${escapeHtml(c.motivo)}</p>
+        <ul class="cita-datos">
+          <li><i class="fa-solid ${c.modalidad === 'Línea' ? 'fa-video' : 'fa-location-dot'}"></i>${c.modalidad === 'Línea' ? 'En línea' : `Presencial${c.tutor_cubiculo ? ` · ${escapeHtml(c.tutor_cubiculo)}` : ''}`}</li>
+          <li><i class="fa-solid fa-chalkboard-user"></i>${escapeHtml(c.tutor_nombre || '')}</li>
+        </ul>
+        <div class="flex justify-end mt-3"><button type="button" onclick="cancelarCitaAlumno(${c.id})" class="m3-btn texto chico cita-cancelar"><i class="fa-solid fa-xmark"></i> Cancelar cita</button></div>
+      </div>
+    </article>`;
+}
+function filaCitaHistorial(c, oculta) {
+  const p = partesCitaAlumno(c);
+  const estado = estadoCitaTexto(c);
+  const tono = estado === 'No asistió' ? 'tono-rojo' : estado === 'Por confirmar asistencia' ? 'tono-ambar' : CITA_TONO[c.estatus] || 'tono-gris';
+  return `<li class="${oculta ? 'extra' : ''} ${tono}">
+      <div class="cita-fecha chica"><span>${p.mes}</span><b>${p.d}</b></div>
+      <div class="min-w-0 flex-1">
+        <p class="cita-hist-motivo" title="${escapeHtml(c.motivo)}">${escapeHtml(c.motivo)}</p>
+        <p class="cita-hist-meta">${p.inicio} · ${escapeHtml(c.modalidad === 'Línea' ? 'En línea' : 'Presencial')}</p>
+      </div>
+      <span class="cita-estado"><i></i>${escapeHtml(estado)}</span>
+    </li>`;
 }
 
 let citaActivaAlumno = null;
@@ -2734,7 +2774,7 @@ async function eliminarAviso(id) {
  *   Alumno: GET/PUT /api/perfil-tutorado/mio · Tutor/Coord: GET /api/perfil-tutorado/:id
  * ============================================================================= */
 let personaActual = null;
-let opcionesPerfil = { familia: ['Padre', 'Madre', 'Hermano(s)', 'Hermana(s)', 'Abuelo(s)', 'Pareja', 'Hijo(s)', 'Otros familiares'], tope_frase: 100, tope_elemento: 80, tope_lista: 6, tope_palabra: 25 };
+let opcionesPerfil = { familia: ['Padre', 'Madre', 'Hermanos'], ocupaciones: [], tope_frase: 100, tope_elemento: 80, tope_lista: 6, tope_palabra: 25 };
 let fotoPendiente; // undefined = sin cambios · null = quitar · dataURL = nueva
 
 function personaCardHtml(p) {
@@ -2890,7 +2930,8 @@ function abrirEditorPerfil() {
   const fam = String(p.familia || '').split(',').map((x) => x.trim());
   $('pf-familia').innerHTML = opcionesPerfil.familia.map((o, i) => `
     <label class="ficha-opcion"><input type="checkbox" name="pf-familia" id="pf-familia-${i}" value="${escapeHtml(o)}" ${fam.includes(o) ? 'checked' : ''}><span>${escapeHtml(o)}</span></label>`).join('');
-  $('pf-ocupacion').value = p.ocupacion || '';
+  const ocup = opcionesPerfil.ocupaciones || [];
+  $('pf-ocupacion').innerHTML = '<option value="">Selecciona tu ocupación</option>' + ocup.map((o) => `<option ${o === p.ocupacion ? 'selected' : ''}>${escapeHtml(o)}</option>`).join('');
   $('pf-telefono').value = formatearTelefono(p.telefono || '');
   revisarTelefonoPerfil();
   if (!$('pf-telefono').dataset.conectado) {
@@ -5080,3 +5121,6 @@ Object.assign(window, {
   cerrarSesion,
   verAvisosTutor,
 });
+
+/* Año vigente en el pie de página */
+document.querySelectorAll('[data-anio]').forEach((el) => { el.textContent = new Date().getFullYear(); });
