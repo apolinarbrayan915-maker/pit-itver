@@ -31,23 +31,20 @@ const periodoDe = (req) =>
   /^\d{4}-[12]$/.test(req.query.periodo || '') ? req.query.periodo : config.periodoActual;
 
 /**
- * Tutores que el tutorado debe evaluar en el periodo: su tutor actual y, si cambió de
- * tutor, el anterior siempre que haya tenido al menos una sesión atendida con él.
+ * Tutor que el tutorado evalúa en el periodo: solo su tutor ACTUAL (asignación activa).
+ * Aunque haya cambiado de tutor, la evaluación es una sola por alumno y periodo.
  */
 async function tutoresAEvaluar(tutoradoId, periodo) {
   const { rows } = await db.query(
-    `SELECT DISTINCT ON (a.tutor_id) a.tutor_id, u.nombre || ' ' || u.apellidos AS tutor_nombre,
-            a.estatus_asignacion = 'Activa' AS actual,
-            (SELECT count(*) FROM citas_tutorias c WHERE c.tutorado_id = a.tutorado_id AND c.tutor_id = a.tutor_id
-                AND c.estatus = 'Completada')::int AS sesiones
+    `SELECT a.tutor_id, u.nombre || ' ' || u.apellidos AS tutor_nombre, true AS actual
        FROM asignaciones_tutoria a
        JOIN tutores tu ON tu.id = a.tutor_id
        JOIN usuarios u ON u.id = tu.usuario_id
-      WHERE a.tutorado_id = $1 AND a.periodo_escolar = $2 AND a.estatus_asignacion IN ('Activa', 'Reasignada')
-   ORDER BY a.tutor_id, (a.estatus_asignacion = 'Activa') DESC`,
+      WHERE a.tutorado_id = $1 AND a.periodo_escolar = $2 AND a.estatus_asignacion = 'Activa'
+      LIMIT 1`,
     [tutoradoId, periodo]
   );
-  return rows.filter((t) => t.actual || t.sesiones > 0).sort((x, y) => y.actual - x.actual);
+  return rows;
 }
 
 /**
@@ -84,7 +81,7 @@ async function miEvaluacion(req, res) {
 /**
  * POST /api/evaluaciones/alumno   (alumno)
  * Body: { tutor_id?, respuestas: { s4a: 1..5, … }, comentarios? }
- * Evalúa a uno de los tutores del periodo (por omisión, el actual). Se puede actualizar.
+ * Evalúa a su tutor actual (una evaluación por periodo). Se puede actualizar.
  */
 async function guardar(req, res) {
   const ventana = ventanaActual();
@@ -110,7 +107,7 @@ async function guardar(req, res) {
   const tutores = await tutoresAEvaluar(req.user.tutoradoId, config.periodoActual);
   if (!tutores.length) throw conflict('No tienes un tutor asignado en este periodo; no hay a quién evaluar.');
   const tutor = req.body.tutor_id ? tutores.find((t) => t.tutor_id === Number(req.body.tutor_id)) : tutores[0];
-  if (!tutor) throw badRequest('Solo puedes evaluar a los tutores que te atendieron en este periodo.');
+  if (!tutor) throw badRequest('Solo puedes evaluar a tu tutor actual.');
 
   const { rows } = await db.query(
     `INSERT INTO evaluaciones_alumno (tutorado_id, tutor_id, periodo, respuestas, comentarios)
