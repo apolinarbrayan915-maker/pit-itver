@@ -63,8 +63,13 @@ async function enviarCorreo({ para, asunto, html, texto }) {
   }
 }
 
-/** Logotipo oficial del TecNM campus Veracruz (alojado en el portal del ITVER). */
-const LOGO_ITVER = 'https://www.veracruz.tecnm.mx/images/logoheader.png';
+/**
+ * Logotipos oficiales (TecNM e ITV) servidos desde la propia plataforma (public/img/correo/).
+ * Se usa la dirección pública fija para que el cliente de correo siempre los encuentre.
+ */
+const URL_PUBLICA = (env.APP_URL || 'https://pit-itver.vercel.app').replace(/\/$/, '');
+const LOGO_TECNM = `${URL_PUBLICA}/img/correo/tecnm.png`;
+const LOGO_ITV = `${URL_PUBLICA}/img/correo/itv.png`;
 
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -108,8 +113,15 @@ function correoNuevaCita(c, urlApp) {
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eef2f7;padding:24px 12px;">
     <tr><td align="center">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #dde3ec;">
-        <tr><td style="background:#ffffff;padding:20px 32px 16px;border-bottom:1px solid #e3e8f0;">
-          <img src="${LOGO_ITVER}" width="230" alt="TecNM · Instituto Tecnológico de Veracruz" style="display:block;width:230px;max-width:100%;height:auto;border:0;">
+        <tr><td style="background:#ffffff;padding:18px 32px 14px;border-bottom:1px solid #e3e8f0;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+            <td align="left" style="vertical-align:middle;">
+              <img src="${LOGO_TECNM}" width="141" height="60" alt="Tecnológico Nacional de México" style="display:block;width:141px;height:60px;border:0;">
+            </td>
+            <td align="right" style="vertical-align:middle;">
+              <img src="${LOGO_ITV}" width="79" height="60" alt="Instituto Tecnológico de Veracruz" style="display:block;width:79px;height:60px;border:0;">
+            </td>
+          </tr></table>
         </td></tr>
         <tr><td style="background:#1b396a;padding:10px 32px;">
           <p style="margin:0;color:#ffffff;font-size:13px;font-weight:bold;letter-spacing:.3px;">Programa Institucional de Tutorías · ITVER</p>
