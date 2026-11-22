@@ -151,52 +151,45 @@
         </div>
 
         <!-- TAB 2: AGENDA -->
-        <div id="tab-agenda" class="tab-content space-y-6">
-            <div class="bg-white p-5 md:p-8 rounded-2xl shadow-sm border border-slate-200">
-                <div class="flex flex-wrap justify-between items-center gap-3 mb-5">
+        <div id="tab-agenda" class="tab-content">
+            <section class="m3-card panel-tutor">
+                <header class="pt-cab">
                     <div>
-                        <h3 class="text-base font-bold text-slate-800">Agenda de Citas del Tutor</h3>
-                        <p class="text-xs text-slate-500">Sesiones individuales (30 días atrás · 60 días adelante). Desde cada cita puedes registrar la minuta e imprimir el comprobante de asistencia.</p>
+                        <h3>Agenda</h3>
+                        <p>Tus citas de los últimos 30 días y los próximos 60. Desde cada cita confirmas, registras la minuta o imprimes el comprobante.</p>
                     </div>
-                    <button onclick="openModalCita()" class="bg-tecnmGreen text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-tecnmDark transition flex items-center space-x-2">
-                        <i class="fa-solid fa-calendar-plus"></i> <span>Nueva Cita</span>
-                    </button>
-                </div>
-                <div class="space-y-3" id="lista-agenda"><p class="text-xs text-slate-400 text-center py-6">Cargando agenda…</p></div>
-            </div>
+                    <button type="button" onclick="openModalCita()" class="m3-btn lleno chico"><i class="fa-solid fa-calendar-plus"></i> Nueva cita</button>
+                </header>
+                <div id="agenda-resumen" class="pt-resumen"></div>
+                <div id="agenda-filtros" class="m3-chips pt-filtros" role="group" aria-label="Filtrar citas"></div>
+                <div id="lista-agenda"><p class="pt-cargando">Cargando agenda…</p></div>
+            </section>
         </div>
 
         <!-- TAB 3: CANALIZACIONES -->
-        <div id="tab-canalizaciones" class="tab-content space-y-6">
-            <div class="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200">
-                <div class="flex justify-between items-center mb-6">
+        <div id="tab-canalizaciones" class="tab-content">
+            <section class="m3-card panel-tutor">
+                <header class="pt-cab">
                     <div>
-                        <h3 class="text-base font-bold text-slate-800">Canalización a Programas y Comunidades de Apoyo ITVER</h3>
-                        <p class="text-xs text-slate-500">Gestión de canalizaciones directas a las instancias especializadas del departamento e instituto.</p>
+                        <h3>Canalizaciones</h3>
+                        <p>Da seguimiento a cada tutorado que enviaste a un programa o área de apoyo: registra avances, cambia su estatus y agenda la próxima revisión.</p>
                     </div>
-                    <span class="bg-tecnmGold/20 text-tecnmDark text-xs px-3 py-1 rounded-full font-bold" id="canal-registrados">…</span>
-                </div>
-                <div class="kpi-grid grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-8">
-                    <div class="tarjeta-suave p-4 bg-emerald-50 rounded-xl border border-emerald-200"><span class="text-[10px] font-extrabold text-tecnmGreen uppercase">PALPROG</span><h4 class="text-xs font-bold text-slate-800 mt-1">Asesorías en Lógica y Programación</h4><p class="text-[10px] text-slate-500 mt-1">Reforzamiento en código y algoritmos.</p></div>
-                    <div class="tarjeta-suave p-4 bg-sky-50 rounded-xl border border-sky-200"><span class="text-[10px] font-extrabold text-sky-800 uppercase">CIS</span><h4 class="text-xs font-bold text-slate-800 mt-1">Comunidad de Ing. en Sistemas</h4><p class="text-[10px] text-slate-500 mt-1">Integración y proyectos tecnológicos.</p></div>
-                    <div class="tarjeta-suave p-4 bg-purple-50 rounded-xl border border-purple-200"><span class="text-[10px] font-extrabold text-purple-800 uppercase">CEPC</span><h4 class="text-xs font-bold text-slate-800 mt-1">Programación Competitiva</h4><p class="text-[10px] text-slate-500 mt-1">Entrenamiento de alto rendimiento.</p></div>
-                    <div class="tarjeta-suave p-4 bg-rose-50 rounded-xl border border-rose-200"><span class="text-[10px] font-extrabold text-rose-800 uppercase">PAPA's / Psicología</span><h4 class="text-xs font-bold text-slate-800 mt-1">Asesoría Par a Par & Orientación</h4><p class="text-[10px] text-slate-500 mt-1">Acompañamiento entre estudiantes y salud.</p></div>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left text-xs text-slate-700">
-                        <thead class="bg-slate-100 uppercase font-bold text-[10px] text-slate-600">
-                            <tr>
-                                <th class="p-3 rounded-l-lg">Tutorado</th>
-                                <th class="p-3">Área de Destino</th>
-                                <th class="p-3">Diagnóstico Inicial</th>
-                                <th class="p-3">Fecha Registro</th>
-                                <th class="p-3 rounded-r-lg">Estatus Seguimiento</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-slate-100 font-medium" id="tbody-canalizaciones"></tbody>
-                    </table>
-                </div>
-            </div>
+                    <button type="button" onclick="nuevaCanalizacion()" class="m3-btn lleno chico"><i class="fa-solid fa-share"></i> Nueva canalización</button>
+                </header>
+                <div id="canal-resumen" class="pt-resumen"></div>
+                <div id="canal-filtros" class="m3-chips pt-filtros" role="group" aria-label="Filtrar canalizaciones"></div>
+                <div id="lista-canal-tutor"><p class="pt-cargando">Cargando canalizaciones…</p></div>
+                <details class="canal-areas">
+                    <summary><i class="fa-solid fa-circle-info"></i> ¿A qué áreas puedo canalizar?</summary>
+                    <ul>
+                        <li><span class="m3-etiqueta tono-verde">PALPROG</span> Asesorías en lógica y programación</li>
+                        <li><span class="m3-etiqueta tono-azul">CIS</span> Comunidad de Ingeniería en Sistemas</li>
+                        <li><span class="m3-etiqueta tono-violeta">CEPC</span> Programación competitiva</li>
+                        <li><span class="m3-etiqueta tono-ambar">PAPA's</span> Asesoría par a par</li>
+                        <li><span class="m3-etiqueta tono-rojo">Psicología / salud</span> Orientación y salud integral</li>
+                    </ul>
+                </details>
+            </section>
         </div>
 
         <!-- TAB: MI PERFIL Y HORARIO DE ATENCIÓN (GET/PUT /api/tutores/mi-perfil) -->
@@ -273,102 +266,77 @@
         </div>
 
         <!-- TAB 4: INFORMES Y EVALUACIONES -->
-        <div id="tab-reportes" class="tab-content space-y-5">
-            <div class="flex flex-col md:flex-row md:items-end justify-between gap-3">
+        <div id="tab-reportes" class="tab-content space-y-4">
+            <div class="inf-cab">
                 <div>
-                    <h3 class="text-base font-bold text-slate-800">Informes</h3>
-                    <p class="text-xs text-slate-500">Semestre <span id="rep-periodo" class="font-semibold text-slate-700">…</span></p>
+                    <h3>Informes</h3>
+                    <p>Semestre <span id="rep-periodo">…</span> · <i class="fa-regular fa-calendar-check"></i> Entrega a la Coordinación: <b>12 de diciembre de 2026</b></p>
                 </div>
-                <p class="inline-flex items-center gap-2 self-start md:self-auto bg-tecnmGold/15 border border-tecnmGold/40 text-tecnmDark rounded-xl px-3 py-1.5 text-[11px] font-semibold">
-                    <i class="fa-regular fa-calendar-check"></i> Entrega a la Coordinación: 12 de diciembre de 2026
-                </p>
-            </div>
-
-            <div class="informes-menu grid grid-cols-2 lg:grid-cols-4 gap-2" role="tablist" aria-label="Secciones de informes">
-                <button type="button" class="informe-btn activo" data-informe="periodo" role="tab" aria-selected="true" onclick="verInforme('periodo')">
-                    <i class="fa-solid fa-chart-column"></i><span><b>Informe del periodo</b><small>Para la Coordinación</small></span>
-                </button>
-                <button type="button" class="informe-btn" data-informe="dia" role="tab" aria-selected="false" onclick="verInforme('dia')">
-                    <i class="fa-solid fa-calendar-day"></i><span><b>Reporte del día</b><small>Sesiones y tiempos</small></span>
-                </button>
-                <button type="button" class="informe-btn" data-informe="semestral" role="tab" aria-selected="false" onclick="verInforme('semestral')">
-                    <i class="fa-solid fa-file-lines"></i><span><b>Reporte semestral</b><small>Sesiones atendidas</small></span>
-                </button>
-                <button type="button" class="informe-btn" data-informe="evaluacion" role="tab" aria-selected="false" onclick="verInforme('evaluacion')">
-                    <i class="fa-solid fa-clipboard-check"></i><span><b>Evaluación del PIT</b><small id="eval-menu-estado">Cuestionario</small></span>
-                </button>
+                <div class="informes-menu seg" role="tablist" aria-label="Secciones de informes">
+                    <button type="button" class="informe-btn activo" data-informe="periodo" role="tab" aria-selected="true" onclick="verInforme('periodo')"><i class="fa-solid fa-chart-column"></i><b>Periodo</b></button>
+                    <button type="button" class="informe-btn" data-informe="dia" role="tab" aria-selected="false" onclick="verInforme('dia')"><i class="fa-solid fa-calendar-day"></i><b>Día</b></button>
+                    <button type="button" class="informe-btn" data-informe="semestral" role="tab" aria-selected="false" onclick="verInforme('semestral')"><i class="fa-solid fa-file-lines"></i><b>Semestral</b></button>
+                    <button type="button" class="informe-btn" data-informe="evaluacion" role="tab" aria-selected="false" onclick="verInforme('evaluacion')"><i class="fa-solid fa-clipboard-check"></i><b>Evaluación PIT</b><small id="eval-menu-estado">…</small></button>
+                </div>
             </div>
 
             <!-- Informe del periodo -->
-            <section id="informe-periodo" class="informe-seccion bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-slate-200">
-                <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
-                    <div>
-                        <h3 class="text-sm font-bold text-slate-800">Informe del periodo</h3>
-                        <p class="text-xs text-slate-500">Resumen de tu acción tutorial para la Coordinación: citas, asistencia, minutas, canalizaciones y seguimiento de cada tutorado.</p>
-                    </div>
-                    <button type="button" onclick="imprimirInformePeriodo()" class="bg-tecnmGreen hover:bg-tecnmDark text-white font-bold px-4 py-2 rounded-xl text-xs shadow transition"><i class="fa-solid fa-print mr-1"></i> Imprimir informe</button>
-                </div>
-                <div id="inf-periodo-cuerpo"><p class="text-xs text-slate-400 text-center py-6">Cargando…</p></div>
+            <section id="informe-periodo" class="informe-seccion m3-card panel-tutor">
+                <header class="pt-cab">
+                    <div><h3>Informe del periodo</h3><p>Resumen de tu acción tutorial para la Coordinación.</p></div>
+                    <button type="button" onclick="imprimirInformePeriodo()" class="m3-btn contorno chico"><i class="fa-solid fa-print"></i> Imprimir</button>
+                </header>
+                <div id="inf-periodo-cuerpo"><p class="pt-cargando">Cargando…</p></div>
             </section>
 
             <!-- Reporte del día -->
-            <section id="informe-dia" class="informe-seccion hidden bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-slate-200">
-                <div class="flex flex-wrap items-end justify-between gap-3 mb-4">
-                    <div>
-                        <h3 class="text-sm font-bold text-slate-800">Reporte del día</h3>
-                        <p class="text-xs text-slate-500">Tus sesiones del día: tutorado atendido, asistencia y tiempo de cada sesión.</p>
-                    </div>
-                    <div class="flex flex-wrap items-end gap-2">
-                        <div>
-                            <label for="rd-fecha" class="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1">Fecha</label>
-                            <input type="date" id="rd-fecha" class="p-2 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-tecnmGreen outline-none bg-white">
+            <section id="informe-dia" class="informe-seccion hidden m3-card panel-tutor">
+                <header class="pt-cab">
+                    <div><h3>Reporte del día</h3><p>Sesiones del día, asistencia y tiempo de cada una.</p></div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <div class="dia-nav">
+                            <button type="button" onclick="moverDiaReporte(-1)" aria-label="Día anterior"><i class="fa-solid fa-chevron-left"></i></button>
+                            <label for="rd-fecha" class="sr-only">Fecha</label>
+                            <input type="date" id="rd-fecha">
+                            <button type="button" onclick="moverDiaReporte(1)" aria-label="Día siguiente"><i class="fa-solid fa-chevron-right"></i></button>
+                            <button type="button" id="rd-hoy" class="dia-hoy" onclick="moverDiaReporte(0)">Hoy</button>
                         </div>
-                        <button type="button" onclick="imprimirReporteDiario()" class="bg-tecnmGreen hover:bg-tecnmDark text-white font-bold px-4 py-2 rounded-xl text-xs shadow transition"><i class="fa-solid fa-print mr-1"></i> Imprimir reporte del día</button>
+                        <button type="button" onclick="imprimirReporteDiario()" class="m3-btn contorno chico"><i class="fa-solid fa-print"></i> Imprimir</button>
                     </div>
-                </div>
-                <div id="rd-resumen" class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4"></div>
-                <div id="rd-tabla"><p class="text-xs text-slate-400 text-center py-6">Cargando…</p></div>
+                </header>
+                <div id="rd-resumen" class="pt-resumen"></div>
+                <div id="rd-tabla"><p class="pt-cargando">Cargando…</p></div>
             </section>
 
             <!-- Reporte semestral -->
-            <section id="informe-semestral" class="informe-seccion hidden bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-slate-200">
-                <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
-                    <div>
-                        <h3 class="text-sm font-bold text-slate-800">Reporte Semestral del Tutor</h3>
-                        <p class="text-xs text-slate-500">Sesiones atendidas en el ciclo, con su duración y minuta.</p>
-                    </div>
-                    <button type="button" id="btn-imprimir-reporte" onclick="imprimirReporteSemestral()" class="bg-tecnmGreen hover:bg-tecnmDark text-white font-bold px-4 py-2 rounded-xl text-xs shadow transition"><i class="fa-solid fa-print mr-1"></i> Imprimir reporte</button>
-                </div>
-                <div id="rep-sesiones"><p class="text-xs text-slate-400 text-center py-6">Cargando…</p></div>
+            <section id="informe-semestral" class="informe-seccion hidden m3-card panel-tutor">
+                <header class="pt-cab">
+                    <div><h3>Reporte semestral</h3><p>Sesiones atendidas en el ciclo, con su duración y minuta.</p></div>
+                    <button type="button" id="btn-imprimir-reporte" onclick="imprimirReporteSemestral()" class="m3-btn contorno chico"><i class="fa-solid fa-print"></i> Imprimir</button>
+                </header>
+                <div id="rep-resumen" class="pt-resumen"></div>
+                <div id="rep-sesiones"><p class="pt-cargando">Cargando…</p></div>
             </section>
 
             <!-- Evaluación del PIT -->
-            <section id="informe-evaluacion" class="informe-seccion hidden bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-slate-200">
-                <div class="flex flex-wrap items-start justify-between gap-3 mb-3">
-                    <div>
-                        <h3 class="text-sm font-bold text-slate-800">Evaluación del Tutor hacia el Programa de Tutorías (PIT)</h3>
-                        <p class="text-xs text-slate-500">11 preguntas · 1 Siempre · 2 Casi siempre · 3 A veces · 4 Casi nunca · 5 Nunca.</p>
-                    </div>
+            <section id="informe-evaluacion" class="informe-seccion hidden m3-card panel-tutor">
+                <header class="pt-cab">
+                    <div><h3>Evaluación del Programa de Tutorías</h3><p>11 preguntas sobre el PIT. Marca de 1 (Siempre) a 5 (Nunca).</p></div>
                     <span id="eval-progreso" class="shrink-0 bg-slate-100 text-slate-600 text-[11px] font-bold px-3 py-1 rounded-full">0 / 11</span>
-                </div>
-                <div id="eval-estado" class="mb-4 p-3 rounded-xl border text-xs font-semibold bg-amber-50 border-amber-200 text-amber-800">
-                    <i class="fa-solid fa-hourglass-half mr-1"></i> Cargando estado de tu evaluación…
-                </div>
-                <button type="button" id="btn-panel-eval-tutor" onclick="alternarPanel('panel-eval-tutor', this)" aria-expanded="false" aria-controls="panel-eval-tutor" class="w-full sm:w-auto px-5 bg-tecnmGold hover:bg-tecnmGoldDark text-slate-900 font-bold py-2.5 rounded-xl text-xs transition inline-flex items-center justify-center gap-1"><i class="fa-solid fa-pen-to-square"></i> <span>Responder evaluación</span></button>
-                <div id="panel-eval-tutor" class="hidden mt-5 pt-5 border-t border-slate-200">
-                        <form id="form-likert" novalidate onsubmit="handleLikertSubmit(event)" class="space-y-3 text-xs">
-                            <div id="likert-preguntas" class="space-y-3">
-                                <p class="text-slate-400 text-center py-6">Cargando cuestionario…</p>
-                            </div>
-                            <div>
-                                <label for="eval-comentarios" class="block font-bold text-slate-700 mb-1">Comentarios u observaciones (opcional)</label>
-                                <textarea id="eval-comentarios" rows="3" maxlength="2000" placeholder="Propuestas de mejora para el programa, necesidades de infraestructura, capacitación…" class="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-tecnmGreen outline-none"></textarea>
-                            </div>
-                            <button type="submit" id="eval-boton" class="w-full bg-tecnmGreen hover:bg-tecnmDark text-white font-bold py-3 rounded-xl shadow transition">Enviar Cuestionario Institucional de Evaluación</button>
-                        </form>
-                        <div id="likert-success" class="hidden mt-4 p-3 bg-emerald-50 text-emerald-800 text-xs rounded-xl border border-emerald-200 font-bold text-center"><i class="fa-solid fa-circle-check mr-1"></i> <span></span></div>
-                        <div id="likert-error" class="hidden mt-4 p-3 bg-rose-50 text-rose-700 text-xs rounded-xl border border-rose-200 font-bold text-center" role="alert"><i class="fa-solid fa-circle-exclamation mr-1"></i> <span></span></div>
-                        <button type="button" onclick="cerrarPanel('panel-eval-tutor')" class="mt-4 w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 rounded-xl text-xs transition"><i class="fa-solid fa-chevron-up mr-1"></i> Cerrar evaluación</button>
+                </header>
+                <div id="eval-estado" class="eval-estado pendiente"><i class="fa-solid fa-hourglass-half"></i> Cargando estado de tu evaluación…</div>
+                <div id="panel-eval-tutor">
+                    <form id="form-likert" novalidate onsubmit="handleLikertSubmit(event)" class="text-xs">
+                        <p class="escala-likert"><span>Escala</span><i><b>1</b> Siempre</i><i><b>2</b> Casi siempre</i><i><b>3</b> A veces</i><i><b>4</b> Casi nunca</i><i><b>5</b> Nunca</i></p>
+                        <div id="likert-preguntas" class="mt-1"><p class="pt-cargando">Cargando cuestionario…</p></div>
+                        <div class="mt-4">
+                            <label for="eval-comentarios" class="block font-bold text-slate-700 mb-1">Comentarios u observaciones <span class="font-normal text-slate-400">(opcional)</span></label>
+                            <textarea id="eval-comentarios" rows="2" maxlength="2000" placeholder="Propuestas de mejora, necesidades de infraestructura, capacitación…" class="w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-tecnmGreen outline-none"></textarea>
+                        </div>
+                        <div class="mt-3 flex justify-end"><button type="submit" id="eval-boton" class="m3-btn lleno">Enviar evaluación</button></div>
+                    </form>
+                    <div id="likert-success" class="hidden mt-3 p-3 bg-emerald-50 text-emerald-800 text-xs rounded-xl border border-emerald-200 font-bold text-center"><i class="fa-solid fa-circle-check mr-1"></i> <span></span></div>
+                    <div id="likert-error" class="hidden mt-3 p-3 bg-rose-50 text-rose-700 text-xs rounded-xl border border-rose-200 font-bold text-center" role="alert"><i class="fa-solid fa-circle-exclamation mr-1"></i> <span></span></div>
                 </div>
             </section>
         </div>
@@ -509,6 +477,7 @@
                 <div>
                     <label for="modal-canalizar-alumno" class="block font-bold text-slate-700 mb-1">Alumno a Canalizar</label>
                     <input type="text" id="modal-canalizar-alumno" readonly class="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-100 text-slate-700 font-bold">
+                    <select id="modal-canalizar-select" class="hidden w-full p-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-tecnmGreen outline-none bg-white"></select>
                 </div>
                 <div>
                     <label for="modal-canalizar-area" class="block font-bold text-slate-700 mb-1">Área o Comunidad de Destino</label>

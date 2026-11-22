@@ -438,3 +438,8 @@ COMMIT;
 -- =============================================================================
 \ir migracion_009_intereses_cambio_tutor.sql
 \ir migracion_010_ocupacion_familia_correo.sql
+
+-- =============================================================================
+-- 15. SEGUIMIENTO DE CANALIZACIONES (bitácora y próxima revisión)
+-- =============================================================================
+\ir migracion_011_seguimiento_canalizaciones.sql

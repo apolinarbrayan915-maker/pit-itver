@@ -778,27 +778,6 @@ function iniciarAlumno() {
 /* =============================================================================
  * VISTA: MAESTRO TUTOR
  * ============================================================================= */
-async function cargarAgendaTutor() {
-  const cont = $('lista-agenda');
-  const u = Sesion.usuario;
-  if (!cont || !u?.tutorId) return;
-  try {
-    const { citas } = await api(`/citas/tutor/${u.tutorId}`);
-    citasTutor.clear();
-    if (!citas.length) {
-      cont.innerHTML = '<p class="text-xs text-slate-400 text-center py-6">No hay citas en el periodo consultado.</p>';
-      return;
-    }
-    // Próximas primero (ascendente), después el historial (descendente)
-    const ahora = new Date();
-    const proximas = citas.filter((c) => new Date(c.fecha_hora) >= ahora);
-    const pasadas = citas.filter((c) => new Date(c.fecha_hora) < ahora).reverse();
-    cont.innerHTML = [...proximas, ...pasadas].map(tarjetaCitaTutor).join('');
-  } catch (err) {
-    cont.innerHTML = `<p class="text-xs text-rose-600 text-center py-6">${escapeHtml(err.message)}</p>`;
-  }
-}
-
 /* ---------- Agenda: tarjeta de cada cita -------------------------------- */
 const citasTutor = new Map();
 const MESES_LARGOS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
@@ -825,58 +804,121 @@ function fechaLargaHoy() {
   return `${d} de ${MESES_LARGOS[m - 1]} de ${y}`;
 }
 
-const BTN_CITA = 'inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold whitespace-nowrap transition';
+let agendaCitas = [];
+let filtroAgenda = null;
+const ahoraAgenda = () => new Date();
+const requiereAccion = (c, ahora) => c.estatus === 'Pendiente' || (c.estatus === 'Confirmada' && new Date(c.fecha_hora) <= ahora);
 
-function tarjetaCitaTutor(c) {
+async function cargarAgendaTutor() {
+  const cont = $('lista-agenda');
+  const u = Sesion.usuario;
+  if (!cont || !u?.tutorId) return;
+  try {
+    const { citas } = await api(`/citas/tutor/${u.tutorId}`);
+    citasTutor.clear();
+    citas.forEach((c) => citasTutor.set(c.id, c));
+    agendaCitas = citas;
+    pintarAgenda();
+  } catch (err) {
+    cont.innerHTML = `<p class="pt-cargando text-rose-600">${escapeHtml(err.message)}</p>`;
+  }
+}
+
+function filtrarAgenda(f) {
+  filtroAgenda = f;
+  agendaHistorialMax = 12;
+  pintarAgenda();
+}
+
+let agendaHistorialMax = 12;
+function verMasHistorial() { agendaHistorialMax += 12; pintarAgenda(); }
+
+function pintarAgenda() {
+  const cont = $('lista-agenda');
+  if (!cont) return;
+  const ahora = ahoraAgenda();
+  const hoy = hoyLocal();
+  const fut = (c) => new Date(c.fecha_hora) >= ahora;
+  const grupos = {
+    accion: agendaCitas.filter((c) => requiereAccion(c, ahora)).sort((a, b) => new Date(a.fecha_hora) - new Date(b.fecha_hora)),
+    proximas: agendaCitas.filter((c) => fut(c) && ['Pendiente', 'Confirmada'].includes(c.estatus)).sort((a, b) => new Date(a.fecha_hora) - new Date(b.fecha_hora)),
+    historial: agendaCitas.filter((c) => !fut(c) && !requiereAccion(c, ahora)).sort((a, b) => new Date(b.fecha_hora) - new Date(a.fecha_hora)),
+  };
+  if (!filtroAgenda) filtroAgenda = grupos.accion.length ? 'accion' : 'proximas';
+  const deHoy = agendaCitas.filter((c) => String(c.fecha_hora_local).slice(0, 10) === hoy && c.estatus !== 'Cancelada').length;
+  const porConfirmar = agendaCitas.filter((c) => c.estatus === 'Pendiente').length;
+  const asistencia = agendaCitas.filter((c) => c.estatus === 'Confirmada' && new Date(c.fecha_hora) <= ahora).length;
+  const atendidas = agendaCitas.filter((c) => c.estatus === 'Completada').length;
+  $('agenda-resumen').innerHTML = [
+    celdaResumen('Hoy', deHoy, 'fa-sun', 'tono-azul'),
+    celdaResumen('Por confirmar', porConfirmar, 'fa-hourglass-half', porConfirmar ? 'tono-ambar' : 'tono-gris'),
+    celdaResumen('Falta registrar asistencia', asistencia, 'fa-user-clock', asistencia ? 'tono-rojo' : 'tono-gris'),
+    celdaResumen('Sesiones atendidas', atendidas, 'fa-user-check', 'tono-verde'),
+  ].join('');
+  const filtros = [['accion', 'Requieren acción', 'tono-ambar'], ['proximas', 'Próximas', 'tono-azul'], ['historial', 'Historial', 'tono-gris']];
+  $('agenda-filtros').innerHTML = filtros.map(([k, etq, tono]) => `<button type="button" class="m3-chip ${tono} ${filtroAgenda === k ? 'activo' : ''}" aria-pressed="${filtroAgenda === k}" onclick="filtrarAgenda('${k}')"><i class="fa-solid fa-check"></i>${etq} <span class="cuenta">${grupos[k].length}</span></button>`).join('');
+
+  let lista = grupos[filtroAgenda];
+  if (!lista.length) {
+    const vacio = { accion: 'No tienes citas pendientes de confirmar ni asistencias por registrar.', proximas: 'No hay citas próximas. Tus tutorados pueden agendar desde su portal.', historial: 'Aún no hay citas pasadas en este periodo.' }[filtroAgenda];
+    cont.innerHTML = `<div class="m3-vacio"><span class="m3-icono tono-verde"><i class="fa-solid fa-calendar-check"></i></span>${vacio}</div>`;
+    return;
+  }
+  let extra = '';
+  if (filtroAgenda === 'historial' && lista.length > agendaHistorialMax) {
+    extra = `<div class="text-center mt-2"><button type="button" class="m3-btn texto chico" onclick="verMasHistorial()">Ver más (${lista.length - agendaHistorialMax})</button></div>`;
+    lista = lista.slice(0, agendaHistorialMax);
+  }
+  let diaActual = '';
+  cont.innerHTML = lista.map((c) => {
+    const dia = String(c.fecha_hora_local).slice(0, 10);
+    let cab = '';
+    if (dia !== diaActual) {
+      diaActual = dia;
+      const p = partesCita(c);
+      const txt = p.conDia.replace(/ de \d{4}$/, '');
+      cab = `<h4 class="ag-dia"><span>${escapeHtml(txt.charAt(0).toUpperCase() + txt.slice(1))}</span>${dia === hoy ? '<em>Hoy</em>' : ''}</h4>`;
+    }
+    return cab + filaCitaTutor(c, ahora);
+  }).join('') + extra;
+}
+
+function celdaResumen(etq, valor, icono, tono, nota = '') {
+  return `<div class="pt-celda ${tono}"><span class="pt-icono"><i class="fa-solid ${icono}"></i></span><div><b>${valor}</b><span>${etq}</span>${nota ? `<small>${nota}</small>` : ''}</div></div>`;
+}
+
+function filaCitaTutor(c, ahora = new Date()) {
   citasTutor.set(c.id, c);
   const p = partesCita(c);
-  const fondo = {
-    Pendiente: 'bg-amber-50/60 border-amber-200',
-    Confirmada: 'bg-white border-slate-200',
-    Completada: 'bg-white border-slate-200',
-    Cancelada: 'bg-slate-50 border-slate-200 opacity-75',
-  }[c.estatus] || 'bg-white border-slate-200';
+  const [ini, fin] = p.horario.split(' – ');
   const minuta = c.minuta && c.minuta.acuerdos;
-  const botonMinuta = `<button onclick="abrirMinuta(${c.id})" class="${BTN_CITA} bg-white border border-tecnmGreen text-tecnmGreen hover:bg-slate-50"><i class="fa-solid ${minuta ? 'fa-file-circle-check' : 'fa-file-signature'}"></i> Minuta</button>`;
-  const botonComprobante = `<button onclick="imprimirComprobante(${c.id})" class="${BTN_CITA} bg-tecnmGold text-slate-900 hover:bg-tecnmGoldDark"><i class="fa-solid fa-print"></i> Comprobante</button>`;
+  const grupal = c.tipo === 'Grupal';
+  const b = (onclick, icono, texto, clase, extraAttr = '') => `<button type="button" onclick="${onclick}" class="m3-btn chico ${clase}" ${extraAttr}><i class="fa-solid ${icono}"></i><span>${texto}</span></button>`;
   let botones = [];
   if (c.estatus === 'Pendiente') {
-    botones = [
-      `<button onclick="cambiarEstatusCita(${c.id}, 'Confirmada', this)" class="${BTN_CITA} bg-tecnmGreen text-white hover:bg-tecnmDark"><i class="fa-solid fa-check"></i> Confirmar</button>`,
-      `<button onclick="cambiarEstatusCita(${c.id}, 'Cancelada', this)" class="${BTN_CITA} bg-slate-200 text-slate-700 hover:bg-slate-300"><i class="fa-solid fa-xmark"></i> Cancelar</button>`,
-    ];
+    botones = [b(`cambiarEstatusCita(${c.id}, 'Confirmada', this)`, 'fa-check', 'Confirmar', 'lleno'), b(`cambiarEstatusCita(${c.id}, 'Cancelada', this)`, 'fa-xmark', 'Cancelar', 'texto')];
   } else if (c.estatus === 'Confirmada') {
-    botones = [
-      new Date(c.fecha_hora) <= new Date()
-        ? `<button onclick="abrirAsistencia(${c.id})" class="${BTN_CITA} bg-tecnmGreen text-white hover:bg-tecnmDark"><i class="fa-solid fa-user-check"></i> Confirmar asistencia</button>`
-        : `<button disabled title="Se confirma cuando llegue la hora de la cita" class="${BTN_CITA} bg-slate-100 text-slate-400 cursor-not-allowed"><i class="fa-solid fa-user-clock"></i> Confirmar asistencia</button>`,
-      botonMinuta,
-    ];
-  } else if (c.estatus === 'Completada' && c.tipo !== 'Grupal') {
-    botones = [botonMinuta, botonComprobante];
+    botones = [new Date(c.fecha_hora) <= ahora
+      ? b(`abrirAsistencia(${c.id})`, 'fa-user-check', 'Registrar asistencia', 'lleno')
+      : b('', 'fa-user-clock', 'Asistencia', 'tonal', 'disabled title="Se registra cuando llegue la hora de la cita"')];
+    if (!grupal) botones.push(b(`abrirMinuta(${c.id})`, minuta ? 'fa-file-circle-check' : 'fa-file-signature', 'Minuta', 'contorno'));
+  } else if (c.estatus === 'Completada' && !grupal) {
+    botones = [b(`abrirMinuta(${c.id})`, minuta ? 'fa-file-circle-check' : 'fa-file-signature', minuta ? 'Minuta' : 'Registrar minuta', minuta ? 'contorno' : 'tonal'), b(`imprimirComprobante(${c.id})`, 'fa-print', 'Comprobante', 'contorno')];
   }
-  if (c.tipo === 'Grupal') botones = botones.filter((b) => b !== botonMinuta && b !== botonComprobante);
-  const iconoModalidad = c.modalidad === 'Línea' ? 'fa-video' : 'fa-building-user';
-  const datosAlumno = [c.no_control, c.semestre ? `${c.semestre}° semestre` : ''].filter(Boolean).map(escapeHtml).join(' · ');
-  return `<article class="cita-tarjeta rounded-xl border ${fondo} p-4">
-    <div class="flex items-start justify-between gap-3">
-      <div class="min-w-0">
-        <h4 class="text-sm font-bold text-slate-800 leading-snug">${escapeHtml(c.tutorado_nombre || `Grupo ${c.grupo || ''}`)}</h4>
-        <p class="text-[11px] text-slate-500">${datosAlumno}</p>
-      </div>
-      <div class="flex-none">${chip(c.estatus, ESTATUS_CITA_ESTILO[c.estatus])}</div>
+  const meta = [c.no_control, c.semestre ? `${c.semestre}° sem.` : '', grupal ? 'Grupal' : '', c.modalidad === 'Línea' ? 'En línea' : 'Presencial'].filter(Boolean).map(escapeHtml).join(' · ');
+  let nota = '';
+  if (c.estatus === 'Completada' && c.duracion_real_min) nota = `<span class="ok"><i class="fa-solid fa-user-check"></i> Asistió · ${c.duracion_real_min} min</span>`;
+  if (c.asistio === false) nota = '<span class="mal"><i class="fa-solid fa-user-xmark"></i> No asistió</span>';
+  if (minuta) nota += `<span class="acuerdo" title="${escapeHtml(c.minuta.acuerdos)}"><i class="fa-solid fa-file-circle-check"></i> ${escapeHtml(c.minuta.acuerdos)}</span>`;
+  else if (c.notas_tutor) nota += `<span class="acuerdo" title="${escapeHtml(c.notas_tutor)}"><i class="fa-regular fa-note-sticky"></i> ${escapeHtml(c.notas_tutor)}</span>`;
+  return `<article class="ag-fila est-${escapeHtml(String(c.estatus).toLowerCase())}">
+    <div class="ag-hora"><b>${escapeHtml(ini)}</b><span>${escapeHtml(fin || '')}</span></div>
+    <div class="ag-cuerpo">
+      <p class="ag-nombre">${escapeHtml(c.tutorado_nombre || `Grupo ${c.grupo || ''}`)} <span>${meta}</span></p>
+      <p class="ag-motivo" title="${escapeHtml(c.motivo)}">${escapeHtml(c.motivo)}</p>
+      ${nota ? `<p class="ag-nota">${nota}</p>` : ''}
     </div>
-    <div class="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-[11px] text-slate-600">
-      <span class="inline-flex items-center gap-1.5"><i class="fa-regular fa-calendar text-slate-400 w-3.5 text-center"></i><span class="capitalize">${escapeHtml(p.corta)}</span></span>
-      <span class="inline-flex items-center gap-1.5"><i class="fa-regular fa-clock text-slate-400 w-3.5 text-center"></i>${escapeHtml(p.horario)}</span>
-      <span class="inline-flex items-center gap-1.5"><i class="fa-solid ${iconoModalidad} text-slate-400 w-3.5 text-center"></i>${escapeHtml(c.modalidad === 'Línea' ? 'En línea' : c.modalidad)}</span>
-    </div>
-    <p class="mt-2 text-xs text-slate-700 break-words"><span class="font-semibold text-slate-500">Motivo:</span> ${escapeHtml(c.motivo)}</p>
-    ${c.estatus === 'Completada' && c.duracion_real_min ? `<p class="mt-1 text-[11px] text-emerald-700 font-semibold"><i class="fa-solid fa-user-check mr-1"></i>Asistió · sesión de ${c.duracion_real_min} minutos</p>` : ''}
-    ${c.asistio === false ? '<p class="mt-1 text-[11px] text-rose-600 font-semibold"><i class="fa-solid fa-user-xmark mr-1"></i>El tutorado no asistió</p>' : ''}
-    ${c.notas_tutor ? `<p class="mt-1 text-[11px] text-slate-500 italic break-words"><span class="font-semibold not-italic">Notas:</span> ${escapeHtml(c.notas_tutor)}</p>` : ''}
-    ${minuta ? `<p class="mt-1 text-[11px] text-emerald-700 break-words"><i class="fa-solid fa-file-circle-check mr-1"></i><span class="font-semibold">Acuerdos:</span> ${escapeHtml(c.minuta.acuerdos.length > 140 ? `${c.minuta.acuerdos.slice(0, 140)}…` : c.minuta.acuerdos)}</p>` : ''}
-    ${botones.length ? `<div class="mt-3 pt-3 border-t border-slate-200 grid grid-cols-2 sm:flex sm:justify-end gap-2">${botones.join('')}</div>` : ''}
+    <div class="ag-lado">${chip(c.estatus, ESTATUS_CITA_ESTILO[c.estatus])}${botones.length ? `<div class="ag-botones">${botones.join('')}</div>` : ''}</div>
   </article>`;
 }
 
@@ -1080,6 +1122,7 @@ async function cambiarEstatusCita(id, estatus, boton, extra = {}) {
 }
 
 async function cargarTablaCanalizaciones() {
+  if ($('lista-canal-tutor')) return cargarCanalTutor();
   const tbody = $('tbody-canalizaciones');
   if (!tbody) return;
   const columnas = tbody.closest('table').querySelectorAll('thead th').length;
@@ -1109,6 +1152,201 @@ async function cargarTablaCanalizaciones() {
   } catch (err) {
     mostrarEstadoTabla(tbody, columnas, err.message, 'error');
   }
+}
+
+/* ---------- Canalizaciones: seguimiento (tutor y coordinación) ----------- */
+const PASOS_CANAL = ['Pendiente', 'Aceptado', 'En Proceso', 'Atendido'];
+const DESC_ESTATUS_CANAL = {
+  Pendiente: 'Enviada; el área aún no responde',
+  Aceptado: 'El área aceptó al tutorado',
+  'En Proceso': 'Ya asiste o recibe atención',
+  Atendido: 'Concluyó con resultado (cierra el caso)',
+  Cerrado: 'Se cierra sin concluir (baja, no asistió…)',
+};
+const CANAL_ABIERTA = (c) => ['Pendiente', 'Aceptado', 'En Proceso'].includes(c.estatus_canalizacion);
+let canalTutor = [];
+let filtroCanalTutor = 'abiertas';
+
+function diasDesde(iso) {
+  if (!iso) return null;
+  return Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 86400000));
+}
+const haceTexto = (iso) => {
+  const d = diasDesde(iso);
+  return d === null ? '—' : d === 0 ? 'hoy' : d === 1 ? 'ayer' : `hace ${d} días`;
+};
+const fechaCortaYmd = (ymd) => (ymd ? partesCita({ fecha_hora_local: `${ymd}T00:00` }).corta.replace(/ \d{4}$/, '') : '');
+
+function pasosCanalHtml(estatus, grande = false) {
+  if (estatus === 'Cerrado') return `<div class="cn-pasos cerrado ${grande ? 'grande' : ''}"><span class="cn-cerrado"><i class="fa-solid fa-ban"></i> Cerrada sin concluir</span></div>`;
+  const i = PASOS_CANAL.indexOf(estatus);
+  return `<div class="cn-pasos ${grande ? 'grande' : ''}" role="img" aria-label="Estatus: ${escapeHtml(estatus)}">${PASOS_CANAL.map((p, k) => `<span class="cn-paso ${k < i ? 'hecho' : k === i ? 'actual' : ''}"><i></i>${grande || k === i ? `<em>${escapeHtml(p)}</em>` : ''}</span>`).join('')}</div>`;
+}
+
+async function cargarCanalTutor() {
+  const cont = $('lista-canal-tutor');
+  try {
+    const { canalizaciones } = await api('/canalizaciones');
+    canalTutor = canalizaciones;
+    pintarCanalTutor();
+  } catch (err) {
+    cont.innerHTML = `<p class="pt-cargando text-rose-600">${escapeHtml(err.message)}</p>`;
+  }
+}
+
+function filtrarCanalTutor(f) { filtroCanalTutor = f; pintarCanalTutor(); }
+
+function pintarCanalTutor() {
+  const cont = $('lista-canal-tutor');
+  if (!cont) return;
+  const hoy = hoyLocal();
+  const abiertas = canalTutor.filter(CANAL_ABIERTA);
+  const porRevisar = abiertas.filter((c) => c.proxima_revision && c.proxima_revision <= hoy);
+  const sinRevision = abiertas.filter((c) => !c.proxima_revision);
+  $('canal-resumen').innerHTML = [
+    celdaResumen('Abiertas', abiertas.length, 'fa-folder-open', 'tono-azul'),
+    celdaResumen('Revisión pendiente', porRevisar.length, 'fa-bell', porRevisar.length ? 'tono-rojo' : 'tono-gris', sinRevision.length ? `${sinRevision.length} sin fecha de revisión` : ''),
+    celdaResumen('Atendidas', canalTutor.filter((c) => c.estatus_canalizacion === 'Atendido').length, 'fa-circle-check', 'tono-verde'),
+    celdaResumen('Total del periodo', canalTutor.length, 'fa-share-nodes', 'tono-violeta'),
+  ].join('');
+  const grupos = {
+    abiertas,
+    revisar: porRevisar,
+    cerradas: canalTutor.filter((c) => !CANAL_ABIERTA(c)),
+    todas: canalTutor,
+  };
+  const filtros = [['abiertas', 'Abiertas', 'tono-azul'], ['revisar', 'Por revisar', 'tono-rojo'], ['cerradas', 'Atendidas y cerradas', 'tono-verde'], ['todas', 'Todas', 'tono-gris']];
+  $('canal-filtros').innerHTML = filtros.map(([k, etq, tono]) => `<button type="button" class="m3-chip ${tono} ${filtroCanalTutor === k ? 'activo' : ''}" aria-pressed="${filtroCanalTutor === k}" onclick="filtrarCanalTutor('${k}')"><i class="fa-solid fa-check"></i>${etq} <span class="cuenta">${grupos[k].length}</span></button>`).join('');
+  const lista = grupos[filtroCanalTutor];
+  if (!lista.length) {
+    cont.innerHTML = `<div class="m3-vacio"><span class="m3-icono tono-azul"><i class="fa-solid fa-share-nodes"></i></span>${canalTutor.length ? 'No hay canalizaciones con este filtro.' : 'Aún no canalizas a ningún tutorado. Usa «Nueva canalización» o el botón Canalizar en Mis Tutorados.'}</div>`;
+    return;
+  }
+  cont.innerHTML = lista.map((c) => {
+    let revision = '';
+    if (CANAL_ABIERTA(c)) {
+      if (!c.proxima_revision) revision = '<span class="cn-rev gris"><i class="fa-regular fa-calendar"></i> Sin revisión agendada</span>';
+      else if (c.proxima_revision < hoy) revision = `<span class="cn-rev rojo"><i class="fa-solid fa-bell"></i> Revisión vencida · ${fechaCortaYmd(c.proxima_revision)}</span>`;
+      else if (c.proxima_revision === hoy) revision = '<span class="cn-rev ambar"><i class="fa-solid fa-bell"></i> Revisar hoy</span>';
+      else revision = `<span class="cn-rev azul"><i class="fa-regular fa-calendar"></i> Revisar ${fechaCortaYmd(c.proxima_revision)}</span>`;
+    } else {
+      revision = `<span class="cn-rev gris"><i class="fa-solid fa-flag-checkered"></i> Cerrada ${c.fecha_cierre ? fmtFecha(c.fecha_cierre) : ''}</span>`;
+    }
+    return `<article class="cn-fila" role="button" tabindex="0" onclick="abrirSeguimientoCanal(${c.id})" onkeydown="if(event.key==='Enter')abrirSeguimientoCanal(${c.id})">
+      <span class="m3-avatar chico ${AREA_TONO[c.area_destino] || 'tono-azul'}">${escapeHtml(iniciales(c.tutorado_nombre))}</span>
+      <div class="cn-cuerpo">
+        <p class="cn-nombre">${escapeHtml(c.tutorado_nombre)} <span>${escapeHtml(c.no_control)}</span></p>
+        <p class="cn-diag" title="${escapeHtml(c.seguimiento || c.diagnostico_inicial)}">${escapeHtml(c.seguimiento || c.diagnostico_inicial)}</p>
+      </div>
+      <span class="m3-etiqueta ${AREA_TONO[c.area_destino] || 'tono-gris'} cn-area">${escapeHtml(AREA_NOMBRE[c.area_destino] || c.area_destino)}</span>
+      ${pasosCanalHtml(c.estatus_canalizacion)}
+      <div class="cn-meta">${revision}<span class="cn-act">Actualizada ${haceTexto(c.ultima_actualizacion || c.fecha_registro)}</span></div>
+      <i class="fa-solid fa-chevron-right cn-ir"></i>
+    </article>`;
+  }).join('');
+}
+
+/* Modal de seguimiento (se crea una sola vez; sirve en Tutor y Coordinación) */
+function modalSeguimientoCanal() {
+  let m = $('modal-seg-canal');
+  if (m) return m;
+  m = document.createElement('div');
+  m.id = 'modal-seg-canal';
+  m.className = 'fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden flex items-center justify-center z-50 p-3';
+  m.setAttribute('role', 'dialog');
+  m.setAttribute('aria-modal', 'true');
+  m.setAttribute('aria-labelledby', 'seg-canal-titulo');
+  m.innerHTML = '<div class="seg-canal m3-card"><div id="seg-canal-cuerpo"></div></div>';
+  m.addEventListener('click', (e) => { if (e.target === m) cerrarSeguimientoCanal(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !m.classList.contains('hidden')) cerrarSeguimientoCanal(); });
+  document.body.appendChild(m);
+  return m;
+}
+
+function cerrarSeguimientoCanal() { $('modal-seg-canal')?.classList.add('hidden'); }
+
+async function abrirSeguimientoCanal(id) {
+  const m = modalSeguimientoCanal();
+  const cuerpo = $('seg-canal-cuerpo');
+  cuerpo.innerHTML = '<p class="pt-cargando">Cargando seguimiento…</p>';
+  m.classList.remove('hidden');
+  try {
+    const { canalizacion: c, seguimientos } = await api(`/canalizaciones/${id}`);
+    const puedeEditar = ['tutor', 'coordinador'].includes(Sesion.usuario?.rol);
+    const abierta = CANAL_ABIERTA(c);
+    const dias = diasDesde(c.fecha_registro);
+    const bitacora = seguimientos.map((s) => `<li class="${s.estatus_nuevo ? 'cambio' : ''}">
+        <div class="bt-cab"><b>${escapeHtml(s.autor || 'Sistema')}</b><span>${escapeHtml(fmtFechaHora(s.fecha))}</span></div>
+        ${s.estatus_nuevo ? `<p class="bt-estatus">${s.estatus_anterior ? `${escapeHtml(s.estatus_anterior)} <i class="fa-solid fa-arrow-right"></i> ` : ''}<b>${escapeHtml(s.estatus_nuevo)}</b></p>` : ''}
+        <p class="bt-nota">${escapeHtml(s.nota)}</p></li>`).join('');
+    cuerpo.innerHTML = `
+      <header class="seg-cab">
+        <span class="m3-avatar ${AREA_TONO[c.area_destino] || 'tono-azul'}">${escapeHtml(iniciales(c.tutorado_nombre))}</span>
+        <div class="min-w-0">
+          <h3 id="seg-canal-titulo">${escapeHtml(c.tutorado_nombre)}</h3>
+          <p>${escapeHtml(c.no_control)}${c.semestre ? ` · ${escapeHtml(c.semestre)}° semestre` : ''} · <span class="m3-etiqueta ${AREA_TONO[c.area_destino] || 'tono-gris'}">${escapeHtml(AREA_NOMBRE[c.area_destino] || c.area_destino)}</span>${PAGINA === 'coordinacion' ? ` · Tutor(a): ${escapeHtml(c.tutor_nombre)}` : ''}</p>
+        </div>
+        <button type="button" class="m3-btn-icono" onclick="cerrarSeguimientoCanal()" aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button>
+      </header>
+      <div class="seg-scroll">
+        ${pasosCanalHtml(c.estatus_canalizacion, true)}
+        <dl class="seg-datos">
+          <div><dt>Registrada</dt><dd>${fmtFecha(c.fecha_registro)}</dd></div>
+          <div><dt>${abierta ? 'Días abierta' : 'Cerrada'}</dt><dd>${abierta ? dias : fmtFecha(c.fecha_cierre)}</dd></div>
+          <div><dt>Próxima revisión</dt><dd>${c.proxima_revision ? escapeHtml(partesCita({ fecha_hora_local: `${c.proxima_revision}T00:00` }).larga) : '—'}</dd></div>
+        </dl>
+        <div class="seg-diag"><span>Diagnóstico inicial</span><p>${escapeHtml(c.diagnostico_inicial)}</p></div>
+        ${puedeEditar ? `<form class="seg-form" onsubmit="guardarSeguimientoCanal(event, ${c.id})">
+          <h4><i class="fa-solid fa-pen"></i> Registrar seguimiento</h4>
+          <label for="seg-nota" class="sr-only">Nota de seguimiento</label>
+          <textarea id="seg-nota" rows="2" maxlength="2000" required placeholder="¿Qué avance hubo? Ej.: asistió a 3 asesorías, mejoró en ejercicios de punteros…"></textarea>
+          <div class="seg-form-fila">
+            <label>Estatus
+              <select id="seg-estatus">${['Pendiente', 'Aceptado', 'En Proceso', 'Atendido', 'Cerrado'].map((e) => `<option value="${e}" ${e === c.estatus_canalizacion ? 'selected' : ''}>${e}${e === c.estatus_canalizacion ? ' (actual)' : ''} · ${DESC_ESTATUS_CANAL[e]}</option>`).join('')}</select>
+            </label>
+            <label>Próxima revisión
+              <input type="date" id="seg-revision" min="${hoyLocal()}" value="${c.proxima_revision && c.proxima_revision >= hoyLocal() ? c.proxima_revision : ''}">
+            </label>
+            <button type="submit" class="m3-btn lleno chico"><i class="fa-solid fa-floppy-disk"></i> Guardar</button>
+          </div>
+        </form>` : ''}
+        <h4 class="seg-sub"><i class="fa-solid fa-clock-rotate-left"></i> Bitácora <span>${seguimientos.length}</span></h4>
+        <ol class="bitacora">${bitacora || '<li><p class="bt-nota">Sin movimientos.</p></li>'}</ol>
+      </div>`;
+    setTimeout(() => $('seg-nota')?.focus(), 50);
+  } catch (err) {
+    cuerpo.innerHTML = `<div class="p-5 text-xs text-rose-600">${escapeHtml(err.message)} <button class="m3-btn texto chico" onclick="cerrarSeguimientoCanal()">Cerrar</button></div>`;
+  }
+}
+
+async function guardarSeguimientoCanal(event, id) {
+  event.preventDefault();
+  const body = { nota: $('seg-nota').value.trim(), estatus: $('seg-estatus').value, proxima_revision: $('seg-revision').value || null };
+  if (body.nota.length < 3) { toast('Escribe una nota de seguimiento.', 'error'); return; }
+  await conBotonOcupado(event.target.querySelector('button[type=submit]'), 'Guardando…', async () => {
+    try {
+      const r = await api(`/canalizaciones/${id}/seguimiento`, { method: 'POST', body });
+      toast(r.mensaje);
+      await abrirSeguimientoCanal(id);
+      cargarTablaCanalizaciones();
+    } catch (err) {
+      toast(err.message, 'error');
+    }
+  });
+}
+
+/* Nueva canalización desde la pestaña: el tutor elige al tutorado */
+async function nuevaCanalizacion() {
+  try {
+    if (!cacheTutorados?.length) cacheTutorados = (await api('/tutorados/riesgo', { query: { nivel: 'TODOS', q: '' } })).tutorados;
+  } catch (err) { return toast(err.message, 'error'); }
+  abrirModalCanalizacion('', '', '');
+  const sel = $('modal-canalizar-select');
+  sel.innerHTML = '<option value="">Elige un tutorado…</option>' + cacheTutorados.map((t) => `<option value="${t.tutorado_id}" data-area="${AREA_SUGERIDA[t.nivel_riesgo] || ''}">${escapeHtml(t.nombre_completo)} · ${escapeHtml(t.no_control || '')} (riesgo ${escapeHtml(String(t.nivel_riesgo).toLowerCase())})</option>`).join('');
+  sel.onchange = () => { const a = sel.selectedOptions[0]?.dataset.area; if (a && a !== 'undefined') $('modal-canalizar-area').value = a; };
+  sel.classList.remove('hidden');
+  sel.required = true;
+  $('modal-canalizar-alumno').classList.add('hidden');
 }
 
 /* ---- Modal de cita (tutor) ------------------------------------------------ */
@@ -1217,6 +1455,9 @@ function abrirModalCanalizacion(nombreAlumno, areaSugerida, tutoradoId) {
   const input = $('modal-canalizar-alumno');
   input.value = nombreAlumno;
   input.dataset.id = tutoradoId;
+  input.classList.remove('hidden');
+  const sel = $('modal-canalizar-select');
+  if (sel) { sel.classList.add('hidden'); sel.required = false; }
   if (areaSugerida) $('modal-canalizar-area').value = areaSugerida;
   $('modal-canalizacion').classList.remove('hidden');
 }
@@ -1224,7 +1465,8 @@ function abrirModalCanalizacion(nombreAlumno, areaSugerida, tutoradoId) {
 async function enviarCanalizacion(event) {
   event.preventDefault();
   const body = {
-    tutorado_id: Number($('modal-canalizar-alumno').dataset.id),
+    tutorado_id: Number($('modal-canalizar-select') && !$('modal-canalizar-select').classList.contains('hidden')
+      ? $('modal-canalizar-select').value : $('modal-canalizar-alumno').dataset.id),
     area_destino: $('modal-canalizar-area').value,
     diagnostico_inicial: $('modal-canalizar-diagnostico').value.trim(),
   };
@@ -1358,32 +1600,26 @@ async function cargarReporteDiario() {
           <td>${estadoSesion(c)[1]}</td></tr>`).join('')}</tbody></table></div>`;
       return;
     }
-    const dato = (etq, val, color = 'text-slate-800') => `<div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
-        <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500">${etq}</p><p class="text-lg font-extrabold ${color}">${val}</p></div>`;
     $('rd-resumen').innerHTML = [
-      dato('Sesiones atendidas', r.atendidas),
-      dato('Tiempo de tutoría', fmtMin(r.minutos)),
-      dato('Inasistencias', r.inasistencias, r.inasistencias ? 'text-rose-600' : 'text-slate-800'),
-      conTutor ? dato('Tutores que atendieron', r.tutores) : dato('Por confirmar', r.por_confirmar, r.por_confirmar ? 'text-amber-600' : 'text-slate-800'),
+      celdaResumen('Sesiones atendidas', r.atendidas, 'fa-user-check', 'tono-verde'),
+      celdaResumen('Tiempo de tutoría', fmtMin(r.minutos), 'fa-clock', 'tono-azul'),
+      celdaResumen('Inasistencias', r.inasistencias, 'fa-user-xmark', r.inasistencias ? 'tono-rojo' : 'tono-gris'),
+      celdaResumen('Por confirmar', r.por_confirmar, 'fa-hourglass-half', r.por_confirmar ? 'tono-ambar' : 'tono-gris'),
     ].join('');
     if (!sesiones.length) {
-      cont.innerHTML = '<p class="text-xs text-slate-400 text-center py-6 border border-dashed border-slate-200 rounded-xl">No hay sesiones registradas ese día.</p>';
+      cont.innerHTML = '<div class="m3-vacio"><span class="m3-icono tono-gris"><i class="fa-regular fa-calendar"></i></span>No hay sesiones registradas ese día.</div>';
       return;
     }
     const estado = (c) => (c.estatus === 'Completada'
       ? chip('Asistió', 'bg-emerald-100 text-emerald-800')
       : c.asistio === false ? chip('No asistió', 'bg-rose-100 text-rose-700') : chip('Por confirmar', 'bg-amber-100 text-amber-800'));
-    cont.innerHTML = `<div class="overflow-x-auto"><table class="w-full text-xs text-left">
-      <thead class="text-[10px] uppercase tracking-wide text-slate-500 border-b border-slate-200"><tr>
-        <th class="py-2 pr-3">Hora</th>${conTutor ? '<th class="py-2 pr-3">Tutor(a)</th>' : ''}<th class="py-2 pr-3">Tutorado(a)</th><th class="py-2 pr-3">No. de control</th><th class="py-2 pr-3">Asistencia</th><th class="py-2">Tiempo</th>
-      </tr></thead>
-      <tbody class="divide-y divide-slate-100">${sesiones.map((c) => `<tr>
-        <td class="py-2 pr-3 whitespace-nowrap text-slate-600">${escapeHtml(String(c.fecha_hora_local).slice(11, 16))}</td>
-        ${conTutor ? `<td class="py-2 pr-3 text-slate-700">${escapeHtml(c.tutor_nombre)}</td>` : ''}
-        <td class="py-2 pr-3 font-semibold text-slate-800">${escapeHtml(c.tutorado_nombre || `Grupo ${c.grupo || ''}`)}</td>
-        <td class="py-2 pr-3 text-slate-600">${escapeHtml(c.no_control || '—')}</td>
-        <td class="py-2 pr-3">${estado(c)}</td>
-        <td class="py-2 font-semibold text-slate-700">${c.estatus === 'Completada' && c.duracion_real_min ? `${c.duracion_real_min} min` : '—'}</td>
+    cont.innerHTML = `<div class="overflow-x-auto"><table class="tabla-compacta">
+      <thead><tr><th>Hora</th><th>Tutorado(a)</th><th>Asistencia</th><th class="der">Tiempo</th></tr></thead>
+      <tbody>${sesiones.map((c) => `<tr>
+        <td class="num">${escapeHtml(String(c.fecha_hora_local).slice(11, 16))}</td>
+        <td><b>${escapeHtml(c.tutorado_nombre || `Grupo ${c.grupo || ''}`)}</b><small>${escapeHtml(c.no_control || '')}</small></td>
+        <td>${estado(c)}</td>
+        <td class="der num">${c.estatus === 'Completada' && c.duracion_real_min ? `${c.duracion_real_min} min` : '—'}</td>
       </tr>`).join('')}</tbody></table></div>`;
   } catch (err) {
     cont.innerHTML = `<p class="text-xs text-rose-600 text-center py-6">${escapeHtml(err.message)}</p>`;
@@ -1686,7 +1922,7 @@ function pintarTablaCanal() {
     return;
   }
   const tonoEstatus = { Pendiente: 'tono-gris', 'En Proceso': 'tono-ambar', Aceptado: 'tono-verde', Atendido: 'tono-azul', Cerrado: 'tono-gris' };
-  tbody.innerHTML = filas.map((c) => `<tr>
+  tbody.innerHTML = filas.map((c) => `<tr class="fila-clic" tabindex="0" title="Ver seguimiento" onclick="abrirSeguimientoCanal(${c.id})" onkeydown="if(event.key==='Enter')abrirSeguimientoCanal(${c.id})">
       <td><div class="flex items-center gap-2.5"><span class="m3-avatar chico ${AREA_TONO[c.area_destino] || 'tono-azul'}">${escapeHtml(iniciales(c.tutorado_nombre))}</span>
         <span><b class="block font-semibold" style="color:var(--m3-texto)">${escapeHtml(c.tutorado_nombre)}</b><span class="text-[11px]" style="color:var(--m3-texto-3)">${escapeHtml(c.no_control)}</span></span></div></td>
       <td><span class="m3-etiqueta ${AREA_TONO[c.area_destino] || 'tono-gris'}">${escapeHtml(AREA_NOMBRE[c.area_destino] || c.area_destino)}</span></td>
@@ -1760,22 +1996,27 @@ async function cargarReporteTutor() {
     const { resumen: r, periodo, sesiones } = reporteTutor;
     setText('rep-periodo', periodo.nombre);
     pintarInformePeriodo(reporteTutor);
+    const minutos = sesiones.reduce((t, x) => t + Number(x.duracion_real_min || 0), 0);
+    const conMinuta = sesiones.filter((x) => x.con_minuta).length;
+    if ($('rep-resumen')) $('rep-resumen').innerHTML = [
+      celdaResumen('Sesiones atendidas', sesiones.length, 'fa-user-check', 'tono-verde', `${r.individuales} individuales · ${r.grupales} grupales`),
+      celdaResumen('Tiempo de tutoría', fmtMin(minutos), 'fa-clock', 'tono-azul'),
+      celdaResumen('Con minuta', `${conMinuta} / ${sesiones.filter((x) => x.tipo !== 'Grupal').length || sesiones.length}`, 'fa-file-circle-check', 'tono-violeta'),
+      celdaResumen('Tutorados atendidos', `${r.tutorados_atendidos} / ${r.tutorados}`, 'fa-users', 'tono-ambar'),
+    ].join('');
     if (!sesiones.length) {
-      cont.innerHTML = '<p class="text-xs text-slate-400 text-center py-6 border border-dashed border-slate-200 rounded-xl">Aún no hay sesiones atendidas en este periodo. Cuando marques una cita como atendida aparecerá aquí.</p>';
+      cont.innerHTML = '<div class="m3-vacio"><span class="m3-icono tono-gris"><i class="fa-solid fa-file-lines"></i></span>Aún no hay sesiones atendidas en este periodo. Cuando registres la asistencia de una cita aparecerá aquí.</div>';
       return;
     }
-    cont.innerHTML = `<div class="overflow-x-auto"><table class="w-full text-xs text-left">
-      <thead class="text-[10px] uppercase tracking-wide text-slate-500 border-b border-slate-200">
-        <tr><th class="py-2 pr-3">Fecha</th><th class="py-2 pr-3">Tutorado</th><th class="py-2 pr-3">Motivo</th><th class="py-2 pr-3">Tiempo</th><th class="py-2 text-center">Minuta</th></tr>
-      </thead>
-      <tbody class="divide-y divide-slate-100">${sesiones.map((x) => `<tr>
-        <td class="py-2 pr-3 whitespace-nowrap text-slate-600">${escapeHtml(partesCita(x).corta)}</td>
-        <td class="py-2 pr-3 font-semibold text-slate-800">${escapeHtml(x.tutorado_nombre || `Grupo ${x.grupo || ''}`)}</td>
-        <td class="py-2 pr-3 text-slate-600">${escapeHtml(x.motivo)}</td>
-        <td class="py-2 pr-3 whitespace-nowrap text-slate-600">${x.duracion_real_min ? `${x.duracion_real_min} min` : '—'}</td>
-        <td class="py-2 text-center">${x.con_minuta ? '<i class="fa-solid fa-circle-check text-emerald-600" title="Con minuta"></i>' : '<span class="text-slate-300">—</span>'}</td>
-      </tr>`).join('')}</tbody></table></div>
-`;
+    cont.innerHTML = `<div class="overflow-x-auto"><table class="tabla-compacta">
+      <thead><tr><th>Fecha</th><th>Tutorado</th><th>Motivo</th><th class="der">Tiempo</th><th class="cen">Minuta</th></tr></thead>
+      <tbody>${sesiones.map((x) => `<tr>
+        <td class="num capitalize">${escapeHtml(partesCita(x).corta)}</td>
+        <td><b>${escapeHtml(x.tutorado_nombre || `Grupo ${x.grupo || ''}`)}</b></td>
+        <td class="trunca" title="${escapeHtml(x.motivo)}">${escapeHtml(x.motivo)}</td>
+        <td class="der num">${x.duracion_real_min ? `${x.duracion_real_min} min` : '—'}</td>
+        <td class="cen">${x.con_minuta ? '<i class="fa-solid fa-circle-check text-emerald-600" title="Con minuta"></i>' : '<span class="text-slate-300">—</span>'}</td>
+      </tr>`).join('')}</tbody></table></div>`;
   } catch (err) {
     cont.innerHTML = `<p class="text-xs text-rose-600 text-center py-6">${escapeHtml(err.message)}</p>`;
   }
@@ -1808,66 +2049,48 @@ function pintarInformePeriodo(rep) {
   const r = rep.resumen;
   const atendidosN = tutorados.filter((t) => t.sesiones > 0).length;
   const sinAtender = tutorados.filter((t) => t.sesiones === 0);
-  const fila = (etq, val, nota = '') => `<div class="flex items-baseline justify-between gap-3 py-1.5 border-b border-slate-100 last:border-0">
-      <dt class="text-slate-600">${etq}</dt><dd class="text-right"><b class="text-slate-800">${val}</b>${nota ? `<span class="block text-[10px] text-slate-400">${nota}</span>` : ''}</dd></div>`;
-  const bloque = (icono, titulo, filas) => `<div class="p-4 rounded-xl border border-slate-200">
-      <h4 class="text-xs font-bold text-slate-800 mb-2"><i class="fa-solid ${icono} text-tecnmGreen mr-1"></i>${titulo}</h4><dl class="text-xs">${filas}</dl></div>`;
-  const pendientes = [];
-  if (c.sin_confirmar) pendientes.push(`${c.sin_confirmar} cita(s) ya pasaron y falta confirmar la asistencia.`);
-  if (c.sin_minuta) pendientes.push(`${c.sin_minuta} sesión(es) atendida(s) sin minuta.`);
-  if (sinAtender.length) pendientes.push(`${sinAtender.length} tutorado(s) sin ninguna sesión atendida en el periodo.`);
-  if (!ev.enviada) pendientes.push('Falta enviar la Evaluación del PIT.');
   const sinFicha = tutorados.filter((t) => !t.con_ficha).length;
-  if (sinFicha) pendientes.push(`${sinFicha} tutorado(s) sin Ficha de Identificación.`);
+  const pendientes = [];
+  if (c.sin_confirmar) pendientes.push(['fa-user-clock', `${c.sin_confirmar} asistencia(s) por registrar`, "switchTab('agenda')"]);
+  if (c.sin_minuta) pendientes.push(['fa-file-signature', `${c.sin_minuta} sesión(es) sin minuta`, "switchTab('agenda')"]);
+  if (sinAtender.length) pendientes.push(['fa-user-slash', `${sinAtender.length} tutorado(s) sin sesión`, "switchTab('tutorados')"]);
+  if (!ev.enviada) pendientes.push(['fa-clipboard-check', 'Evaluación del PIT sin enviar', "verInforme('evaluacion')"]);
+  if (sinFicha) pendientes.push(['fa-id-card', `${sinFicha} sin Ficha de Identificación`, "switchTab('tutorados')"]);
+  const asistPct = c.atendidas + c.inasistencias ? `${pct(c.atendidas, c.atendidas + c.inasistencias)}% de asistencia` : '';
+  const mini = (titulo, filas) => `<div class="inf-mini"><h5>${titulo}</h5><dl>${filas.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl></div>`;
   cont.innerHTML = `
-    ${pendientes.length ? `<div class="mb-4 p-3 rounded-xl border border-amber-200 bg-amber-50 text-amber-900 text-xs">
-        <p class="font-bold mb-1"><i class="fa-solid fa-list-check mr-1"></i>Pendientes antes de entregar</p>
-        <ul class="list-disc pl-5 space-y-0.5">${pendientes.map((x) => `<li>${escapeHtml(x)}</li>`).join('')}</ul></div>`
-      : '<div class="mb-4 p-3 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 text-xs font-semibold"><i class="fa-solid fa-circle-check mr-1"></i>Sin pendientes: tu informe está completo.</div>'}
-    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
-      ${bloque('fa-users', 'Grupo tutorado', [
-        fila('Tutorados asignados', r.tutorados),
-        fila('Atendidos al menos una vez', `${atendidosN} (${pct(atendidosN, r.tutorados)}%)`),
-        fila('Riesgo crítico / alto', `${riesgo['CRÍTICO']} / ${riesgo.ALTO}`),
-        fila('Riesgo medio / bajo', `${riesgo.MEDIO} / ${riesgo.BAJO}`),
-        fila('Con Ficha de Identificación', `${r.tutorados - sinFicha} de ${r.tutorados}`),
-      ].join(''))}
-      ${bloque('fa-calendar-check', 'Citas y asistencia', [
-        fila('Citas registradas', c.total),
-        fila('Sesiones atendidas', c.atendidas, `${c.presenciales} presenciales · ${c.en_linea} en línea`),
-        fila('Inasistencias', c.inasistencias, c.atendidas + c.inasistencias ? `${pct(c.atendidas, c.atendidas + c.inasistencias)}% de asistencia` : ''),
-        fila('Canceladas', c.canceladas),
-        fila('Pendientes / confirmadas', `${c.pendientes} / ${c.confirmadas}`),
-      ].join(''))}
-      ${bloque('fa-clock', 'Tiempo y minutas', [
-        fila('Tiempo total de tutoría', fmtMin(c.minutos)),
-        fila('Promedio por sesión', c.atendidas ? `${Math.round(c.minutos / c.atendidas)} min` : '—'),
-        fila('Minutas registradas', c.minutas),
-        fila('Atendidas sin minuta', c.sin_minuta),
-        fila('Con fecha de seguimiento', c.con_seguimiento),
-      ].join(''))}
-      ${bloque('fa-share-nodes', 'Canalizaciones', [
-        fila('Total en el periodo', r.canalizaciones),
-        ...rep.canalizaciones_por_area.map((x) => fila(escapeHtml(x.area), x.total)),
-        ...canalEst.map((x) => fila(`Estatus: ${escapeHtml(x.estatus)}`, x.total)),
-        fila('Evaluación del PIT', ev.enviada ? 'Enviada' : 'Pendiente'),
-      ].join(''))}
+    ${pendientes.length
+      ? `<div class="inf-pendientes"><span><i class="fa-solid fa-list-check"></i> ${pendientes.length} pendiente(s) antes de entregar</span>${pendientes.map(([i, t, a]) => `<button type="button" onclick="${a}"><i class="fa-solid ${i}"></i>${escapeHtml(t)}</button>`).join('')}</div>`
+      : '<div class="inf-pendientes listo"><span><i class="fa-solid fa-circle-check"></i> Sin pendientes: tu informe está completo.</span></div>'}
+    <div class="pt-resumen seis">
+      ${celdaResumen('Tutorados atendidos', `${atendidosN}/${r.tutorados}`, 'fa-users', 'tono-azul', `${pct(atendidosN, r.tutorados)}% del grupo`)}
+      ${celdaResumen('Sesiones atendidas', c.atendidas, 'fa-user-check', 'tono-verde', asistPct)}
+      ${celdaResumen('Tiempo de tutoría', fmtMin(c.minutos), 'fa-clock', 'tono-violeta', c.atendidas ? `${Math.round(c.minutos / c.atendidas)} min por sesión` : '')}
+      ${celdaResumen('Minutas', c.minutas, 'fa-file-circle-check', 'tono-ambar', c.sin_minuta ? `${c.sin_minuta} sin minuta` : 'Todas al día')}
+      ${celdaResumen('Canalizaciones', r.canalizaciones, 'fa-share-nodes', 'tono-rojo')}
+      ${celdaResumen('Evaluación PIT', ev.enviada ? 'Enviada' : 'Pendiente', 'fa-clipboard-check', ev.enviada ? 'tono-verde' : 'tono-gris')}
     </div>
-    <h4 class="text-xs font-bold text-slate-800 mt-5 mb-2"><i class="fa-solid fa-user-graduate text-tecnmGreen mr-1"></i>Seguimiento por tutorado</h4>
-    <div class="overflow-x-auto"><table class="w-full text-xs text-left">
-      <thead class="text-[10px] uppercase tracking-wide text-slate-500 border-b border-slate-200"><tr>
-        <th class="py-2 pr-3">Tutorado</th><th class="py-2 pr-3">Riesgo</th><th class="py-2 pr-3">Promedio</th><th class="py-2 pr-3">Sesiones</th><th class="py-2 pr-3">Tiempo</th><th class="py-2 pr-3">Inasistencias</th><th class="py-2 pr-3">Última sesión</th><th class="py-2 pr-3">Canalizado</th><th class="py-2">Ficha</th>
-      </tr></thead>
-      <tbody class="divide-y divide-slate-100">${tutorados.map((t) => `<tr>
-        <td class="py-2 pr-3"><b class="text-slate-800">${escapeHtml(t.nombre)}</b><span class="block text-[10px] text-slate-400">${escapeHtml(t.no_control)} · ${escapeHtml(t.semestre)}° sem.</span></td>
-        <td class="py-2 pr-3">${chip(t.nivel_riesgo, RIESGO_ESTILO_INF[t.nivel_riesgo])}</td>
-        <td class="py-2 pr-3 text-slate-600">${t.promedio ?? '—'}</td>
-        <td class="py-2 pr-3 font-semibold ${t.sesiones ? 'text-slate-800' : 'text-rose-600'}">${t.sesiones}</td>
-        <td class="py-2 pr-3 text-slate-600">${t.minutos ? fmtMin(t.minutos) : '—'}</td>
-        <td class="py-2 pr-3 text-slate-600">${t.inasistencias}</td>
-        <td class="py-2 pr-3 text-slate-600 whitespace-nowrap">${t.ultima_sesion ? escapeHtml(partesCita({ fecha_hora_local: `${t.ultima_sesion}T00:00` }).corta) : '—'}</td>
-        <td class="py-2 pr-3 text-slate-600">${t.canalizaciones ? `Sí (${t.canalizaciones})` : 'No'}</td>
-        <td class="py-2">${t.con_ficha ? '<i class="fa-solid fa-circle-check text-emerald-600" title="Entregada"></i>' : '<span class="text-rose-600 font-semibold">Falta</span>'}</td>
+    <details class="inf-desglose">
+      <summary>Ver desglose completo</summary>
+      <div class="inf-minis">
+        ${mini('Riesgo del grupo', [['Crítico', riesgo['CRÍTICO']], ['Alto', riesgo.ALTO], ['Medio', riesgo.MEDIO], ['Bajo', riesgo.BAJO], ['Con ficha', `${r.tutorados - sinFicha} de ${r.tutorados}`]])}
+        ${mini('Citas', [['Registradas', c.total], ['Presenciales / en línea', `${c.presenciales} / ${c.en_linea}`], ['Inasistencias', c.inasistencias], ['Canceladas', c.canceladas], ['Pendientes / confirmadas', `${c.pendientes} / ${c.confirmadas}`]])}
+        ${mini('Canalizaciones', [...rep.canalizaciones_por_area.map((x) => [escapeHtml(AREA_NOMBRE[x.area] || x.area), x.total]), ...canalEst.map((x) => [escapeHtml(x.estatus), x.total]), ['Con seguimiento agendado', c.con_seguimiento]].slice(0, 8))}
+      </div>
+    </details>
+    <h4 class="inf-sub">Seguimiento por tutorado</h4>
+    <div class="overflow-x-auto"><table class="tabla-compacta">
+      <thead><tr><th>Tutorado</th><th>Riesgo</th><th class="der">Prom.</th><th class="der">Sesiones</th><th class="der">Tiempo</th><th class="der">Faltas</th><th>Última sesión</th><th class="cen">Canal.</th><th class="cen">Ficha</th></tr></thead>
+      <tbody>${tutorados.map((t) => `<tr>
+        <td><b>${escapeHtml(t.nombre)}</b><small>${escapeHtml(t.no_control)} · ${escapeHtml(t.semestre)}° sem.</small></td>
+        <td>${chip(t.nivel_riesgo, RIESGO_ESTILO_INF[t.nivel_riesgo])}</td>
+        <td class="der num">${t.promedio ?? '—'}</td>
+        <td class="der num ${t.sesiones ? '' : 'text-rose-600 font-bold'}">${t.sesiones}</td>
+        <td class="der num">${t.minutos ? fmtMin(t.minutos) : '—'}</td>
+        <td class="der num">${t.inasistencias}</td>
+        <td class="num capitalize">${t.ultima_sesion ? escapeHtml(partesCita({ fecha_hora_local: `${t.ultima_sesion}T00:00` }).corta) : '—'}</td>
+        <td class="cen">${t.canalizaciones ? `<span class="font-bold">${t.canalizaciones}</span>` : '<span class="text-slate-300">—</span>'}</td>
+        <td class="cen">${t.con_ficha ? '<i class="fa-solid fa-circle-check text-emerald-600" title="Entregada"></i>' : '<span class="text-rose-600 font-semibold">Falta</span>'}</td>
       </tr>`).join('')}</tbody></table></div>`;
 }
 
@@ -1971,35 +2194,32 @@ const colorPromedio = (p) => (p === null ? 'text-slate-400' : p <= 2 ? 'text-eme
 function actualizarProgresoLikert() {
   const form = $('form-likert');
   if (!form) return;
-  const total = form.querySelectorAll('[data-pregunta]').length;
-  const respondidas = new Set([...form.querySelectorAll('input[type=radio]:checked')].map((i) => i.name)).size;
+  const bloques = [...form.querySelectorAll('[data-reactivo]')];
+  const respondidas = bloques.filter((b) => b.querySelector('input:checked'));
   const chipProgreso = $('eval-progreso');
-  chipProgreso.textContent = `${respondidas} / ${total} respondidas`;
+  chipProgreso.textContent = `${respondidas.length} / ${bloques.length} respondidas`;
   chipProgreso.className = `shrink-0 text-[11px] font-bold px-3 py-1 rounded-full ${
-    respondidas === total ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}`;
-  form.querySelectorAll('[data-pregunta]').forEach((bloque) => {
-    const ok = bloque.querySelector('input:checked');
-    bloque.classList.toggle('border-emerald-200', Boolean(ok));
-    bloque.classList.toggle('border-transparent', !ok);
+    respondidas.length === bloques.length ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}`;
+  bloques.forEach((b) => {
+    const ok = Boolean(b.querySelector('input:checked'));
+    b.classList.toggle('respondida', ok);
+    if (ok) b.classList.remove('falta');
   });
 }
 
 function pintarEstadoEvaluacion(evaluacion, periodo) {
   const estado = $('eval-estado');
-  const btnPanel = $('btn-panel-eval-tutor');
-  if (btnPanel) btnPanel.querySelector('span').textContent = evaluacion ? 'Ver o actualizar mi evaluación' : 'Responder evaluación';
   setText('eval-menu-estado', evaluacion ? 'Enviada' : 'Pendiente');
+  $('eval-menu-estado')?.classList.toggle('ok', Boolean(evaluacion));
   if (evaluacion) {
-    estado.className = 'mb-4 p-3 rounded-xl border text-xs font-semibold bg-emerald-50 border-emerald-200 text-emerald-800';
-    estado.innerHTML = `<i class="fa-solid fa-circle-check mr-1"></i> Evaluación del periodo ${escapeHtml(periodo)} enviada el
-      ${fmtFechaHora(evaluacion.fecha_envio)}${evaluacion.updated_at && evaluacion.updated_at !== evaluacion.fecha_envio
-        ? ` · última actualización ${fmtFechaHora(evaluacion.updated_at)}` : ''}.
-      Puedes modificar tus respuestas y volver a enviarla.`;
-    $('eval-boton').textContent = 'Actualizar mi Evaluación';
+    estado.className = 'eval-estado enviada';
+    estado.innerHTML = `<i class="fa-solid fa-circle-check"></i> Enviada el ${fmtFechaHora(evaluacion.fecha_envio)}${evaluacion.updated_at && evaluacion.updated_at !== evaluacion.fecha_envio
+      ? ` · actualizada ${fmtFechaHora(evaluacion.updated_at)}` : ''}. Puedes cambiar tus respuestas y volver a enviarla.`;
+    $('eval-boton').textContent = 'Actualizar evaluación';
   } else {
-    estado.className = 'mb-4 p-3 rounded-xl border text-xs font-semibold bg-amber-50 border-amber-200 text-amber-800';
-    estado.innerHTML = `<i class="fa-solid fa-hourglass-half mr-1"></i> Pendiente: aún no has enviado tu evaluación del periodo ${escapeHtml(periodo)}.`;
-    $('eval-boton').textContent = 'Enviar Cuestionario Institucional de Evaluación';
+    estado.className = 'eval-estado pendiente';
+    estado.innerHTML = `<i class="fa-solid fa-hourglass-half"></i> Pendiente: aún no envías tu evaluación del periodo ${escapeHtml(periodo)}.`;
+    $('eval-boton').textContent = 'Enviar evaluación';
   }
 }
 
@@ -2009,24 +2229,7 @@ async function cargarEvaluacionTutor() {
   try {
     const { preguntas, escala, evaluacion, periodo } = await api('/evaluaciones/mia');
     ESCALA_LIKERT = escala;
-    cont.innerHTML = preguntas
-      .map((p, i) => `
-        <fieldset data-pregunta="${p.clave}" class="p-3 bg-slate-50 rounded-xl space-y-2 border border-transparent transition">
-          <legend class="sr-only">Pregunta ${i + 1}</legend>
-          <p class="font-bold text-slate-800">P${i + 1}. ${escapeHtml(p.texto)}</p>
-          <div class="flex flex-wrap gap-2 text-slate-600">
-            ${escala.map((e) => `
-              <label class="cursor-pointer">
-                <input type="radio" name="${p.clave}" value="${e.valor}" required class="peer sr-only"
-                  ${evaluacion && evaluacion.respuestas[p.clave] === e.valor ? 'checked' : ''}>
-                <span class="inline-block px-3 py-1.5 rounded-lg border border-slate-300 bg-white
-                  peer-checked:bg-tecnmGreen peer-checked:text-white peer-checked:border-tecnmGreen
-                  peer-focus-visible:ring-2 peer-focus-visible:ring-tecnmGold hover:border-tecnmGreen transition">
-                  ${e.valor === 0 ? escapeHtml(e.etiqueta) : `${e.valor}: ${escapeHtml(e.etiqueta)}`}</span>
-              </label>`).join('')}
-          </div>
-        </fieldset>`)
-      .join('');
+    cont.innerHTML = preguntas.map((p, i) => reactivoLikertHtml(p.clave, String(i + 1), p.texto, escala, evaluacion?.respuestas?.[p.clave])).join('');
     $('eval-comentarios').value = evaluacion?.comentarios || '';
     cont.addEventListener('change', actualizarProgresoLikert);
     pintarEstadoEvaluacion(evaluacion, periodo);
@@ -2044,17 +2247,18 @@ async function enviarEvaluacionTutor(event) {
   ok.classList.add('hidden');
   error.classList.add('hidden');
 
-  const bloques = [...form.querySelectorAll('[data-pregunta]')];
+  const bloques = [...form.querySelectorAll('[data-reactivo]')];
   const sinResponder = bloques.filter((b) => !b.querySelector('input:checked'));
   if (sinResponder.length) {
+    sinResponder.forEach((b) => b.classList.add('falta'));
     error.querySelector('span').textContent =
-      `Te faltan ${sinResponder.length} pregunta(s): ${sinResponder.map((b) => b.dataset.pregunta.toUpperCase()).join(', ')}.`;
+      `Te faltan ${sinResponder.length} pregunta(s): ${sinResponder.map((b) => b.dataset.numero).join(', ')}.`;
     error.classList.remove('hidden');
     sinResponder[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
     return;
   }
   const respuestas = Object.fromEntries(
-    bloques.map((b) => [b.dataset.pregunta, Number(b.querySelector('input:checked').value)])
+    bloques.map((b) => [b.dataset.reactivo, Number(b.querySelector('input:checked').value)])
   );
   const comentarios = $('eval-comentarios').value.trim() || undefined;
 

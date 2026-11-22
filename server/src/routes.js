@@ -65,6 +65,8 @@ router.put('/citas/:id/minuta', requiereRol('tutor'), citas.guardarMinuta);
 
 router.post('/canalizaciones/crear', requiereRol('tutor', 'coordinador'), canalizaciones.crear);
 router.get('/canalizaciones', canalizaciones.listar);
+router.get('/canalizaciones/:id', canalizaciones.detalle);
+router.post('/canalizaciones/:id/seguimiento', requiereRol('tutor', 'coordinador'), canalizaciones.agregarSeguimiento);
 
 // Evaluación del Tutor hacia el Programa de Tutorías (11 reactivos Likert)
 router.get('/evaluaciones/mia', requiereRol('tutor'), evaluaciones.miEvaluacion);
