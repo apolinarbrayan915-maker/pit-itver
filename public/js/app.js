@@ -596,16 +596,15 @@ async function cargarMisCitas() {
     }
     actualizarBotonCita();
 
-    const otras = citas.filter((c) => c !== proxima);
+    const otras = citas.filter((c) => c !== proxima).slice(0, 5); // historial: solo las últimas 5
     const destacada = proxima ? tarjetaCitaProxima(proxima) : `
       <div class="cita-vacia">
         <span class="m3-icono tono-azul"><i class="fa-regular fa-calendar-plus"></i></span>
         <div><p class="font-bold">No tienes citas próximas</p><p>Agenda una sesión con tu tutor en el formulario.</p></div>
       </div>`;
     const historial = otras.length ? `
-      <div class="citas-hist-cab"><p>Historial</p><span>${otras.length}</span></div>
-      <ul class="citas-hist">${otras.map((c, i) => filaCitaHistorial(c, i >= 4)).join('')}</ul>
-      ${otras.length > 4 ? `<button type="button" class="m3-btn texto chico w-full justify-center mt-1" onclick="this.previousElementSibling.classList.add('todas'); this.remove();">Ver todas (${otras.length})</button>` : ''}` : '';
+      <div class="citas-hist-cab"><p>Historial</p><span>Últimas ${otras.length}</span></div>
+      <ul class="citas-hist">${otras.map((c) => filaCitaHistorial(c, false)).join('')}</ul>` : '';
     cont.innerHTML = `<p class="citas-etq">Próxima cita</p>${destacada}${historial}`;
   } catch (err) {
     cont.innerHTML = `<p class="text-xs text-rose-600 text-center py-6">${escapeHtml(err.message)}</p>`;
@@ -2262,6 +2261,19 @@ async function cargarEvaluacionAlumno(tutorId) {
   try {
     const r = await api('/evaluaciones/alumno/mia', { query: tutorId ? { tutor_id: tutorId } : {} });
     const { secciones, escala, evaluacion, periodo, tutor_nombre: tutor, tutores = [] } = r;
+    // Solo se responde en el último mes del semestre
+    const w = r.ventana;
+    const btnEval = $('btn-panel-evalal');
+    if (btnEval) btnEval.disabled = Boolean(w && !w.abierta);
+    if (w && !w.abierta) {
+      const chipC = $('evalal-chip');
+      if (chipC) { chipC.textContent = 'Próximamente'; chipC.className = 'text-[10px] font-bold px-2 py-0.5 rounded uppercase whitespace-nowrap bg-slate-200 text-slate-600'; }
+      if (btnEval) btnEval.querySelector('span').textContent = `Desde el ${fechaVentana(w.inicio)}`;
+      setText('evalal-desc', `Se habilita en el último mes del semestre: del ${fechaVentana(w.inicio)} al ${fechaVentana(w.fin)}.`);
+      if (!$('panel-evalal').classList.contains('hidden')) cerrarPanel('panel-evalal');
+      return;
+    }
+    setText('evalal-desc', `23 preguntas sobre tu tutor. Disponible hasta el ${fechaVentana(w?.fin || '')}. Confidencial: solo la ve la Coordinación.`);
     evalTutorId = r.tutor_id;
     setText('evalal-tutor', tutor || 'Sin tutor asignado');
     setText('evalal-periodo', periodo);
@@ -3297,14 +3309,8 @@ function botonElegirTutor(t) {
   if (!tieneTutor) {
     return `<button onclick='elegirTutor(${t.tutor_id}, ${nombre})' class="w-full bg-tecnmGreen hover:bg-tecnmDark text-white font-bold py-2 rounded-lg transition text-xs"><i class="fa-solid fa-user-check mr-1"></i>Elegir como mi tutor(a)</button>`;
   }
-  const sol = estadoCambio.solicitud;
-  if (sol?.estatus === 'Pendiente') {
-    return sol.tutor_nuevo_id === t.tutor_id
-      ? '<span class="block text-center bg-amber-100 text-amber-800 font-bold py-2 rounded-lg text-xs"><i class="fa-solid fa-hourglass-half mr-1"></i>Solicitud de cambio enviada</span>'
-      : '';
-  }
   if (!estadoCambio.ventana?.abierta) return '';
-  return `<button onclick='abrirSolicitudCambio(${t.tutor_id}, ${nombre})' class="w-full bg-white border border-tecnmGreen text-tecnmGreen hover:bg-tecnmGreen hover:text-white font-bold py-2 rounded-lg transition text-xs"><i class="fa-solid fa-right-left mr-1"></i>Solicitar cambio a este tutor</button>`;
+  return `<button onclick='cambiarTutor(${t.tutor_id}, ${nombre})' class="w-full bg-white border border-tecnmGreen text-tecnmGreen hover:bg-tecnmGreen hover:text-white font-bold py-2 rounded-lg transition text-xs"><i class="fa-solid fa-right-left mr-1"></i>Cambiar a este tutor</button>`;
 }
 
 function pintarEstadoCambio() {
@@ -3314,9 +3320,9 @@ function pintarEstadoCambio() {
   const tieneTutor = directorioTutores.some((x) => x.es_mi_tutor);
   const nota = $('tutores-nota-cambio');
   if (nota && w) {
-    nota.textContent = `El cambio de tutor solo se solicita en las primeras ${w.semanas} semanas del semestre (del ${fechaVentana(w.inicio)} al ${fechaVentana(w.fin)}) y lo aprueba la Coordinación de Tutorías.`;
+    nota.textContent = `Puedes cambiar de tutor solo en las primeras ${w.semanas} semanas del semestre (del ${fechaVentana(w.inicio)} al ${fechaVentana(w.fin)}).${w.abierta ? ' El cambio está disponible ahora.' : ''}`;
   }
-  if (!sol || !tieneTutor && sol.estatus !== 'Aprobada') { cont.innerHTML = ''; return; }
+  if (!sol || sol.estatus !== 'Pendiente' || !tieneTutor) { cont.innerHTML = ''; return; }
   const caja = (clase, icono, html) => `<div class="p-3 rounded-xl border text-xs font-semibold flex flex-col sm:flex-row sm:items-center justify-between gap-2 ${clase}"><span><i class="fa-solid ${icono} mr-1"></i>${html}</span>`;
   if (sol.estatus === 'Pendiente') {
     cont.innerHTML = `${caja('border-amber-200 bg-amber-50 text-amber-900', 'fa-hourglass-half', `Solicitaste cambiar a <strong>${escapeHtml(sol.tutor_nuevo)}</strong>. La coordinación revisará tu solicitud.`)}
@@ -3446,7 +3452,7 @@ async function cargarDirectorioTutores() {
     estadoCambio = { ventana, solicitud: sol.solicitud };
     const mio = tutores.find((t) => t.es_mi_tutor);
     $('tutores-mi-tutor').innerHTML = mio
-      ? `<div class="p-3 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 text-xs font-semibold"><i class="fa-solid fa-circle-check mr-1"></i> Tu tutor(a) actual es <strong>${escapeHtml(mio.nombre)}</strong>.${ventana?.abierta ? ' Si necesitas otro, puedes solicitar el cambio a la coordinación.' : ''}</div>`
+      ? `<div class="p-3 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 text-xs font-semibold"><i class="fa-solid fa-circle-check mr-1"></i> Tu tutor(a) actual es <strong>${escapeHtml(mio.nombre)}</strong>.${ventana?.abierta ? ' Si necesitas otro, puedes cambiarlo desde la tarjeta de cualquier tutor con lugares disponibles.' : ''}</div>`
       : '<div class="p-3 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 text-xs font-semibold"><i class="fa-solid fa-hand-pointer mr-1"></i> Aún no eliges tutor. Elige al que mejor se adapte a tus necesidades y horario.</div>';
     cont.innerHTML = tutores.length ? tutores.map((t) => tarjetaTutorHtml(t)).join('')
       : '<p class="text-xs text-slate-400 text-center py-8 col-span-full">No hay tutores registrados.</p>';
@@ -3455,6 +3461,19 @@ async function cargarDirectorioTutores() {
     pintarHorarioTutorEnCita();
   } catch (err) {
     cont.innerHTML = `<p class="text-xs text-rose-600 text-center py-8 col-span-full">${escapeHtml(err.message)}</p>`;
+  }
+}
+
+async function cambiarTutor(tutorId, nombre) {
+  const actual = directorioTutores.find((t) => t.es_mi_tutor);
+  if (!confirm(`¿Cambiar de tutor a ${nombre}?${actual ? `\n\nDejarás de estar con ${actual.nombre} y se cancelarán las citas pendientes que tengas con ese tutor.` : ''}`)) return;
+  try {
+    const r = await api('/tutores/elegir', { method: 'POST', body: { tutor_id: tutorId } });
+    toast(r.mensaje);
+    await Promise.all([cargarDirectorioTutores(), cargarPerfilAlumno(), cargarPersonaAlumno(), cargarEvaluacionAlumno(), cargarMisCitas()]);
+    $('cita-horario').innerHTML = '<option value="">Primero elige una fecha</option>';
+  } catch (err) {
+    toast(err.message, 'error');
   }
 }
 
@@ -4630,7 +4649,7 @@ function pintarPanelFichaAlumno() {
       </div>
       <span id="ficha-progreso" class="shrink-0 bg-slate-100 text-slate-600 text-[11px] font-bold px-3 py-1 rounded-full">…</span>
     </div>
-    <div class="mb-3 p-3 rounded-xl border text-xs font-medium flex items-start gap-2 ${cls}"><i class="fa-solid ${icono} mt-0.5"></i><span>${texto}</span></div>
+    ${estado === 'Requiere corrección' ? `<div class="mb-3 p-3 rounded-xl border text-xs font-medium flex items-start gap-2 ${cls}"><i class="fa-solid ${icono} mt-0.5"></i><span>${texto}</span></div>` : ''}
     <p class="formato-nota mb-4"><i class="fa-solid fa-user-shield"></i> <span><strong>Confidencial.</strong> Solo la Coordinación de Tutorías puede consultar tus respuestas; contesta con sinceridad. Toca cada sección para abrirla.</span></p>
     <form id="form-ficha" novalidate class="space-y-2.5">
       ${formularioFichaHtml(datos, 'fa', { acordeon: true })}

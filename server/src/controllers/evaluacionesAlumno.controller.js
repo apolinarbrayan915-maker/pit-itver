@@ -9,6 +9,14 @@ const db = require('../db');
 const config = require('../config');
 const { badRequest, conflict, notFound } = require('../utils/errores');
 const v = require('../utils/validaciones');
+const { ventanaEvaluacion } = require('../utils/calendarioEscolar');
+
+/** Ventana de la evaluación (último mes de clases); EVALUACION_ABIERTA=1 la abre siempre (presentaciones). */
+function ventanaActual() {
+  const hoy = new Intl.DateTimeFormat('en-CA', { timeZone: config.tz }).format(new Date());
+  const w = ventanaEvaluacion(hoy);
+  return process.env.EVALUACION_ABIERTA === '1' ? { ...w, abierta: true } : w;
+}
 const {
   ESCALA, ESCALA_ALUMNO, NO_APLICA, SECCIONES_ALUMNO, PREGUNTAS_ALUMNO, CLAVES_ALUMNO,
 } = require('../utils/cuestionario');
@@ -63,6 +71,7 @@ async function miEvaluacion(req, res) {
   res.json({
     ok: true,
     periodo,
+    ventana: ventanaActual(),
     tutores: tutores.map((t) => ({ ...t, evaluado: porTutor.has(t.tutor_id) })),
     tutor_id: elegido?.tutor_id || null,
     tutor_nombre: elegido?.tutor_nombre || null,
@@ -78,6 +87,10 @@ async function miEvaluacion(req, res) {
  * Evalúa a uno de los tutores del periodo (por omisión, el actual). Se puede actualizar.
  */
 async function guardar(req, res) {
+  const ventana = ventanaActual();
+  if (!ventana.abierta) {
+    throw conflict(`La evaluación tutoral se habilita en el último mes del semestre (del ${ventana.inicio} al ${ventana.fin}).`);
+  }
   const entrada = req.body.respuestas || {};
   const faltantes = [];
   const respuestas = {};

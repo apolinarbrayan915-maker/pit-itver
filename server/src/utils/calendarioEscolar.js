@@ -36,7 +36,7 @@ const CALENDARIO = {
 const dentro = (ymd, r) => ymd >= r.inicio && ymd <= r.fin;
 
 /** Semanas al inicio de cada periodo en que el tutorado puede pedir cambio de tutor. */
-const SEMANAS_CAMBIO_TUTOR = 3;
+const SEMANAS_CAMBIO_TUTOR = 2;
 
 /**
  * Ventana para solicitar cambio de tutor: las primeras semanas de clases del periodo
@@ -51,6 +51,24 @@ function ventanaCambioTutor(hoy) {
   });
   const actual = lista.find((v) => hoy >= v.inicio && hoy <= v.fin_periodo) || lista.find((v) => v.inicio > hoy) || lista[lista.length - 1];
   return { ...actual, abierta: hoy >= actual.inicio && hoy <= actual.fin, semanas: SEMANAS_CAMBIO_TUTOR };
+}
+
+/** Días antes del fin de clases en que se habilita la evaluación tutoral (≈ un mes). */
+const DIAS_EVALUACION = 30;
+
+/**
+ * Ventana de la evaluación del acompañamiento tutorial: el último mes de clases del
+ * periodo en curso (o del siguiente, si el actual ya terminó). { abierta, inicio, fin, periodo }.
+ */
+function ventanaEvaluacion(hoy) {
+  const ymd = (d) => d.toISOString().slice(0, 10);
+  const lista = CALENDARIO.periodos.map((p) => {
+    const ini = new Date(`${p.fin}T12:00:00Z`);
+    ini.setUTCDate(ini.getUTCDate() - DIAS_EVALUACION);
+    return { periodo: p.nombre, inicio: ymd(ini), fin: p.fin };
+  });
+  const actual = lista.find((v) => hoy <= v.fin) || lista[lista.length - 1];
+  return { ...actual, abierta: hoy >= actual.inicio && hoy <= actual.fin, dias: DIAS_EVALUACION };
 }
 
 /**
@@ -71,4 +89,4 @@ function diaDeClases(ymd) {
   return { ok: true };
 }
 
-module.exports = { CALENDARIO, diaDeClases, ventanaCambioTutor, SEMANAS_CAMBIO_TUTOR };
+module.exports = { CALENDARIO, diaDeClases, ventanaCambioTutor, ventanaEvaluacion, SEMANAS_CAMBIO_TUTOR, DIAS_EVALUACION };

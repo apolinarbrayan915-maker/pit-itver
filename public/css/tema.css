@@ -913,3 +913,4 @@ html.dark .mis-citas .cita-cancelar:hover { background: #3b1220; }
 .cita-hist-meta { font-size: .66rem; color: var(--m3-texto-3); margin-top: .05rem; }
 .cita-estado { flex: 0 0 auto; display: inline-flex; align-items: center; gap: .35rem; font-size: .66rem; font-weight: 600; color: var(--tf); white-space: nowrap; }
 .cita-estado i { width: .45rem; height: .45rem; border-radius: 999px; background: currentColor; }
+.m3-btn:disabled { opacity: .55; cursor: not-allowed; }

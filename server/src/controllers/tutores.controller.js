@@ -12,6 +12,8 @@ const { diaDeClases, ventanaCambioTutor } = require('../utils/calendarioEscolar'
 
 const hoyYmd = () => new Intl.DateTimeFormat('en-CA', { timeZone: config.tz }).format(new Date());
 /** Ventana de cambio de tutor; CAMBIO_TUTOR_ABIERTO=1 la abre siempre (pruebas). */
+const MESES_CORTOS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+const fechaCorta = (ymd) => { const [y, m, d] = String(ymd).split('-').map(Number); return `${d} ${MESES_CORTOS[m - 1]} ${y}`; };
 const ventanaActual = () => {
   const w = ventanaCambioTutor(hoyYmd());
   return process.env.CAMBIO_TUTOR_ABIERTO === '1' ? { ...w, abierta: true } : w;
@@ -93,8 +95,13 @@ async function elegir(req, res) {
 
     const actual = await tutorActualDe(client, tutoradoId);
     if (actual?.tutor_id === tutorId) throw conflict(`${t[0].nombre} ya es tu tutor(a).`);
-    // Con tutor asignado, el cambio se solicita y lo aprueba la coordinación
-    if (actual) throw conflict('Ya tienes tutor. Para cambiarlo envía una solicitud de cambio a la coordinación.');
+    // Con tutor asignado, el tutorado puede cambiarlo solo dentro de la ventana de cambio
+    if (actual) {
+      const ventana = ventanaActual();
+      if (!ventana.abierta) {
+        throw conflict(`El cambio de tutor solo está disponible en las primeras ${ventana.semanas} semanas del semestre (del ${fechaCorta(ventana.inicio)} al ${fechaCorta(ventana.fin)}).`);
+      }
+    }
 
     const { rows: ocupados } = await client.query(
       `SELECT count(*)::int AS n FROM asignaciones_tutoria
@@ -105,17 +112,20 @@ async function elegir(req, res) {
       throw conflict(`${t[0].nombre} ya no tiene lugares disponibles. Elige otro tutor.`);
     }
 
+    let canceladas = 0;
     if (actual) {
-      const { rows: vigentes } = await client.query(
-        `SELECT count(*)::int AS n FROM citas_tutorias
+      // Las citas vigentes con el tutor anterior se cancelan para liberar su agenda
+      const c = await client.query(
+        `UPDATE citas_tutorias SET estatus = 'Cancelada'
           WHERE tutorado_id = $1 AND tutor_id = $2
             AND estatus IN ('Pendiente','Confirmada') AND fecha_hora >= now()`,
         [tutoradoId, actual.tutor_id]
       );
-      if (vigentes[0].n > 0) {
-        throw conflict(`Tienes ${vigentes[0].n} cita(s) vigente(s) con tu tutor actual. Cancélalas antes de cambiar de tutor.`);
-      }
+      canceladas = c.rowCount;
       await client.query(`UPDATE asignaciones_tutoria SET estatus_asignacion = 'Reasignada' WHERE id = $1`, [actual.id]);
+      await client.query(
+        `UPDATE solicitudes_cambio_tutor SET estatus = 'Cancelada', resuelta_en = now()
+          WHERE tutorado_id = $1 AND estatus = 'Pendiente'`, [tutoradoId]);
     }
 
     await client.query(
@@ -123,13 +133,13 @@ async function elegir(req, res) {
        VALUES ($1, $2, $3, 'Elección del tutorado')`,
       [tutorId, tutoradoId, periodo]
     );
-    return { nombre: t[0].nombre, cambio: Boolean(actual) };
+    return { nombre: t[0].nombre, cambio: Boolean(actual), canceladas };
   });
 
   res.status(201).json({
     ok: true,
     mensaje: resultado.cambio
-      ? `Cambiaste de tutor. Ahora tu tutor(a) es ${resultado.nombre}.`
+      ? `Cambiaste de tutor. Ahora tu tutor(a) es ${resultado.nombre}.${resultado.canceladas ? ` Se cancelaron ${resultado.canceladas} cita(s) con tu tutor anterior.` : ''}`
       : `¡Listo! ${resultado.nombre} es ahora tu tutor(a). Ya puedes agendar una cita.`,
     tutor_id: tutorId,
   });

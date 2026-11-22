@@ -63,6 +63,9 @@ async function enviarCorreo({ para, asunto, html, texto }) {
   }
 }
 
+/** Logotipo oficial del TecNM campus Veracruz (alojado en el portal del ITVER). */
+const LOGO_ITVER = 'https://www.veracruz.tecnm.mx/images/logoheader.png';
+
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 const DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
@@ -90,7 +93,6 @@ function fechaLegible(local, duracionMin = 60) {
 function correoNuevaCita(c, urlApp) {
   const { fecha, hora } = fechaLegible(c.fecha_hora_local, c.duracion_min);
   const lugar = c.modalidad === 'Línea' ? 'En línea (envía el enlace al tutorado)' : `Presencial${c.tutor_cubiculo ? ` · ${c.tutor_cubiculo}` : ''}`;
-  const agenda = `${urlApp.replace(/\/$/, '')}/tutor.html`;
   const prueba = env.CORREO_PRUEBAS
     ? `<tr><td style="padding:10px 32px;background:#fff7e0;color:#7a5600;font-size:12px;border-bottom:1px solid #f1e2b3;">
          <strong>Modo de prueba:</strong> este correo iba dirigido a ${esc(c.tutor_correo)}.</td></tr>`
@@ -106,9 +108,11 @@ function correoNuevaCita(c, urlApp) {
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eef2f7;padding:24px 12px;">
     <tr><td align="center">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #dde3ec;">
-        <tr><td style="background:#1b396a;padding:22px 32px;">
-          <p style="margin:0;color:#c9d6ea;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;">TecNM · Instituto Tecnológico de Veracruz</p>
-          <p style="margin:4px 0 0;color:#ffffff;font-size:16px;font-weight:bold;">Programa Institucional de Tutorías</p>
+        <tr><td style="background:#ffffff;padding:20px 32px 16px;border-bottom:1px solid #e3e8f0;">
+          <img src="${LOGO_ITVER}" width="230" alt="TecNM · Instituto Tecnológico de Veracruz" style="display:block;width:230px;max-width:100%;height:auto;border:0;">
+        </td></tr>
+        <tr><td style="background:#1b396a;padding:10px 32px;">
+          <p style="margin:0;color:#ffffff;font-size:13px;font-weight:bold;letter-spacing:.3px;">Programa Institucional de Tutorías · ITVER</p>
         </td></tr>
         ${prueba}
         <tr><td style="padding:30px 32px 8px;">
@@ -134,11 +138,8 @@ function correoNuevaCita(c, urlApp) {
             </td></tr>
           </table>
         </td></tr>
-        <tr><td style="padding:22px 32px 8px;" align="left">
-          <a href="${esc(agenda)}" style="display:inline-block;background:#1b396a;color:#ffffff;text-decoration:none;font-size:14px;font-weight:bold;padding:12px 22px;border-radius:999px;">Ver en mi agenda</a>
-        </td></tr>
-        <tr><td style="padding:8px 32px 28px;">
-          <p style="margin:0;color:#6b7280;font-size:12px;line-height:1.6;">La cita queda <strong>pendiente</strong> hasta que la confirmes en la plataforma. Si no puedes atenderla, cancélala desde tu agenda para que el tutorado elija otro horario.</p>
+        <tr><td style="padding:20px 32px 28px;">
+          <p style="margin:0;color:#6b7280;font-size:12px;line-height:1.6;">La cita queda <strong>pendiente</strong> hasta que la confirmes en la plataforma. Si no puedes atenderla, cancélala ahí mismo para que el tutorado elija otro horario.</p>
         </td></tr>
         <tr><td style="background:#611232;padding:16px 32px;">
           <p style="margin:0;color:#f3dbe3;font-size:11px;line-height:1.6;">Correo automático de la Plataforma de Tutorías del ITVER. No respondas a este mensaje.<br>Calz. Miguel Ángel de Quevedo 2779, Formando Hogar, Veracruz, Ver.</p>
@@ -160,8 +161,6 @@ function correoNuevaCita(c, urlApp) {
     `Tipo: ${c.tipo}`,
     `Motivo: ${c.motivo}`,
     c.tutorado_correo ? `Contacto: ${c.tutorado_correo}` : '',
-    '',
-    `Ver en mi agenda: ${agenda}`,
     env.CORREO_PRUEBAS ? `\n(Modo de prueba: este correo iba dirigido a ${c.tutor_correo}.)` : '',
   ].filter((l) => l !== null).join('\n');
 
