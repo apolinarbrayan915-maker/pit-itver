@@ -101,6 +101,7 @@ router.get('/tutores/disponibles', requiereRol('alumno', 'coordinador'), tutores
 router.get('/tutores/catalogo-materias', requiereRol('coordinador'), recomendador.listarCatalogoMaterias);
 router.post('/tutores/catalogo-materias/confirmar-altas', requiereRol('coordinador'), recomendador.confirmarAltas);
 router.put('/tutores/catalogo-materias/:perfilId/vinculo', requiereRol('coordinador'), recomendador.vincularPerfil);
+router.post('/tutores/indexar-semantico', requiereRol('coordinador'), recomendador.indexarSemantico);
 router.post('/tutores/recomendar', requiereRol('alumno', 'tutor', 'coordinador'), rateLimit({
   windowMs: 60_000,
   limit: 8,

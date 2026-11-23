@@ -57,6 +57,9 @@
                     <button onclick="switchTab('citas')" id="btn-citas" title="Citas y Reservas" class="nav-btn" role="tab" aria-selected="false">
                         <i class="fa-solid fa-calendar-days"></i> <span>Citas y Reservas</span><span class="nav-corto">Citas</span>
                     </button>
+                    <button onclick="switchTab('tutores'); enfocarBuscadorDestacado()" id="btn-tutores" title="Encuentra a tu tutor ideal por tu duda" class="nav-btn" role="tab" aria-selected="false">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> <span>Tutor ideal</span><span class="nav-corto">Tutor ideal</span>
+                    </button>
                 </div>
                 <div class="pit-user shrink-0 flex items-center pl-3 md:pl-4 border-l border-white/20 my-2.5 relative">
                     <button type="button" id="btn-menu-alumno" onclick="alternarMenuAlumno()" aria-haspopup="menu" aria-expanded="false" aria-controls="menu-alumno" title="Mi cuenta"
@@ -97,6 +100,9 @@
                     <div class="mt-6 flex flex-wrap gap-3">
                         <button onclick="switchTab('citas')" class="bg-tecnmGold hover:bg-tecnmGoldDark text-slate-900 font-bold px-4 py-2.5 rounded-xl text-xs shadow transition flex items-center space-x-2">
                             <i class="fa-solid fa-calendar-plus"></i> <span>Agendar Tutoría</span>
+                        </button>
+                        <button onclick="switchTab('tutores'); enfocarBuscadorDestacado()" class="bg-tecnmGold hover:bg-tecnmGoldDark text-slate-900 font-bold px-4 py-2.5 rounded-xl text-xs shadow ring-2 ring-tecnmGreen/30 transition flex items-center space-x-2">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> <span>Encontrar mi tutor ideal por mi duda</span>
                         </button>
                         <button onclick="switchTab('perfil')" class="bg-white/10 hover:bg-white/20 text-white font-semibold px-4 py-2.5 rounded-xl text-xs transition border border-white/20">Ver mi avance académico</button>
                     </div>
@@ -284,7 +290,43 @@
                 <p class="text-xs text-slate-500 mb-4">Revisa la presentación, las áreas de apoyo y el horario de cada docente. Te recomendamos a quienes cubren los temas de tus intereses.</p>
                 <div id="tutores-mi-tutor" class="mb-4"></div>
                 <div id="tutores-solicitud" class="mb-4"></div>
-                <button id="recomendador-atajo" type="button" hidden class="mb-4 rounded-lg border border-tecnmGreen px-4 py-2 text-xs font-bold text-tecnmGreen">Buscar tutoría por mi duda</button>
+                <section id="buscador-destacado" class="buscador-destacado mb-6" aria-labelledby="buscador-destacado-titulo">
+                    <div class="flex items-start gap-3">
+                        <span class="buscador-destacado-icono" aria-hidden="true"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
+                        <div class="min-w-0">
+                            <h4 id="buscador-destacado-titulo" class="text-lg font-extrabold text-slate-800">Encuentra a tu tutor ideal según tu duda</h4>
+                            <p class="text-xs text-slate-600 mt-1">Escribe con tus palabras en qué necesitas apoyo. El sistema compara tu duda con las áreas y materias de cada tutor y te muestra a quienes más se parecen, con su porcentaje de afinidad.</p>
+                        </div>
+                    </div>
+                    <form id="buscador-destacado-form" class="mt-4 flex flex-col md:flex-row gap-3" data-duda="buscador-destacado-duda" data-resultado="buscador-destacado-resultado">
+                        <label for="buscador-destacado-duda" class="sr-only">Tu duda</label>
+                        <textarea id="buscador-destacado-duda" required minlength="10" maxlength="500" rows="2" class="flex-1 rounded-xl border border-slate-300 bg-white p-3 text-sm text-slate-800" placeholder="Ej. No entiendo cálculo integral y tengo examen la próxima semana"></textarea>
+                        <button type="submit" class="shrink-0 self-stretch md:self-auto rounded-xl bg-tecnmGreen hover:bg-tecnmDark px-5 py-3 text-sm font-bold text-white shadow transition disabled:opacity-50">
+                            <i class="fa-solid fa-magnifying-glass mr-1" aria-hidden="true"></i> Buscar mi tutor
+                        </button>
+                    </form>
+                    <p class="mt-2 text-[11px] text-slate-500">No escribas datos personales. Tu duda no se guarda.</p>
+                    <div id="buscador-destacado-resultado" class="mt-4 space-y-2 text-sm text-slate-700" aria-live="polite"></div>
+
+                    <details class="buscador-como mt-4">
+                        <summary class="cursor-pointer text-xs font-bold text-tecnmGreen"><i class="fa-solid fa-diagram-project mr-1" aria-hidden="true"></i> ¿Cómo funciona?</summary>
+                        <ol class="buscador-flujo mt-4" aria-label="Pasos del buscador">
+                            <li><span class="paso-num">1</span><i class="fa-regular fa-keyboard" aria-hidden="true"></i><strong>Escribes tu duda</strong><small>En lenguaje natural, como se la contarías a un profesor.</small></li>
+                            <li><span class="paso-num">2</span><i class="fa-solid fa-vector-square" aria-hidden="true"></i><strong>Se convierte en un vector</strong><small>Un modelo de lenguaje (Sentence-BERT multilingüe) traduce el significado del texto a 384 números: su <em>embedding</em>.</small></li>
+                            <li><span class="paso-num">3</span><i class="fa-solid fa-chalkboard-user" aria-hidden="true"></i><strong>Se compara con cada tutor</strong><small>Cada perfil (áreas, materias, proyectos y certificaciones) también tiene su vector. Se mide la <em>similitud coseno</em> entre ambos.</small></li>
+                            <li><span class="paso-num">4</span><i class="fa-solid fa-ranking-star" aria-hidden="true"></i><strong>Ranking con % de afinidad</strong><small>Se ponderan tema 45&nbsp;%, proyectos 35&nbsp;% y certificaciones 20&nbsp;%. Se muestran los 3 más afines; si ninguno pasa el umbral (40&nbsp;%), te orienta Coordinación.</small></li>
+                        </ol>
+                        <div class="buscador-formula mt-4">
+                            <p class="text-xs font-bold text-slate-700">Similitud coseno</p>
+                            <p class="formula" aria-label="coseno de theta igual a A punto B entre norma de A por norma de B">cos(θ) = <span class="frac"><span>A · B</span><span>‖A‖ ‖B‖</span></span></p>
+                            <p class="text-[11px] text-slate-500">A = vector de tu duda, B = vector del perfil del tutor. Un valor cercano a 1 significa que hablan de lo mismo aunque usen palabras distintas.</p>
+                        </div>
+                        <p id="buscador-modo-nota" class="buscador-nota mt-3 text-[11px]">
+                            <i class="fa-solid fa-circle-info mr-1" aria-hidden="true"></i>
+                            <strong>Respaldo:</strong> si el modelo de lenguaje no está disponible, la afinidad se calcula con coincidencia de palabras clave entre tu duda y las áreas y materias de cada tutor. Cada búsqueda indica qué método se usó.
+                        </p>
+                    </details>
+                </section>
                 <section id="tutores-recomendados" class="mb-6"></section>
                 <h4 class="text-sm font-bold text-slate-800 mb-3">Todos los tutores</h4>
                 <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4" id="lista-tutores"><p class="text-xs text-slate-400 text-center py-8 col-span-full">Cargando tutores…</p></div>
@@ -488,7 +530,7 @@
     </footer>
 
     <script>
-        const TABS_MENU = ['perfil', 'tutores', 'documentos'];
+        const TABS_MENU = ['perfil', 'documentos'];
         function switchTab(tabId) {
             if (tabId === 'documentos' && typeof cerrarDetalleFormatos === 'function') cerrarDetalleFormatos();
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
