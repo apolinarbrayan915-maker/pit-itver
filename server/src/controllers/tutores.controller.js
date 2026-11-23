@@ -76,7 +76,8 @@ async function directorio(req, res) {
 
 async function tutoresDisponibles() {
   const { rows } = await db.query(
-    `SELECT tu.id AS tutor_id, u.nombre || ' ' || u.apellidos AS nombre, u.correo_institucional AS correo
+    `SELECT tu.id AS tutor_id, u.nombre || ' ' || u.apellidos AS nombre,
+            u.correo_institucional AS correo, tu.areas_apoyo, tu.especialidad
        FROM tutores tu JOIN usuarios u ON u.id = tu.usuario_id AND u.estado = 'activo'
       WHERE tu.acepta_tutorados AND tu.max_tutorados > (
         SELECT count(*) FROM asignaciones_tutoria a

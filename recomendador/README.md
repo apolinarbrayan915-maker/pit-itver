@@ -1,8 +1,8 @@
 # Recomendador semántico del PIT
 
-El botón circular con lupa abre el buscador desde cualquier pestaña del portal del alumno. El atajo en **Mi tutor(a)** abre el mismo panel.
+El botón circular con lupa abre el buscador en las sesiones de alumno, tutor y Coordinación. El atajo en **Mi tutor(a)** abre el mismo panel.
 
-En **Mi tutor(a)** el alumno puede describir una duda y abrir los perfiles recomendados. Express exige una sesión de alumno y consulta el cupo vigente en PostgreSQL. El servicio Python compara la duda con los CV de ese conjunto usando Sentence-BERT multilingüe. El clasificador conserva la ponderación original de afinidad general (45 %), proyectos (35 %) y certificaciones (20 %), con un umbral de 0,40. Si ningún perfil alcanza el umbral, el portal sugiere consultar el directorio o contactar a Coordinación.
+En **Mi tutor(a)** el alumno puede describir una duda y abrir los perfiles recomendados. Express exige una sesión de uno de los tres roles del PIT y consulta el cupo vigente en PostgreSQL. El servicio Python compara la duda con los CV de ese conjunto usando Sentence-BERT multilingüe. El clasificador conserva la ponderación original de afinidad general (45 %), proyectos (35 %) y certificaciones (20 %), con un umbral de 0,40. Si ningún perfil alcanza el umbral, el portal sugiere consultar el directorio o contactar a Coordinación.
 
 La selección y los cambios de tutor se realizan desde los controles del PIT. La API presenta el desglose de afinidad. Los archivos fuente, los fragmentos del CV y la caché quedan del lado del servicio. Este flujo no guarda la consulta del alumno.
 
@@ -29,6 +29,6 @@ La selección y los cambios de tutor se realizan desde los controles del PIT. La
 
 3. Configura `RECOMENDADOR_URL=http://127.0.0.1:8000` y el mismo `RECOMENDADOR_TOKEN` en el `.env` de Express. Arranca el PIT con la base local de prueba y entra como alumno. En **Mi tutor(a)** escribe una pregunta que coincida con uno de los CV del catálogo. Prueba también una duda fuera del catálogo.
 
-Para Vercel, despliega el servicio Python por separado con HTTPS y un volumen privado para el catálogo. Configura URL y token solo en el entorno del servidor. El primer arranque descarga los pesos del modelo si la caché de Hugging Face está vacía. El PIT puede arrancar con su configuración habitual, con la búsqueda semántica oculta hasta que se activen ambas variables.
+Para Vercel, despliega el servicio Python por separado con HTTPS y un volumen privado para el catálogo. Configura URL y token solo en el entorno del servidor. El primer arranque descarga los pesos del modelo si la caché de Hugging Face está vacía. Si falta la configuración, el servicio está caído o no tiene CV para los docentes elegibles, la lupa busca coincidencias textuales en las áreas y especialidades registradas en el PIT. El resultado indica el origen de la búsqueda.
 
 El `Dockerfile` del servicio usa PyTorch para CPU. Usa `recomendador/` como contexto de construcción, monta el catálogo autorizado con escritura en `/datos` e inyecta `RECOMENDADOR_TOKEN` desde el gestor de secretos del alojamiento. Configura Vercel con la URL HTTPS del servicio y el mismo token. El Dockerfile copia solo el código y sus dependencias.
