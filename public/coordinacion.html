@@ -157,6 +157,24 @@
                 <ul id="lista-solicitudes" class="m3-lista"></ul>
             </section>
 
+            <details class="m3-card" id="tt-catalogo-materias">
+                <summary class="m3-card-titulo cursor-pointer">
+                    <span><strong>Catálogo de materias de Sistemas</strong><br>
+                    <span class="text-xs">Perfiles de referencia y materias reportadas por estudiantes</span></span>
+                    <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+                </summary>
+                <div class="p-4 space-y-3">
+                    <label class="m3-buscar">
+                        <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                        <span class="sr-only">Buscar por profesor, materia o tema</span>
+                        <input type="search" id="tt-materias-buscar" placeholder="Buscar por profesor, materia o tema">
+                    </label>
+                    <p id="tt-materias-estado" class="text-xs" role="status"></p>
+                    <button id="tt-materias-reintento" type="button" hidden class="m3-btn texto chico">Volver a cargar</button>
+                    <ul id="tt-materias-lista" class="m3-lista"></ul>
+                </div>
+            </details>
+
             <section class="m3-card panel-tutor">
                 <div id="tt-resumen" class="pt-resumen"></div>
                 <div class="tt-barra">

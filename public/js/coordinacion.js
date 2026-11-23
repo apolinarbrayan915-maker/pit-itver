@@ -21,6 +21,66 @@ function nuevoAvisoDesdeInicio() {
  * ============================================================================= */
 const TT = { filtro: 'todos' };
 
+function conectarCatalogoMaterias() {
+  const panel = $('tt-catalogo-materias');
+  if (!panel) return;
+  const estado = $('tt-materias-estado');
+  const buscar = $('tt-materias-buscar');
+  const lista = $('tt-materias-lista');
+  const reintento = $('tt-materias-reintento');
+  let catalogo = null;
+  let cargando = false;
+
+  function pintar() {
+    if (!catalogo) return;
+    const consulta = normalizarTexto(buscar.value.trim()).split(/\s+/).filter(Boolean);
+    const coincidencias = catalogo.perfiles.filter(p => {
+      const texto = normalizarTexto([p.nombre, ...p.materias, ...p.temas].join(' '));
+      return consulta.every(palabra => texto.includes(palabra));
+    });
+    estado.textContent = `${coincidencias.length} de ${catalogo.perfiles.length} perfiles de referencia`;
+    lista.innerHTML = coincidencias.map(p => {
+      const ficha = p.fichas.find(url => /^https:\/\/misprofesores\.com\/profesores\/_\d+$/.test(url));
+      return `<li class="px-2 py-2">
+        <details>
+          <summary class="cursor-pointer text-sm font-semibold">
+            ${escapeHtml(p.nombre)}
+            <span class="m3-etiqueta ${p.vinculado ? 'tono-verde' : 'tono-azul'}">
+              ${p.vinculado ? 'Vinculado al PIT' : 'Referencia'}
+            </span>
+          </summary>
+          <div class="pt-2 text-xs space-y-2">
+            <p><strong>Materias reportadas</strong> · ${escapeHtml(p.materias.join(' · '))}</p>
+            ${p.temas.length ? `<p><strong>Temas inferidos</strong> · ${escapeHtml(p.temas.join(' · '))}</p>` : ''}
+            ${ficha ? `<a class="underline" href="${escapeHtml(ficha)}" target="_blank" rel="noopener noreferrer">Ficha en MisProfesores</a>` : ''}
+          </div>
+        </details>
+      </li>`;
+    }).join('');
+  }
+
+  async function cargar() {
+    if (catalogo || cargando) return;
+    cargando = true;
+    reintento.hidden = true;
+    estado.textContent = 'Cargando el catálogo de materias…';
+    try {
+      catalogo = await api('/tutores/catalogo-materias');
+      pintar();
+    } catch {
+      catalogo = null;
+      estado.textContent = 'No se pudo cargar el catálogo.';
+      reintento.hidden = false;
+    } finally {
+      cargando = false;
+    }
+  }
+
+  panel.addEventListener('toggle', () => { if (panel.open) cargar(); });
+  reintento.addEventListener('click', cargar);
+  buscar.addEventListener('input', pintar);
+}
+
 async function cargarAsignaciones() {
   const lista = $('tutores-lista');
   if (!lista) return;
@@ -785,6 +845,7 @@ function avisoCoordHtml(a) {
 /* ---- Arranque de lo propio de este módulo ------------------------------------ */
 document.addEventListener('DOMContentLoaded', () => {
   if (PAGINA !== 'coordinacion' || !Sesion.usuario) return;
+  conectarCatalogoMaterias();
   limpiarFormAviso();
   cargarReportesCoord();
   ['tbody-riesgo', 'tbody-asig-integrantes', 'tbody-canalizaciones', 'tbody-fichas'].forEach((id) => paginar($(id), 10));
