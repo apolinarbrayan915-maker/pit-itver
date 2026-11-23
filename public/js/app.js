@@ -3373,6 +3373,7 @@ function tutorPersonaHtml(t) {
         <div><h4 class="text-sm font-extrabold text-slate-800 mb-2">¿En qué puedo apoyarte?</h4>${lista(t.enfoque || [])}</div>
         <div><h4 class="text-sm font-extrabold text-slate-800 mb-2">Áreas de apoyo</h4>
           <div class="flex flex-wrap gap-1">${(t.areas_apoyo || []).map((a) => chip(a, 'bg-sky-100 text-sky-800')).join('') || '<p class="text-slate-400 italic">Sin registrar</p>'}</div>
+          ${t.materias_reportadas?.length ? `<p class="mt-3 text-xs text-slate-600"><strong>Materias reportadas por estudiantes</strong> · ${escapeHtml(t.materias_reportadas.join(' · '))}</p>` : ''}
           <p class="text-[10px] text-slate-500 mt-3">${t.tutorados} de ${t.max_tutorados} lugares ocupados · <strong class="${t.lugares_disponibles ? 'text-emerald-700' : 'text-rose-600'}">${t.lugares_disponibles} disponibles</strong>${t.acepta_tutorados ? '' : ' · <span class="text-rose-600 font-bold">no recibe tutorados</span>'}</p>
         </div>
       </div>

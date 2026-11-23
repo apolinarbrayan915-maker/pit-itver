@@ -4,7 +4,7 @@ El botón circular con lupa abre el buscador en las sesiones de alumno, tutor y 
 
 En **Coordinación → Tutores**, la lista reúne a los tutores inscritos y a los perfiles del catálogo por vincular. El buscador encuentra nombres, materias, temas y cubículos. Los perfiles vinculados aparecen en una sola fila con sus materias y controles de tutoría.
 
-Los perfiles académicos de MisProfesores también aparecen en la lupa cuando sus materias o temas coinciden con la búsqueda. Coordinación ve un código de cubículo simulado del edificio E, marcado como tal. Los perfiles académicos carecen de cuenta y alta de tutor. Su incorporación al flujo de citas y cupos requiere identidad institucional y habilitación en el PIT.
+Los perfiles académicos de MisProfesores aparecen en la lupa cuando sus materias o temas coinciden con la búsqueda. En **Coordinación → Tutores → Perfiles académicos**, **Dar de alta como tutor** permite vincular una cuenta docente activa cuyo nombre coincida con la ficha. El formulario pide el cupo al crear el alta y permite registrar el cubículo. El perfil aparece como inscrito tras guardar el vínculo.
 
 La ruta `GET /api/tutores/catalogo-materias` permite a Coordinación consultar 69 perfiles de referencia con materias reportadas por estudiantes y sus fuentes. Las dos entradas vinculadas por correo a tutores existentes aportan coincidencias al directorio si hay cupo. El servicio Python incorpora sus materias a la afinidad general de perfiles con CV indexado. Proyectos y certificaciones siguen usando los fragmentos del CV. Las entradas sin vínculo sirven para revisión y el catálogo no crea cuentas ni asignaciones.
 

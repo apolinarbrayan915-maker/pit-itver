@@ -8,6 +8,7 @@ const db = require('../db');
 const config = require('../config');
 const { badRequest, notFound, conflict } = require('../utils/errores');
 const v = require('../utils/validaciones');
+const catalogoMaterias = require('../catalogoMaterias');
 const { diaDeClases, ventanaCambioTutor } = require('../utils/calendarioEscolar');
 
 const hoyYmd = () => new Intl.DateTimeFormat('en-CA', { timeZone: config.tz }).format(new Date());
@@ -26,7 +27,7 @@ const SELECT_TUTORES = `
   SELECT tu.id AS tutor_id,
          u.nombre || ' ' || u.apellidos AS nombre,
          u.correo_institucional AS correo,
-         tu.departamento, tu.cubiculo, tu.formacion_tutorial,
+         tu.departamento, tu.cubiculo, tu.formacion_tutorial, tu.catalogo_materias_id,
          tu.presentacion, tu.areas_apoyo, tu.max_tutorados, tu.acepta_tutorados,
          tu.foto, tu.grado_academico, tu.especialidad, tu.anios_experiencia, tu.frase, tu.enfoque,
          (SELECT count(*) FROM asignaciones_tutoria a
@@ -42,9 +43,12 @@ const SELECT_TUTORES = `
 
 function completar(t, miTutorId) {
   const lugares = Math.max(0, t.max_tutorados - t.tutorados);
+  const perfil = catalogoMaterias.perfiles.find(p => p.id === t.catalogo_materias_id ||
+    (p.correo_pit && p.correo_pit === t.correo.toLowerCase()));
   return {
     ...t,
     lugares_disponibles: lugares,
+    materias_reportadas: perfil?.materias ?? [],
     disponible: t.acepta_tutorados && lugares > 0,
     es_mi_tutor: miTutorId === t.tutor_id,
     horarios: t.horarios.map((h) => ({ ...h, dia: DIAS[h.dia_semana] })),
@@ -77,7 +81,7 @@ async function directorio(req, res) {
 async function tutoresDisponibles() {
   const { rows } = await db.query(
     `SELECT tu.id AS tutor_id, u.nombre || ' ' || u.apellidos AS nombre,
-            u.correo_institucional AS correo, tu.areas_apoyo, tu.especialidad
+            u.correo_institucional AS correo, tu.areas_apoyo, tu.especialidad, tu.catalogo_materias_id
        FROM tutores tu JOIN usuarios u ON u.id = tu.usuario_id AND u.estado = 'activo'
       WHERE tu.acepta_tutorados AND tu.max_tutorados > (
         SELECT count(*) FROM asignaciones_tutoria a

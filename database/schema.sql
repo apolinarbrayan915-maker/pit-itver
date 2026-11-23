@@ -448,3 +448,4 @@ COMMIT;
 -- 16. SESIONES DEL SERVIDOR Y BLOQUEO POR INTENTOS FALLIDOS
 -- =============================================================================
 \ir migracion_012_sesiones_seguridad.sql
+\ir migracion_013_catalogo_materias.sql

@@ -1,12 +1,15 @@
 'use strict';
 
-const { badRequest } = require('../utils/errores');
+const { badRequest, conflict, notFound } = require('../utils/errores');
+const v = require('../utils/validaciones');
+const db = require('../db');
 const { tutoresDisponibles } = require('./tutores.controller');
 const { recomendador } = require('../config');
 const catalogo = require('../catalogoMaterias');
 
 const { url, token, habilitado } = recomendador;
 const materiasPorCorreo = new Map(catalogo.perfiles.filter(p => p.correo_pit).map(p => [p.correo_pit, p]));
+const materiasPorId = new Map(catalogo.perfiles.map(p => [p.id, p]));
 const palabrasGenerales = new Set('como cual duda ayuda ayudar necesito quiero para sobre tengo puedo buscar porque donde alguien usar hacer del los las una uno por con mis nos que'.split(' '));
 
 function palabras(texto) {
@@ -20,7 +23,7 @@ function buscarEnDirectorio(duda, tutores) {
   for (const tutor of tutores) {
     const areas = [...new Set([...(tutor.areas_apoyo || []), tutor.especialidad].filter(Boolean))];
     const coincidencias = areas.filter(area => palabras(area).some(p => consulta.has(p)));
-    const referencia = materiasPorCorreo.get(tutor.correo.toLowerCase());
+    const referencia = materiasPorId.get(tutor.catalogo_materias_id) ?? materiasPorCorreo.get(tutor.correo.toLowerCase());
     const materias = (referencia?.materias ?? []).filter(materia => palabras(materia).some(p => consulta.has(p)));
     if (coincidencias.length || materias.length) candidatos.push({
       tutor_id: tutor.tutor_id, nombre: tutor.nombre, areas: coincidencias,
@@ -32,9 +35,9 @@ function buscarEnDirectorio(duda, tutores) {
   return { ok: true, modo: candidatos.length ? 'directorio' : 'sin_coincidencias', candidatos: candidatos.slice(0, 3) };
 }
 
-function buscarPerfilesAcademicos(duda) {
+function buscarPerfilesAcademicos(duda, perfilesVinculados) {
   const consulta = new Set(palabras(duda));
-  return catalogo.perfiles.filter(p => !p.correo_pit).map(({ correo_pit, ...perfil }) => {
+  return catalogo.perfiles.filter(p => !p.correo_pit && !perfilesVinculados.has(p.id)).map(({ correo_pit, ...perfil }) => {
     const materias = perfil.materias.filter(m => palabras(m).some(p => consulta.has(p)));
     const temas = perfil.temas.filter(t => palabras(t).some(p => consulta.has(p)));
     return { ...perfil, coincidencias: materias.length ? materias : temas };
@@ -49,8 +52,11 @@ async function recomendar(req, res) {
   if (duda.length < 10 || duda.length > 500) {
     throw badRequest('Escribe una duda de entre 10 y 500 caracteres.');
   }
-  const perfiles_academicos = buscarPerfilesAcademicos(duda);
-  const disponibles = await tutoresDisponibles();
+  const [disponibles, vinculados] = await Promise.all([
+    tutoresDisponibles(),
+    db.query('SELECT catalogo_materias_id FROM tutores WHERE catalogo_materias_id IS NOT NULL'),
+  ]);
+  const perfiles_academicos = buscarPerfilesAcademicos(duda, new Set(vinculados.rows.map(t => t.catalogo_materias_id)));
   const porCorreo = new Map(disponibles.map(t => [t.correo.toLowerCase(), t]));
   if (!porCorreo.size) return res.json({ ok: true, modo: 'sin_cupo', candidatos: [], perfiles_academicos });
   const directorio = () => res.json({ ...buscarEnDirectorio(duda, disponibles), perfiles_academicos });
@@ -93,13 +99,52 @@ async function recomendar(req, res) {
     candidatos: modo === 'ranking' ? recomendados : [], perfiles_academicos });
 }
 
-function listarCatalogoMaterias(req, res) {
+async function listarCatalogoMaterias(req, res) {
   res.set('Cache-Control', 'no-store');
+  const { rows } = await db.query('SELECT catalogo_materias_id FROM tutores WHERE catalogo_materias_id IS NOT NULL');
+  const vinculados = new Set(rows.map(t => t.catalogo_materias_id));
   res.json({ ok: true, fuente: catalogo.fuente, fecha: catalogo.fecha,
     perfiles: catalogo.perfiles.map(({ correo_pit, ...perfil }) => ({
-      ...perfil, vinculado: Boolean(correo_pit),
+      ...perfil, vinculado: Boolean(correo_pit) || vinculados.has(perfil.id),
     })),
   });
 }
 
-module.exports = { recomendar, listarCatalogoMaterias };
+function identidad(nombre) {
+  return (nombre.toLowerCase().normalize('NFD').replace(/\p{M}/gu, '').match(/[a-z]+/g) || [])
+    .sort().join(' ');
+}
+
+async function vincularPerfil(req, res) {
+  const perfil = materiasPorId.get(req.params.perfilId);
+  if (!perfil) throw notFound('No se encontró el perfil académico.');
+  const correo = v.texto(req.body?.correo, 'correo', { max: 180 }).toLowerCase();
+  if (!v.esCorreoInstitucional(correo)) throw badRequest('Usa el correo institucional del docente.');
+  if (perfil.correo_pit && perfil.correo_pit !== correo) throw conflict('El perfil ya tiene una cuenta institucional vinculada.');
+  const cupo = v.idPositivo(req.body?.cupo, 'cupo');
+  if (cupo > 60) throw badRequest('El cupo máximo es de 60 tutorados.');
+  const cubiculo = req.body?.cubiculo ? v.texto(req.body.cubiculo, 'cubículo', { max: 40 }) : null;
+
+  const tutorId = await db.withTransaction(async client => {
+    const { rows: usuarios } = await client.query(
+      `SELECT id, nombre || ' ' || apellidos AS nombre FROM usuarios
+        WHERE lower(correo_institucional) = $1 AND rol = 'tutor' AND estado = 'activo'
+        FOR UPDATE`, [correo]);
+    const usuario = usuarios[0];
+    if (!usuario) throw notFound('Ese correo debe corresponder a una cuenta activa con rol tutor.');
+    if (identidad(usuario.nombre) !== identidad(perfil.nombre)) {
+      throw conflict('El nombre del perfil académico no coincide con la cuenta institucional.');
+    }
+    const { rows } = await client.query(
+      `INSERT INTO tutores (usuario_id, catalogo_materias_id, cubiculo, max_tutorados, acepta_tutorados)
+       VALUES ($1, $2, $3, $4, true)
+       ON CONFLICT (usuario_id) DO UPDATE SET catalogo_materias_id = EXCLUDED.catalogo_materias_id
+       WHERE tutores.catalogo_materias_id IS NULL OR tutores.catalogo_materias_id = EXCLUDED.catalogo_materias_id
+       RETURNING id`, [usuario.id, perfil.id, cubiculo, cupo]);
+    if (!rows[0]) throw conflict('La cuenta ya tiene otro perfil académico.');
+    return rows[0].id;
+  });
+  res.json({ ok: true, tutor_id: tutorId });
+}
+
+module.exports = { recomendar, listarCatalogoMaterias, vincularPerfil };
