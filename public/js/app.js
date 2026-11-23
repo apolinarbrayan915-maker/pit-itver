@@ -3662,7 +3662,7 @@ async function recomendarTutores(event) {
   boton.disabled = true;
   resultado.textContent = 'Buscando afinidad con tu duda…';
   try {
-    const { modo, candidatos } = await api('/tutores/recomendar', {
+    const { modo, candidatos, perfiles_academicos = [] } = await api('/tutores/recomendar', {
       method: 'POST', body: { duda: $('recomendador-duda').value },
     });
     const avisos = {
@@ -3673,6 +3673,7 @@ async function recomendarTutores(event) {
     };
     if (modo !== 'ranking' && modo !== 'directorio') {
       resultado.textContent = avisos[modo] || avisos.sin_catalogo;
+      mostrarPerfilesAcademicos(resultado, perfiles_academicos);
       return;
     }
     const porcentaje = n => `${Math.round(n * 100)} %`;
@@ -3713,11 +3714,52 @@ async function recomendarTutores(event) {
       if (PAGINA !== 'tutor') tarjeta.append(perfil);
       return tarjeta;
     }));
+    mostrarPerfilesAcademicos(resultado, perfiles_academicos);
   } catch (err) {
     resultado.textContent = err.message;
   } finally {
     boton.disabled = false;
   }
+}
+
+function mostrarPerfilesAcademicos(resultado, perfiles) {
+  if (!perfiles.length) return;
+  const seccion = document.createElement('section');
+  seccion.className = 'mt-3 space-y-2 border-t border-slate-200 pt-3';
+  const titulo = document.createElement('h3');
+  titulo.className = 'text-xs font-bold';
+  titulo.textContent = 'Perfiles académicos relacionados · Sin alta como tutor';
+  seccion.append(titulo);
+  for (const p of perfiles) {
+    const ficha = document.createElement('details');
+    ficha.className = 'rounded-lg border border-slate-200 p-2 text-xs';
+    const nombre = document.createElement('summary');
+    nombre.className = 'cursor-pointer font-semibold';
+    nombre.textContent = p.nombre;
+    ficha.append(nombre);
+    const materias = document.createElement('p');
+    materias.className = 'mt-1';
+    materias.textContent = 'Materias reportadas · ' + p.materias.join(' · ');
+    ficha.append(materias);
+    if (p.temas.length) {
+      const temas = document.createElement('p');
+      temas.className = 'mt-1';
+      temas.textContent = 'Temas inferidos · ' + p.temas.join(' · ');
+      ficha.append(temas);
+    }
+    const url = p.fichas.find(f => /^https:\/\/misprofesores\.com\/profesores\/_\d+$/.test(f));
+    if (url) {
+      const enlace = document.createElement('a');
+      enlace.href = url;
+      enlace.target = '_blank';
+      enlace.rel = 'noopener noreferrer';
+      enlace.className = 'mt-1 block underline';
+      enlace.textContent = 'Ficha en MisProfesores';
+      ficha.append(enlace);
+    }
+    seccion.append(ficha);
+  }
+  resultado.append(seccion);
 }
 
 async function cambiarTutor(tutorId, nombre) {

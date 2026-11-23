@@ -3,7 +3,7 @@
 const { badRequest } = require('../utils/errores');
 const { tutoresDisponibles } = require('./tutores.controller');
 const { recomendador } = require('../config');
-const catalogo = require('../../../recomendador/catalogo_materias.json');
+const catalogo = require('../catalogoMaterias');
 
 const { url, token, habilitado } = recomendador;
 const materiasPorCorreo = new Map(catalogo.perfiles.filter(p => p.correo_pit).map(p => [p.correo_pit, p]));
@@ -32,16 +32,28 @@ function buscarEnDirectorio(duda, tutores) {
   return { ok: true, modo: candidatos.length ? 'directorio' : 'sin_coincidencias', candidatos: candidatos.slice(0, 3) };
 }
 
+function buscarPerfilesAcademicos(duda) {
+  const consulta = new Set(palabras(duda));
+  return catalogo.perfiles.filter(p => !p.correo_pit).map(({ correo_pit, ...perfil }) => {
+    const materias = perfil.materias.filter(m => palabras(m).some(p => consulta.has(p)));
+    const temas = perfil.temas.filter(t => palabras(t).some(p => consulta.has(p)));
+    return { ...perfil, coincidencias: materias.length ? materias : temas };
+  }).filter(p => p.coincidencias.length)
+    .sort((a, b) => b.coincidencias.length - a.coincidencias.length || a.nombre.localeCompare(b.nombre, 'es'))
+    .slice(0, 5);
+}
+
 async function recomendar(req, res) {
   res.set('Cache-Control', 'no-store');
   const duda = typeof req.body?.duda === 'string' ? req.body.duda.trim() : '';
   if (duda.length < 10 || duda.length > 500) {
     throw badRequest('Escribe una duda de entre 10 y 500 caracteres.');
   }
+  const perfiles_academicos = buscarPerfilesAcademicos(duda);
   const disponibles = await tutoresDisponibles();
   const porCorreo = new Map(disponibles.map(t => [t.correo.toLowerCase(), t]));
-  if (!porCorreo.size) return res.json({ ok: true, modo: 'sin_cupo', candidatos: [] });
-  const directorio = () => res.json(buscarEnDirectorio(duda, disponibles));
+  if (!porCorreo.size) return res.json({ ok: true, modo: 'sin_cupo', candidatos: [], perfiles_academicos });
+  const directorio = () => res.json({ ...buscarEnDirectorio(duda, disponibles), perfiles_academicos });
   if (!habilitado) return directorio();
 
   let resultado;
@@ -78,7 +90,7 @@ async function recomendar(req, res) {
   }
   if (modo === 'ranking' && !recomendados.length) return directorio();
   res.json({ ok: true, modo,
-    candidatos: modo === 'ranking' ? recomendados : [] });
+    candidatos: modo === 'ranking' ? recomendados : [], perfiles_academicos });
 }
 
 function listarCatalogoMaterias(req, res) {

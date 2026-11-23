@@ -54,7 +54,7 @@ const ocupacionDe = (t) => (t.max_tutorados ? t.total_tutorados / t.max_tutorado
 const FILTROS_TUTOR = [
   ['todos', 'Todos', () => true],
   ['inscritos', 'Inscritos', () => true],
-  ['referencia', 'Por vincular', () => false],
+  ['referencia', 'Perfiles académicos', () => false],
   ['lugar', 'Con lugar', (t) => t.acepta_tutorados && t.total_tutorados < t.max_tutorados],
   ['llenos', 'Cupo lleno', (t) => t.total_tutorados >= t.max_tutorados],
   ['vacios', 'Sin tutorados', (t) => t.total_tutorados === 0],
@@ -78,7 +78,7 @@ function pintarTutores() {
   const libres = reciben.reduce((s, t) => s + Math.max(0, t.max_tutorados - t.total_tutorados), 0);
   const diplomado = tutores.filter((t) => /Diplomado/i.test(t.formacion_tutorial || '')).length;
   $('tt-resumen').innerHTML = [
-    celdaResumen('Perfiles en el directorio', total, 'fa-chalkboard-user', 'tono-azul', `${tutores.length} inscritos · ${referencias.length} por vincular`),
+    celdaResumen('Perfiles en el directorio', total, 'fa-chalkboard-user', 'tono-azul', `${tutores.length} inscritos · ${referencias.length} académicos`),
     celdaResumen('Tutorados asignados', asignados, 'fa-user-graduate', 'tono-verde', `${pct(asignados, cupo)}% del cupo total (${cupo})`),
     celdaResumen('Lugares disponibles', libres, 'fa-chair', libres ? 'tono-violeta' : 'tono-rojo', 'entre quienes reciben'),
     celdaResumen('Sin tutor', sinTutor, 'fa-user-clock', sinTutor ? 'tono-ambar' : 'tono-gris', sinTutor ? 'aún no eligen' : 'todos tienen tutor'),
@@ -109,7 +109,7 @@ function pintarTutores() {
 
   const filas = lista.map(t => filaTutorCoord(t, materiasPorTutor.get(t.tutor_id)));
   if (TT.filtro === 'todos' || TT.filtro === 'referencia') {
-    filas.push(...referencias.filter(p => coincide([p.nombre, ...p.materias, ...p.temas])).map(filaReferenciaCoord));
+    filas.push(...referencias.filter(p => coincide([p.nombre, p.cubiculo_demo, ...p.materias, ...p.temas])).map(filaReferenciaCoord));
   }
   $('tutores-lista').innerHTML = filas.length ? filas.join('')
     : '<li class="m3-vacio"><span class="m3-icono tono-gris"><i class="fa-solid fa-magnifying-glass"></i></span>Ningún perfil coincide con la búsqueda.</li>';
@@ -238,7 +238,8 @@ function filaReferenciaCoord(p) {
       <span class="m3-avatar tono-gris">${escapeHtml(iniciales(p.nombre))}</span>
       <div class="min-w-0">
         <b>${escapeHtml(p.nombre)}</b>
-        <span class="tt-meta">Por vincular al PIT</span>
+        <span class="tt-meta">Perfil académico · Sin alta como tutor</span>
+        ${p.cubiculo_demo ? `<span class="tt-meta">Cubículo simulado ${escapeHtml(p.cubiculo_demo)}</span>` : ''}
         ${detalleMateriasCoord(p)}
       </div>
     </div>

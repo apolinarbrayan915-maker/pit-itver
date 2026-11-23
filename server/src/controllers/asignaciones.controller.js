@@ -10,7 +10,7 @@ const db = require('../db');
 const config = require('../config');
 const { notFound } = require('../utils/errores');
 const v = require('../utils/validaciones');
-const catalogoMaterias = require('../../../recomendador/catalogo_materias.json');
+const catalogoMaterias = require('../catalogoMaterias');
 
 const periodoDe = (req) =>
   /^\d{4}-[12]$/.test(req.query.periodo || '') ? req.query.periodo : config.periodoActual;

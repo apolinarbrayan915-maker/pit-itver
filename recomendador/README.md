@@ -4,6 +4,8 @@ El botón circular con lupa abre el buscador en las sesiones de alumno, tutor y 
 
 En **Coordinación → Tutores**, la lista reúne a los tutores inscritos y a los perfiles del catálogo por vincular. El buscador encuentra nombres, materias, temas y cubículos. Los perfiles vinculados aparecen en una sola fila con sus materias y controles de tutoría.
 
+Los perfiles académicos de MisProfesores también aparecen en la lupa cuando sus materias o temas coinciden con la búsqueda. Coordinación ve un código de cubículo simulado del edificio E, marcado como tal. Los perfiles académicos carecen de cuenta y alta de tutor. Su incorporación al flujo de citas y cupos requiere identidad institucional y habilitación en el PIT.
+
 La ruta `GET /api/tutores/catalogo-materias` permite a Coordinación consultar 69 perfiles de referencia con materias reportadas por estudiantes y sus fuentes. Las dos entradas vinculadas por correo a tutores existentes aportan coincidencias al directorio si hay cupo. El servicio Python incorpora sus materias a la afinidad general de perfiles con CV indexado. Proyectos y certificaciones siguen usando los fragmentos del CV. Las entradas sin vínculo sirven para revisión y el catálogo no crea cuentas ni asignaciones.
 
 En **Mi tutor(a)** el alumno puede describir una duda y abrir los perfiles recomendados. Express exige una sesión de uno de los tres roles del PIT y consulta el cupo vigente en PostgreSQL. El servicio Python compara la duda con los CV de ese conjunto usando Sentence-BERT multilingüe. El clasificador conserva la ponderación original de afinidad general (45 %), proyectos (35 %) y certificaciones (20 %), con un umbral de 0,40. Si ningún perfil alcanza el umbral, el portal sugiere consultar el directorio o contactar a Coordinación.
