@@ -22,10 +22,12 @@ const fichas = require('./controllers/fichas.controller');
 
 const router = Router();
 
-// Freno a ataques de fuerza bruta en el login: 10 intentos / 15 min por IP
+// Freno a ataques de fuerza bruta en el login: 10 intentos fallidos / 15 min por IP
+// (además, cada cuenta se bloquea 15 min tras 5 contraseñas incorrectas seguidas)
 const limiteLogin = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 10,
+  skipSuccessfulRequests: true,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
   message: { ok: false, error: 'Demasiados intentos. Espera 15 minutos e inténtalo de nuevo.' },
@@ -48,6 +50,8 @@ router.get('/catalogos/municipios', (req, res) => {
 router.use(verificarToken);
 
 router.get('/auth/me', auth.perfil);
+router.get('/auth/sesion', auth.sesion);
+router.post('/auth/logout', auth.logout);
 
 // Calendario Académico del TecNM (días con clases para agendar tutorías)
 router.get('/calendario-escolar', (req, res) => {

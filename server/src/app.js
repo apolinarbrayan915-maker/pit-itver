@@ -27,11 +27,17 @@ app.use(
         'connect-src': ["'self'"],
         'img-src': ["'self'", 'data:', 'blob:'],
         'frame-src': ["'self'", 'blob:'], // vista previa del PDF del Anexo 6
+        'object-src': ["'none'"],
         'upgrade-insecure-requests': config.isProduction ? [] : null,
       },
     },
   })
 );
+
+app.use((req, res, next) => {
+  res.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=()');
+  next();
+});
 
 // CORS solo si el frontend se sirve desde otro origen (p.ej. Live Server)
 if (config.corsOrigins.length) {
@@ -40,12 +46,25 @@ if (config.corsOrigins.length) {
 
 app.use(express.json({ limit: '600kb' })); // incluye la foto del perfil del tutorado
 
+// Las respuestas de la API traen datos personales: nunca se guardan en caché
+// (ni en el navegador ni en proxies), así no reaparecen al volver con "Atrás".
+app.use('/api', (req, res, next) => {
+  if (!res.get('Cache-Control')) res.set('Cache-Control', 'no-store');
+  next();
+});
+
 // API REST
 app.use('/api', routes);
 app.use('/api', (req, res) => res.status(404).json({ ok: false, error: 'Ruta no encontrada' }));
 
 // Frontend estático (carpeta /public del proyecto)
-app.use(express.static(path.join(__dirname, '..', '..', 'public'), { extensions: ['html'] }));
+app.use(express.static(path.join(__dirname, '..', '..', 'public'), {
+  extensions: ['html'],
+  setHeaders(res, ruta) {
+    // Las páginas no se guardan: tras cerrar sesión, "Atrás" no muestra la página anterior.
+    if (ruta.endsWith('.html')) res.set('Cache-Control', 'no-store');
+  },
+}));
 
 app.use(manejadorErrores);
 

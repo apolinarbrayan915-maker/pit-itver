@@ -9,6 +9,8 @@ const config = {
   isProduction: env.NODE_ENV === 'production',
   jwtSecret: env.JWT_SECRET,
   jwtExpiresIn: env.JWT_EXPIRES_IN || '8h',
+  // Minutos sin usar la plataforma tras los que el servidor cierra la sesión
+  minutosInactividad: Number(env.MINUTOS_INACTIVIDAD) || 30,
   dominio: (env.DOMINIO_INSTITUCIONAL || 'veracruz.tecnm.mx').toLowerCase(),
   periodoActual: env.PERIODO_ACTUAL || '2026-2',
   tz: env.TZ_INSTITUCIONAL || 'America/Mexico_City',

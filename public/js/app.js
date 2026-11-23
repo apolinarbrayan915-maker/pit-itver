@@ -22,33 +22,94 @@ const PAGINA = document.body.dataset.page;
 const RUTA_POR_ROL = { alumno: 'alumno.html', tutor: 'tutor.html', coordinador: 'coordinacion.html' };
 
 /* -----------------------------------------------------------------------------
- * Sesión (JWT en localStorage)
+ * Sesión (JWT en sessionStorage)
+ * sessionStorage se borra al cerrar la pestaña o el navegador, así la sesión
+ * no queda abierta en una computadora compartida. El servidor además la cierra
+ * al pulsar "Cerrar sesión" y tras un tiempo sin uso.
  * --------------------------------------------------------------------------- */
+const almacenSesion = (() => {
+  try { return window.sessionStorage; } catch { return null; }
+})();
+// Versiones anteriores guardaban la sesión en localStorage (persistía al cerrar el navegador).
+try { localStorage.removeItem('pit_token'); localStorage.removeItem('pit_usuario'); } catch { /* sin almacenamiento */ }
+
 const Sesion = {
   get token() {
-    return localStorage.getItem('pit_token');
+    return almacenSesion?.getItem('pit_token') || null;
   },
   get usuario() {
     try {
-      return JSON.parse(localStorage.getItem('pit_usuario') || 'null');
+      return JSON.parse(almacenSesion?.getItem('pit_usuario') || 'null');
     } catch {
       return null;
     }
   },
-  guardar(token, usuario) {
-    localStorage.setItem('pit_token', token);
-    localStorage.setItem('pit_usuario', JSON.stringify(usuario));
+  guardar(token, usuario, minutosInactividad) {
+    almacenSesion?.setItem('pit_token', token);
+    almacenSesion?.setItem('pit_usuario', JSON.stringify(usuario));
+    if (minutosInactividad) almacenSesion?.setItem('pit_inactividad', String(minutosInactividad));
   },
   cerrar() {
-    localStorage.removeItem('pit_token');
-    localStorage.removeItem('pit_usuario');
+    ['pit_token', 'pit_usuario', 'pit_inactividad'].forEach((k) => almacenSesion?.removeItem(k));
   },
 };
 
-function cerrarSesion() {
+// Avisa a otras pestañas con la misma sesión para que también se cierren al instante.
+const canalSesion = (() => { try { return new BroadcastChannel('pit_sesion'); } catch { return null; } })();
+canalSesion?.addEventListener('message', (e) => {
+  if (e.data?.tipo === 'salir' && e.data.token && e.data.token === Sesion.token) {
+    Sesion.cerrar();
+    if (PAGINA !== 'login') location.replace('index.html?salir=1');
+  }
+});
+
+function cerrarSesion(motivo) {
+  const token = Sesion.token;
   Sesion.cerrar();
-  location.href = 'index.html';
+  if (token) {
+    canalSesion?.postMessage({ tipo: 'salir', token });
+    // Invalida el token en el servidor aunque la página ya se esté cerrando.
+    fetch(new URL(`${API_BASE}/auth/logout`, location.href), {
+      method: 'POST', keepalive: true, headers: { Authorization: `Bearer ${token}` },
+    }).catch(() => {});
+  }
+  // replace(): la página protegida no queda en el historial para volver con "Atrás".
+  location.replace(motivo === 'inactividad' ? 'index.html?inactividad=1' : 'index.html?salir=1');
 }
+
+/* Al volver con "Atrás"/"Adelante" el navegador puede mostrar la página desde su
+ * memoria sin ejecutar de nuevo los scripts. Si ya no hay sesión, se sale de ella. */
+window.addEventListener('pageshow', (e) => {
+  if (PAGINA === 'login') return;
+  if (!Sesion.token || !Sesion.usuario) {
+    document.documentElement.style.visibility = 'hidden';
+    location.replace('index.html');
+  } else if (e.persisted) {
+    api('/auth/sesion').catch(() => {});
+  }
+});
+
+/* Cierre por inactividad: si nadie usa la página durante N minutos, se cierra
+ * la sesión. Mientras haya actividad, se avisa al servidor de vez en cuando
+ * para que no la cierre por su cuenta. */
+const Inactividad = { ultimaActividad: Date.now(), ultimoAviso: Date.now() };
+function vigilarInactividad() {
+  if (PAGINA === 'login' || !Sesion.token) return;
+  const minutos = () => Number(almacenSesion?.getItem('pit_inactividad')) || 30;
+  const marcar = () => {
+    Inactividad.ultimaActividad = Date.now();
+    if (Date.now() - Inactividad.ultimoAviso > 5 * 60 * 1000 && Sesion.token) {
+      Inactividad.ultimoAviso = Date.now();
+      api('/auth/sesion').catch(() => {});
+    }
+  };
+  ['pointerdown', 'keydown', 'scroll', 'touchstart', 'mousemove'].forEach((ev) =>
+    window.addEventListener(ev, marcar, { passive: true }));
+  setInterval(() => {
+    if (Sesion.token && Date.now() - Inactividad.ultimaActividad > minutos() * 60 * 1000) cerrarSesion('inactividad');
+  }, 30 * 1000);
+}
+document.addEventListener('DOMContentLoaded', vigilarInactividad);
 
 /** Redirige al login si no hay sesión o el rol no corresponde a la página. */
 function requiereSesion(rol) {
@@ -76,7 +137,10 @@ async function api(ruta, { method = 'GET', body, query } = {}) {
   }
   const headers = { Accept: 'application/json' };
   if (body) headers['Content-Type'] = 'application/json';
-  if (Sesion.token) headers.Authorization = `Bearer ${Sesion.token}`;
+  if (Sesion.token) {
+    headers.Authorization = `Bearer ${Sesion.token}`;
+    Inactividad.ultimoAviso = Date.now();
+  }
 
   let resp;
   try {
@@ -474,10 +538,15 @@ function iniciarLogin() {
     location.replace(RUTA_POR_ROL[Sesion.usuario.rol]);
     return;
   }
-  if (new URLSearchParams(location.search).has('expirada')) {
-    $('error-text').textContent = 'Tu sesión expiró. Inicia sesión nuevamente.';
+  const params = new URLSearchParams(location.search);
+  const aviso = params.has('expirada') ? 'Tu sesión se cerró o expiró. Inicia sesión nuevamente.'
+    : params.has('inactividad') ? 'Cerramos tu sesión por inactividad. Inicia sesión nuevamente.' : '';
+  if (aviso) {
+    $('error-text').textContent = aviso;
     $('error-message').classList.remove('hidden');
   }
+  // Quita el aviso de la barra de direcciones para que no reaparezca al recargar.
+  if (location.search) history.replaceState(null, '', location.pathname);
 
   window.handleLoginSubmit = async function handleLoginSubmit(event) {
     event.preventDefault();
@@ -499,8 +568,8 @@ function iniciarLogin() {
       try {
         // selectedRole lo define el script del prototipo (alumno | tutor | coordinacion)
         const rol = typeof selectedRole !== 'undefined' ? selectedRole : undefined;
-        const { token, usuario } = await api('/auth/login', { method: 'POST', body: { correo, password, rol } });
-        Sesion.guardar(token, usuario);
+        const { token, usuario, minutos_inactividad: minutos } = await api('/auth/login', { method: 'POST', body: { correo, password, rol } });
+        Sesion.guardar(token, usuario, minutos);
         successBox.classList.remove('hidden');
         setTimeout(() => location.replace(RUTA_POR_ROL[usuario.rol]), 700);
       } catch (err) {

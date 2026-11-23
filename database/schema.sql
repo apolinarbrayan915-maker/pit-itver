@@ -443,3 +443,8 @@ COMMIT;
 -- 15. SEGUIMIENTO DE CANALIZACIONES (bitácora y próxima revisión)
 -- =============================================================================
 \ir migracion_011_seguimiento_canalizaciones.sql
+
+-- =============================================================================
+-- 16. SESIONES DEL SERVIDOR Y BLOQUEO POR INTENTOS FALLIDOS
+-- =============================================================================
+\ir migracion_012_sesiones_seguridad.sql

@@ -14,6 +14,7 @@ const unauthorized = (msg = 'No autenticado') => new HttpError(401, msg);
 const forbidden = (msg = 'No tienes permiso para esta acción') => new HttpError(403, msg);
 const notFound = (msg = 'Recurso no encontrado') => new HttpError(404, msg);
 const conflict = (msg) => new HttpError(409, msg);
+const tooManyRequests = (msg) => new HttpError(429, msg);
 
 /** Traduce errores de PostgreSQL a respuestas HTTP comprensibles. */
 function traducirErrorPg(err) {
@@ -64,5 +65,6 @@ module.exports = {
   forbidden,
   notFound,
   conflict,
+  tooManyRequests,
   manejadorErrores,
 };
