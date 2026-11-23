@@ -21,66 +21,6 @@ function nuevoAvisoDesdeInicio() {
  * ============================================================================= */
 const TT = { filtro: 'todos' };
 
-function conectarCatalogoMaterias() {
-  const panel = $('tt-catalogo-materias');
-  if (!panel) return;
-  const estado = $('tt-materias-estado');
-  const buscar = $('tt-materias-buscar');
-  const lista = $('tt-materias-lista');
-  const reintento = $('tt-materias-reintento');
-  let catalogo = null;
-  let cargando = false;
-
-  function pintar() {
-    if (!catalogo) return;
-    const consulta = normalizarTexto(buscar.value.trim()).split(/\s+/).filter(Boolean);
-    const coincidencias = catalogo.perfiles.filter(p => {
-      const texto = normalizarTexto([p.nombre, ...p.materias, ...p.temas].join(' '));
-      return consulta.every(palabra => texto.includes(palabra));
-    });
-    estado.textContent = `${coincidencias.length} de ${catalogo.perfiles.length} perfiles de referencia`;
-    lista.innerHTML = coincidencias.map(p => {
-      const ficha = p.fichas.find(url => /^https:\/\/misprofesores\.com\/profesores\/_\d+$/.test(url));
-      return `<li class="px-2 py-2">
-        <details>
-          <summary class="cursor-pointer text-sm font-semibold">
-            ${escapeHtml(p.nombre)}
-            <span class="m3-etiqueta ${p.vinculado ? 'tono-verde' : 'tono-azul'}">
-              ${p.vinculado ? 'Vinculado al PIT' : 'Referencia'}
-            </span>
-          </summary>
-          <div class="pt-2 text-xs space-y-2">
-            <p><strong>Materias reportadas</strong> · ${escapeHtml(p.materias.join(' · '))}</p>
-            ${p.temas.length ? `<p><strong>Temas inferidos</strong> · ${escapeHtml(p.temas.join(' · '))}</p>` : ''}
-            ${ficha ? `<a class="underline" href="${escapeHtml(ficha)}" target="_blank" rel="noopener noreferrer">Ficha en MisProfesores</a>` : ''}
-          </div>
-        </details>
-      </li>`;
-    }).join('');
-  }
-
-  async function cargar() {
-    if (catalogo || cargando) return;
-    cargando = true;
-    reintento.hidden = true;
-    estado.textContent = 'Cargando el catálogo de materias…';
-    try {
-      catalogo = await api('/tutores/catalogo-materias');
-      pintar();
-    } catch {
-      catalogo = null;
-      estado.textContent = 'No se pudo cargar el catálogo.';
-      reintento.hidden = false;
-    } finally {
-      cargando = false;
-    }
-  }
-
-  panel.addEventListener('toggle', () => { if (panel.open) cargar(); });
-  reintento.addEventListener('click', cargar);
-  buscar.addEventListener('input', pintar);
-}
-
 async function cargarAsignaciones() {
   const lista = $('tutores-lista');
   if (!lista) return;
@@ -113,6 +53,8 @@ async function cargarAsignaciones() {
 const ocupacionDe = (t) => (t.max_tutorados ? t.total_tutorados / t.max_tutorados : 0);
 const FILTROS_TUTOR = [
   ['todos', 'Todos', () => true],
+  ['inscritos', 'Inscritos', () => true],
+  ['referencia', 'Por vincular', () => false],
   ['lugar', 'Con lugar', (t) => t.acepta_tutorados && t.total_tutorados < t.max_tutorados],
   ['llenos', 'Cupo lleno', (t) => t.total_tutorados >= t.max_tutorados],
   ['vacios', 'Sin tutorados', (t) => t.total_tutorados === 0],
@@ -126,14 +68,17 @@ function filtrarTutores(f) {
 
 function pintarTutores() {
   if (!datosAsig) return;
-  const { tutores, sin_tutor: sinTutor } = datosAsig;
+  const { tutores, sin_tutor: sinTutor, perfiles_materias: perfiles = [] } = datosAsig;
+  const materiasPorTutor = new Map(perfiles.filter(p => p.tutor_id !== null).map(p => [p.tutor_id, p]));
+  const referencias = perfiles.filter(p => p.tutor_id === null);
+  const total = tutores.length + referencias.length;
   const asignados = tutores.reduce((s, t) => s + t.total_tutorados, 0);
   const cupo = tutores.reduce((s, t) => s + t.max_tutorados, 0);
   const reciben = tutores.filter((t) => t.acepta_tutorados);
   const libres = reciben.reduce((s, t) => s + Math.max(0, t.max_tutorados - t.total_tutorados), 0);
   const diplomado = tutores.filter((t) => /Diplomado/i.test(t.formacion_tutorial || '')).length;
   $('tt-resumen').innerHTML = [
-    celdaResumen('Tutores en el programa', tutores.length, 'fa-chalkboard-user', 'tono-azul', `${reciben.length} reciben tutorados`),
+    celdaResumen('Perfiles en el directorio', total, 'fa-chalkboard-user', 'tono-azul', `${tutores.length} inscritos · ${referencias.length} por vincular`),
     celdaResumen('Tutorados asignados', asignados, 'fa-user-graduate', 'tono-verde', `${pct(asignados, cupo)}% del cupo total (${cupo})`),
     celdaResumen('Lugares disponibles', libres, 'fa-chair', libres ? 'tono-violeta' : 'tono-rojo', 'entre quienes reciben'),
     celdaResumen('Sin tutor', sinTutor, 'fa-user-clock', sinTutor ? 'tono-ambar' : 'tono-gris', sinTutor ? 'aún no eligen' : 'todos tienen tutor'),
@@ -141,22 +86,33 @@ function pintarTutores() {
   ].join('');
 
   $('tt-filtros').innerHTML = FILTROS_TUTOR.map(([k, etq, fn]) => {
-    const n = tutores.filter(fn).length;
+    const n = k === 'todos' ? total : k === 'referencia' ? referencias.length : tutores.filter(fn).length;
     const on = TT.filtro === k;
     return `<button type="button" class="m3-chip ${on ? 'activo' : ''}" aria-pressed="${on}" onclick="filtrarTutores('${k}')"><i class="fa-solid fa-check"></i>${etq} <span class="cuenta">${n}</span></button>`;
   }).join('');
 
-  const q = normalizarTexto($('tt-buscar').value.trim());
+  const consulta = normalizarTexto($('tt-buscar').value.trim()).split(/\s+/).filter(Boolean);
+  const coincide = (campos) => {
+    const texto = normalizarTexto(campos.join(' '));
+    return consulta.every(palabra => texto.includes(palabra));
+  };
   const filtro = FILTROS_TUTOR.find(([k]) => k === TT.filtro)[2];
   const orden = $('tt-orden').value;
   const lista = tutores
     .filter(filtro)
-    .filter((t) => !q || normalizarTexto(`${t.nombre} ${t.cubiculo || ''} ${t.rfc}`).includes(q))
+    .filter((t) => {
+      const perfil = materiasPorTutor.get(t.tutor_id);
+      return coincide([t.nombre, t.cubiculo, t.rfc, ...(perfil?.materias ?? []), ...(perfil?.temas ?? [])]);
+    })
     .sort((a, b) => (orden === 'ocupacion' ? ocupacionDe(b) - ocupacionDe(a)
       : orden === 'libres' ? (b.max_tutorados - b.total_tutorados) - (a.max_tutorados - a.total_tutorados) : 0));
 
-  $('tutores-lista').innerHTML = lista.length ? lista.map(filaTutorCoord).join('')
-    : '<li class="m3-vacio"><span class="m3-icono tono-gris"><i class="fa-solid fa-magnifying-glass"></i></span>Ningún tutor coincide con la búsqueda.</li>';
+  const filas = lista.map(t => filaTutorCoord(t, materiasPorTutor.get(t.tutor_id)));
+  if (TT.filtro === 'todos' || TT.filtro === 'referencia') {
+    filas.push(...referencias.filter(p => coincide([p.nombre, ...p.materias, ...p.temas])).map(filaReferenciaCoord));
+  }
+  $('tutores-lista').innerHTML = filas.length ? filas.join('')
+    : '<li class="m3-vacio"><span class="m3-icono tono-gris"><i class="fa-solid fa-magnifying-glass"></i></span>Ningún perfil coincide con la búsqueda.</li>';
   paginar($('tutores-lista'), 5, 'tutores');
   if (TT.abierto) abrirTutoradosTutor(TT.abierto);
 }
@@ -266,7 +222,30 @@ function irPagina(clave, n) {
   if (cab.top < 70) (st.el.closest('table') || st.el).scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-function filaTutorCoord(t) {
+function detalleMateriasCoord(p) {
+  const ficha = p.fichas.find(url => /^https:\/\/misprofesores\.com\/profesores\/_\d+$/.test(url));
+  return `<details class="mt-1 text-xs">
+    <summary class="cursor-pointer font-semibold">Materias reportadas por estudiantes</summary>
+    <p class="mt-1">${escapeHtml(p.materias.join(' · '))}</p>
+    ${p.temas.length ? `<p class="mt-1">Temas inferidos · ${escapeHtml(p.temas.join(' · '))}</p>` : ''}
+    ${ficha ? `<a class="mt-1 block underline" href="${escapeHtml(ficha)}" target="_blank" rel="noopener noreferrer">Ficha en MisProfesores</a>` : ''}
+  </details>`;
+}
+
+function filaReferenciaCoord(p) {
+  return `<li class="tt-fila tt-referencia">
+    <div class="tt-quien">
+      <span class="m3-avatar tono-gris">${escapeHtml(iniciales(p.nombre))}</span>
+      <div class="min-w-0">
+        <b>${escapeHtml(p.nombre)}</b>
+        <span class="tt-meta">Por vincular al PIT</span>
+        ${detalleMateriasCoord(p)}
+      </div>
+    </div>
+  </li>`;
+}
+
+function filaTutorCoord(t, materias) {
   const p = Math.round(ocupacionDe(t) * 100);
   const tono = p >= 100 ? 'tono-rojo' : p >= 80 ? 'tono-ambar' : 'tono-azul';
   const diplomado = /Diplomado/i.test(t.formacion_tutorial || '');
@@ -281,6 +260,7 @@ function filaTutorCoord(t) {
           <i class="tt-punto"></i><span class="${diplomado ? 'ok' : 'aviso'}" title="Formación tutorial"><i class="fa-solid ${diplomado ? 'fa-award' : 'fa-hourglass-half'}"></i>${escapeHtml(t.formacion_tutorial || 'Sin formación registrada')}</span>
           <i class="tt-punto"></i><span class="${t.bloques_horario ? '' : 'mal'}"><i class="fa-regular fa-clock"></i>${t.bloques_horario ? plural(t.bloques_horario, 'bloque', 'bloques') : 'Sin horario'}</span>
         </span>
+        ${materias ? detalleMateriasCoord(materias) : ''}
       </div>
     </div>
     <div class="tt-ocup ${tono}" title="${p}% del cupo">
@@ -845,7 +825,6 @@ function avisoCoordHtml(a) {
 /* ---- Arranque de lo propio de este módulo ------------------------------------ */
 document.addEventListener('DOMContentLoaded', () => {
   if (PAGINA !== 'coordinacion' || !Sesion.usuario) return;
-  conectarCatalogoMaterias();
   limpiarFormAviso();
   cargarReportesCoord();
   ['tbody-riesgo', 'tbody-asig-integrantes', 'tbody-canalizaciones', 'tbody-fichas'].forEach((id) => paginar($(id), 10));

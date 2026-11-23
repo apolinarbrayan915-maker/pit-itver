@@ -10,6 +10,7 @@ const db = require('../db');
 const config = require('../config');
 const { notFound } = require('../utils/errores');
 const v = require('../utils/validaciones');
+const catalogoMaterias = require('../../../recomendador/catalogo_materias.json');
 
 const periodoDe = (req) =>
   /^\d{4}-[12]$/.test(req.query.periodo || '') ? req.query.periodo : config.periodoActual;
@@ -60,10 +61,16 @@ async function panorama(req, res) {
     [periodo]
   );
 
+  const tutoresPorCorreo = new Map(tutores.map(t => [t.correo.toLowerCase(), t.tutor_id]));
+  const perfiles_materias = catalogoMaterias.perfiles.map(({ correo_pit, ...perfil }) => ({
+    ...perfil,
+    tutor_id: tutoresPorCorreo.get(correo_pit) ?? null,
+  }));
   res.json({
     ok: true,
     periodo,
     tutores,
+    perfiles_materias,
     tutorados,
     sin_tutor: tutorados.filter((t) => !t.asignacion_id).length,
     grupos_existentes: [...new Set(tutorados.map((t) => t.grupo).filter(Boolean))].sort(),
