@@ -3678,7 +3678,7 @@ async function recomendarTutores(event) {
     const porcentaje = n => `${Math.round(n * 100)} %`;
     const fuente = document.createElement('p');
     fuente.className = 'text-xs font-semibold text-slate-600';
-    fuente.textContent = modo === 'directorio' ? 'Coincidencias del directorio · áreas de apoyo' : 'Afinidad semántica · Sentence-BERT';
+    fuente.textContent = modo === 'directorio' ? 'Coincidencias del directorio' : 'Afinidad semántica · Sentence-BERT';
     resultado.replaceChildren(fuente, ...candidatos.map(c => {
       const tarjeta = document.createElement('div');
       tarjeta.className = 'rounded-lg border border-slate-200 bg-white p-3';
@@ -3697,6 +3697,19 @@ async function recomendarTutores(event) {
         verPerfilTutor(c.tutor_id);
       };
       tarjeta.append(titulo, detalle);
+      if (c.materias_reportadas?.length) {
+        const materias = document.createElement('p');
+        materias.className = 'mt-1 text-xs text-slate-600';
+        materias.textContent = 'Materias reportadas por estudiantes · ' + c.materias_reportadas.join(' · ');
+        tarjeta.append(materias);
+        const enlace = document.createElement('a');
+        enlace.href = c.ficha_materias;
+        enlace.target = '_blank';
+        enlace.rel = 'noopener noreferrer';
+        enlace.className = 'block text-xs underline';
+        enlace.textContent = 'Consultar ficha en MisProfesores';
+        tarjeta.append(enlace);
+      }
       if (PAGINA !== 'tutor') tarjeta.append(perfil);
       return tarjeta;
     }));

@@ -87,6 +87,7 @@ class CVProcesado:
     tutor_id: str
     secciones: dict[str, list[str]] = field(default_factory=dict)
     eliminados: list[str] = field(default_factory=list)  # Tipos de datos personales disociados
+    materias_reportadas: list[str] = field(default_factory=list)
 
     def texto_unificado(self) -> str:
         """
@@ -106,7 +107,8 @@ class CVProcesado:
         Cada viñeta representa la unidad atómica de evidencia que será vectorizada
         por Sentence-BERT en el Paso 2 para sustentar las recomendaciones.
         """
-        return [(s, it) for s in SECCIONES for it in self.secciones.get(s, [])]
+        return ([(s, it) for s in SECCIONES for it in self.secciones.get(s, [])]
+                + [("materias_reportadas", materia) for materia in self.materias_reportadas])
 
 
 # ==============================================================================

@@ -2,6 +2,8 @@
 
 El botón circular con lupa abre el buscador en las sesiones de alumno, tutor y Coordinación. El atajo en **Mi tutor(a)** abre el mismo panel.
 
+La ruta `GET /api/tutores/catalogo-materias` permite a Coordinación consultar 69 perfiles de referencia con materias reportadas por estudiantes y sus fuentes. Las dos entradas vinculadas por correo a tutores existentes aportan coincidencias al directorio si hay cupo. El servicio Python incorpora sus materias a la afinidad general de perfiles con CV indexado. Proyectos y certificaciones siguen usando los fragmentos del CV. Las entradas sin vínculo sirven para revisión y el catálogo no crea cuentas ni asignaciones.
+
 En **Mi tutor(a)** el alumno puede describir una duda y abrir los perfiles recomendados. Express exige una sesión de uno de los tres roles del PIT y consulta el cupo vigente en PostgreSQL. El servicio Python compara la duda con los CV de ese conjunto usando Sentence-BERT multilingüe. El clasificador conserva la ponderación original de afinidad general (45 %), proyectos (35 %) y certificaciones (20 %), con un umbral de 0,40. Si ningún perfil alcanza el umbral, el portal sugiere consultar el directorio o contactar a Coordinación.
 
 La selección y los cambios de tutor se realizan desde los controles del PIT. La API presenta el desglose de afinidad. Los archivos fuente, los fragmentos del CV y la caché quedan del lado del servicio. Este flujo no guarda la consulta del alumno.

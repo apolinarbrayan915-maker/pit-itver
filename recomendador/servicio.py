@@ -23,6 +23,9 @@ async def lifespan(app: FastAPI):
     data = Path(os.environ["RECOMENDADOR_DATOS"]).resolve(strict=True)
     config.DIR_CACHE = data / "cache"
     catalogo = json.loads((data / "tutores.json").read_text(encoding="utf-8"))
+    fuente = Path(__file__).with_name("catalogo_materias.json")
+    materias = {p["correo_pit"]: p["materias"] for p in
+                json.loads(fuente.read_text(encoding="utf-8"))["perfiles"] if p["correo_pit"]}
     cvs, tutores = {}, {}
     for tutor in catalogo:
         tid = tutor["id"].strip().lower()
@@ -31,6 +34,7 @@ async def lifespan(app: FastAPI):
             raise ValueError("Ruta fuera de cvs o identificador repetido en tutores.json")
         cv = procesar_cv(ruta, tid, tutor["nombre"])
         if cv.fragmentos():
+            cv.materias_reportadas = materias.get(tid, [])
             cvs[tid] = cv
             tutores[tid] = dict(tutor, id=tid, capacidad=1, tutorados_actuales=0,
                                correo="", horario=[], cubiculo="")
