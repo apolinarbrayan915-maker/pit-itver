@@ -3639,12 +3639,7 @@ function configurarBuscadorTutor() {
   const widget = $('recomendador-widget');
   if (!widget) return;
   const boton = $('recomendador-boton');
-  const atajo = $('recomendador-atajo');
   const panel = $('recomendador-tutores');
-  if (atajo) {
-    atajo.hidden = false;
-    atajo.onclick = () => mostrarBuscadorTutor(true, atajo);
-  }
   boton.onclick = () => mostrarBuscadorTutor(panel.hidden, boton);
   $('recomendador-cerrar').onclick = () => mostrarBuscadorTutor(false);
   widget.onkeydown = event => {
@@ -3654,17 +3649,28 @@ function configurarBuscadorTutor() {
     }
   };
   $('recomendador-form').onsubmit = recomendarTutores;
+  const destacado = $('buscador-destacado-form');
+  if (destacado) destacado.onsubmit = recomendarTutores;
+}
+
+function enfocarBuscadorDestacado() {
+  const campo = $('buscador-destacado-duda');
+  if (!campo) return;
+  campo.closest('section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  setTimeout(() => campo.focus({ preventScroll: true }), 300);
 }
 
 async function recomendarTutores(event) {
   event.preventDefault();
-  const boton = event.currentTarget.querySelector('button');
-  const resultado = $('recomendador-resultado');
+  const form = event.currentTarget;
+  const boton = form.querySelector('button[type="submit"], button');
+  const resultado = $(form.dataset.resultado || 'recomendador-resultado');
+  const campo = $(form.dataset.duda || 'recomendador-duda');
   boton.disabled = true;
   resultado.textContent = 'Buscando afinidad con tu duda…';
   try {
     const { modo, candidatos, perfiles_academicos = [] } = await api('/tutores/recomendar', {
-      method: 'POST', body: { duda: $('recomendador-duda').value },
+      method: 'POST', body: { duda: campo.value },
     });
     const avisos = {
       fallback: 'Ningún perfil alcanzó el umbral de afinidad. Puedes consultar el directorio o pedir orientación a Coordinación.',
@@ -3680,7 +3686,7 @@ async function recomendarTutores(event) {
     const porcentaje = n => `${Math.round(n * 100)} %`;
     const fuente = document.createElement('p');
     fuente.className = 'text-xs font-semibold text-slate-600';
-    fuente.textContent = modo === 'directorio' ? 'Afinidad con tu duda · áreas y materias de cada tutor' : 'Afinidad semántica · Sentence-BERT';
+    fuente.textContent = modo === 'directorio' ? 'Afinidad por palabras clave · áreas y materias de cada tutor' : 'Afinidad semántica · Sentence-BERT';
     resultado.replaceChildren(fuente, ...candidatos.map(c => {
       const tarjeta = document.createElement('div');
       tarjeta.className = 'rounded-lg border border-slate-200 bg-white p-3';

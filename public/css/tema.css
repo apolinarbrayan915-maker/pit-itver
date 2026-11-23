@@ -1444,3 +1444,52 @@ html.dark .avc-btn.prim { color: #0d2448; }
   .tt-det-nombre { flex-basis: calc(100% - 3rem); }
   .tt-det-acc { margin-left: auto; }
 }
+
+/* ---- Buscador destacado "Tutor ideal" (alumno · Mi tutor) ------------------- */
+.buscador-destacado {
+  position: relative; padding: 1.25rem; border-radius: 1rem;
+  border: 2px solid #1b396a33; background: linear-gradient(135deg, #eef4ff 0%, #ffffff 60%);
+  box-shadow: 0 6px 20px -10px #1b396a55;
+}
+@media (min-width: 768px) { .buscador-destacado { padding: 1.5rem 1.75rem; } }
+.buscador-destacado-icono {
+  flex-shrink: 0; width: 2.75rem; height: 2.75rem; border-radius: .9rem;
+  display: flex; align-items: center; justify-content: center;
+  background: #1b396a; color: #fff; font-size: 1.15rem;
+}
+.buscador-flujo { list-style: none; padding: 0; margin: 0; display: grid; gap: .75rem; grid-template-columns: 1fr; }
+@media (min-width: 900px) { .buscador-flujo { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.buscador-flujo li {
+  position: relative; display: flex; flex-direction: column; gap: .3rem;
+  padding: .9rem .9rem .8rem; border-radius: .8rem; border: 1px solid #cbd5e1; background: #fff;
+  font-size: .8rem; color: #1e293b;
+}
+.buscador-flujo li > i { font-size: 1.1rem; color: #1b396a; }
+.buscador-flujo li small { font-size: .7rem; line-height: 1.35; color: #475569; }
+.buscador-flujo .paso-num {
+  position: absolute; top: .55rem; right: .6rem; width: 1.3rem; height: 1.3rem; border-radius: 999px;
+  display: flex; align-items: center; justify-content: center; font-size: .65rem; font-weight: 700;
+  background: #1b396a; color: #fff;
+}
+/* Flechas entre pasos: abajo en móvil, a la derecha en escritorio */
+.buscador-flujo li:not(:last-child)::after {
+  content: "\2193"; position: absolute; left: 50%; bottom: -.85rem; transform: translateX(-50%);
+  font-weight: 700; color: #1b396a; font-size: .9rem; line-height: 1;
+}
+@media (min-width: 900px) {
+  .buscador-flujo li:not(:last-child)::after { content: "\2192"; left: auto; right: -.72rem; bottom: auto; top: 50%; transform: translateY(-50%); }
+}
+.buscador-formula { padding: .8rem 1rem; border-radius: .8rem; border: 1px dashed #94a3b8; background: #f8fafc; }
+.buscador-formula .formula { margin: .4rem 0; font-family: "Cambria Math", "Times New Roman", serif; font-size: 1.05rem; color: #0f172a; display: flex; align-items: center; gap: .4rem; }
+.buscador-formula .frac { display: inline-flex; flex-direction: column; align-items: center; line-height: 1.2; }
+.buscador-formula .frac span:first-child { border-bottom: 1px solid currentColor; padding: 0 .3rem; }
+.buscador-nota { padding: .6rem .8rem; border-radius: .6rem; background: #fff7e6; color: #7a4b00; }
+
+html.dark .buscador-destacado { border-color: #3b5b9a66; background: linear-gradient(135deg, #15264a 0%, #111b2e 65%); box-shadow: none; }
+html.dark .buscador-destacado-icono, html.dark .buscador-flujo .paso-num { background: #3b82f6; }
+html.dark .buscador-flujo li { background: #16223a; border-color: #2b3d5e; color: #e2e8f0; }
+html.dark .buscador-flujo li > i, html.dark .buscador-flujo li:not(:last-child)::after { color: #93c5fd; }
+html.dark .buscador-flujo li small { color: #b4c0d1; }
+html.dark .buscador-formula { background: #16223a; border-color: #3b4d6e; }
+html.dark .buscador-formula .formula { color: #f1f5f9; }
+html.dark .buscador-nota { background: #3a2a0c; color: #fcd9a0; }
