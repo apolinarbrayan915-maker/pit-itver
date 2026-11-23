@@ -99,6 +99,7 @@ router.patch('/asignaciones/:id/finalizar', requiereRol('coordinador'), asignaci
 // Tutores: directorio y elección por el tutorado, horario de atención y cupo
 router.get('/tutores/disponibles', requiereRol('alumno', 'coordinador'), tutores.directorio);
 router.get('/tutores/catalogo-materias', requiereRol('coordinador'), recomendador.listarCatalogoMaterias);
+router.post('/tutores/catalogo-materias/confirmar-altas', requiereRol('coordinador'), recomendador.confirmarAltas);
 router.put('/tutores/catalogo-materias/:perfilId/vinculo', requiereRol('coordinador'), recomendador.vincularPerfil);
 router.post('/tutores/recomendar', requiereRol('alumno', 'tutor', 'coordinador'), rateLimit({
   windowMs: 60_000,

@@ -21,6 +21,22 @@ function nuevoAvisoDesdeInicio() {
  * ============================================================================= */
 const TT = { filtro: 'todos' };
 
+async function confirmarAltasCatalogo() {
+  const boton = $('tt-confirmar-altas');
+  const estado = $('tt-confirmar-altas-estado');
+  boton.disabled = true;
+  estado.textContent = 'Confirmando altas…';
+  try {
+    const { total, inscritos, pendientes } = await api('/tutores/catalogo-materias/confirmar-altas', { method: 'POST' });
+    estado.textContent = `${inscritos} de ${total} inscritos · ${pendientes} pendientes de coincidencia institucional`;
+    await cargarAsignaciones();
+  } catch (err) {
+    estado.textContent = err.message;
+  } finally {
+    boton.disabled = false;
+  }
+}
+
 async function cargarAsignaciones() {
   const lista = $('tutores-lista');
   if (!lista) return;
@@ -885,6 +901,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 Object.assign(window, {
+  confirmarAltasCatalogo,
   abrirAltaPerfil,
   irAReporte, nuevoAvisoDesdeInicio, filtrarTutores, pintarTutores, pasoCupo, alternarTutoradosTutor, irPagina,
   presetInformeCoord, cambioRangoCoord, imprimirInformeCoord, imprimirSemestralCoord, resaltarSinSesion,
