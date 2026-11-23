@@ -10,7 +10,7 @@ const catalogo = require('../catalogoMaterias');
 const { url, token, habilitado } = recomendador;
 const materiasPorCorreo = new Map(catalogo.perfiles.filter(p => p.correo_pit).map(p => [p.correo_pit, p]));
 const materiasPorId = new Map(catalogo.perfiles.map(p => [p.id, p]));
-const palabrasGenerales = new Set('como cual duda ayuda ayudar necesito quiero para sobre tengo puedo buscar porque donde alguien usar hacer del los las una uno por con mis nos que'.split(' '));
+const palabrasGenerales = new Set('entiendo dudas aprender apoyo busco materia clase tema como cual duda ayuda ayudar necesito quiero para sobre tengo puedo buscar porque donde alguien usar hacer del los las una uno por con mis nos que'.split(' '));
 
 function palabras(texto) {
   return (texto.toLowerCase().normalize('NFD').replace(/\p{M}/gu, '').match(/[a-z0-9]+/g) || [])
@@ -25,13 +25,19 @@ function buscarEnDirectorio(duda, tutores) {
     const coincidencias = areas.filter(area => palabras(area).some(p => consulta.has(p)));
     const referencia = materiasPorId.get(tutor.catalogo_materias_id) ?? materiasPorCorreo.get(tutor.correo.toLowerCase());
     const materias = (referencia?.materias ?? []).filter(materia => palabras(materia).some(p => consulta.has(p)));
-    if (coincidencias.length || materias.length) candidatos.push({
+    if (!coincidencias.length && !materias.length) continue;
+    // Afinidad = parte de las palabras clave de la duda que cubren sus áreas y materias.
+    const vocabulario = new Set([...coincidencias, ...materias].flatMap(palabras));
+    const cubiertas = [...consulta].filter(p => vocabulario.has(p)).length;
+    candidatos.push({
       tutor_id: tutor.tutor_id, nombre: tutor.nombre, areas: coincidencias,
+      afinidad: consulta.size ? cubiertas / consulta.size : 0,
       materias_reportadas: materias, ficha_materias: materias.length ? referencia.fichas[0] : null,
     });
   }
-  candidatos.sort((a, b) => b.areas.length - a.areas.length ||
-    b.materias_reportadas.length - a.materias_reportadas.length || a.nombre.localeCompare(b.nombre, 'es'));
+  candidatos.sort((a, b) => b.afinidad - a.afinidad ||
+    (b.areas.length + b.materias_reportadas.length) - (a.areas.length + a.materias_reportadas.length) ||
+    a.nombre.localeCompare(b.nombre, 'es'));
   return { ok: true, modo: candidatos.length ? 'directorio' : 'sin_coincidencias', candidatos: candidatos.slice(0, 3) };
 }
 

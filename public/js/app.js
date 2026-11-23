@@ -3680,12 +3680,14 @@ async function recomendarTutores(event) {
     const porcentaje = n => `${Math.round(n * 100)} %`;
     const fuente = document.createElement('p');
     fuente.className = 'text-xs font-semibold text-slate-600';
-    fuente.textContent = modo === 'directorio' ? 'Coincidencias del directorio' : 'Afinidad semántica · Sentence-BERT';
+    fuente.textContent = modo === 'directorio' ? 'Afinidad con tu duda · áreas y materias de cada tutor' : 'Afinidad semántica · Sentence-BERT';
     resultado.replaceChildren(fuente, ...candidatos.map(c => {
       const tarjeta = document.createElement('div');
       tarjeta.className = 'rounded-lg border border-slate-200 bg-white p-3';
       const titulo = document.createElement('strong');
-      titulo.textContent = modo === 'directorio' ? c.nombre : `${c.nombre} · ${porcentaje(c.score)} de afinidad`;
+      titulo.textContent = modo === 'directorio'
+        ? `${c.nombre}${Number.isFinite(c.afinidad) ? ` · ${porcentaje(c.afinidad)} de afinidad` : ''}`
+        : `${c.nombre} · ${porcentaje(c.score)} de afinidad`;
       const detalle = document.createElement('p');
       detalle.className = 'text-xs text-slate-600';
       detalle.textContent = modo === 'directorio' ? c.areas.join(' · ') :
