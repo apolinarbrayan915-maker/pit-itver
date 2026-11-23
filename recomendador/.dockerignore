@@ -1,0 +1,6 @@
+*
+!Dockerfile
+!requirements.txt
+!servicio.py
+!modulo_tutorias/
+!modulo_tutorias/*.py
