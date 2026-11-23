@@ -216,7 +216,18 @@ function periodoDeClases(hoy) {
 async function miReporte(req, res) {
   const tutorId = req.user.tutorId;
   const hoy = new Intl.DateTimeFormat('en-CA', { timeZone: config.tz }).format(new Date());
-  const periodo = periodoDeClases(hoy);
+  const semestre = periodoDeClases(hoy);
+  // Rango opcional ?desde=YYYY-MM-DD&hasta=YYYY-MM-DD (informe del periodo); por omisión, el semestre
+  const ymd = (x) => (/^\d{4}-\d{2}-\d{2}$/.test(String(x || '')) ? String(x) : null);
+  let periodo = semestre;
+  const desde = ymd(req.query.desde);
+  const hasta = ymd(req.query.hasta);
+  if (desde || hasta) {
+    const ini = desde || semestre.inicio;
+    const fin = hasta || semestre.fin;
+    if (ini > fin) throw badRequest('La fecha inicial debe ser anterior o igual a la final.');
+    periodo = { ...semestre, inicio: ini, fin, personalizado: true };
+  }
   const params = [tutorId, periodo.inicio, periodo.fin, config.tz, config.periodoActual];
   const { rows: r } = await db.query(
     `WITH c AS (
@@ -297,8 +308,10 @@ async function miReporte(req, res) {
             (SELECT count(*) FROM citas_tutorias c WHERE c.tutorado_id = t.id AND c.tutor_id = $1 AND c.asistio = false
                AND (c.fecha_hora AT TIME ZONE $4)::date BETWEEN $2::date AND $3::date)::int AS inasistencias,
             (SELECT to_char(max(c.fecha_hora) AT TIME ZONE $4, 'YYYY-MM-DD') FROM citas_tutorias c
-              WHERE c.tutorado_id = t.id AND c.tutor_id = $1 AND c.estatus = 'Completada') AS ultima_sesion,
-            (SELECT count(*) FROM canalizaciones k WHERE k.tutorado_id = t.id AND k.tutor_id = $1)::int AS canalizaciones,
+              WHERE c.tutorado_id = t.id AND c.tutor_id = $1 AND c.estatus = 'Completada'
+                AND (c.fecha_hora AT TIME ZONE $4)::date BETWEEN $2::date AND $3::date) AS ultima_sesion,
+            (SELECT count(*) FROM canalizaciones k WHERE k.tutorado_id = t.id AND k.tutor_id = $1
+               AND (k.fecha_registro AT TIME ZONE $4)::date BETWEEN $2::date AND $3::date)::int AS canalizaciones,
             EXISTS (SELECT 1 FROM fichas_identificacion f WHERE f.tutorado_id = t.id) AS con_ficha
        FROM asignaciones_tutoria a
        JOIN tutorados t ON t.id = a.tutorado_id
@@ -318,7 +331,7 @@ async function miReporte(req, res) {
   const riesgo = { BAJO: 0, MEDIO: 0, ALTO: 0, 'CRÍTICO': 0 };
   porTutorado.forEach((x) => { riesgo[x.nivel_riesgo] += 1; });
   res.json({
-    ok: true, periodo, periodo_escolar: config.periodoActual, tutor: t[0], resumen: r[0], sesiones,
+    ok: true, periodo, semestre, periodo_escolar: config.periodoActual, tutor: t[0], resumen: r[0], sesiones,
     canalizaciones_por_area: canal,
     informe: {
       citas: inf[0],

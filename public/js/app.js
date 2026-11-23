@@ -894,16 +894,19 @@ function filaCitaTutor(c, ahora = new Date()) {
   const minuta = c.minuta && c.minuta.acuerdos;
   const grupal = c.tipo === 'Grupal';
   const b = (onclick, icono, texto, clase, extraAttr = '') => `<button type="button" onclick="${onclick}" class="m3-btn chico ${clase}" ${extraAttr}><i class="fa-solid ${icono}"></i><span>${texto}</span></button>`;
+  const btnMinuta = () => (minuta
+    ? b(`abrirMinuta(${c.id})`, 'fa-file-circle-check', 'Minuta', 'contorno', 'title="Ver o editar la minuta"')
+    : b(`abrirMinuta(${c.id})`, 'fa-file-signature', 'Minuta', 'tonal', 'title="Registrar la minuta de la sesión"'));
   let botones = [];
   if (c.estatus === 'Pendiente') {
     botones = [b(`cambiarEstatusCita(${c.id}, 'Confirmada', this)`, 'fa-check', 'Confirmar', 'lleno'), b(`cambiarEstatusCita(${c.id}, 'Cancelada', this)`, 'fa-xmark', 'Cancelar', 'texto')];
   } else if (c.estatus === 'Confirmada') {
     botones = [new Date(c.fecha_hora) <= ahora
-      ? b(`abrirAsistencia(${c.id})`, 'fa-user-check', 'Registrar asistencia', 'lleno')
+      ? b(`abrirAsistencia(${c.id})`, 'fa-user-check', 'Asistencia', 'lleno', 'title="Registrar si asistió y cuánto duró"')
       : b('', 'fa-user-clock', 'Asistencia', 'tonal', 'disabled title="Se registra cuando llegue la hora de la cita"')];
-    if (!grupal) botones.push(b(`abrirMinuta(${c.id})`, minuta ? 'fa-file-circle-check' : 'fa-file-signature', 'Minuta', 'contorno'));
+    if (!grupal) botones.push(btnMinuta());
   } else if (c.estatus === 'Completada' && !grupal) {
-    botones = [b(`abrirMinuta(${c.id})`, minuta ? 'fa-file-circle-check' : 'fa-file-signature', minuta ? 'Minuta' : 'Registrar minuta', minuta ? 'contorno' : 'tonal'), b(`imprimirComprobante(${c.id})`, 'fa-print', 'Comprobante', 'contorno')];
+    botones = [btnMinuta(), b(`imprimirComprobante(${c.id})`, 'fa-print', 'Comprobante', 'contorno', 'title="Imprimir comprobante de asistencia"')];
   }
   const meta = [c.no_control, c.semestre ? `${c.semestre}° sem.` : '', grupal ? 'Grupal' : '', c.modalidad === 'Línea' ? 'En línea' : 'Presencial'].filter(Boolean).map(escapeHtml).join(' · ');
   let nota = '';
@@ -918,7 +921,8 @@ function filaCitaTutor(c, ahora = new Date()) {
       <p class="ag-motivo" title="${escapeHtml(c.motivo)}">${escapeHtml(c.motivo)}</p>
       ${nota ? `<p class="ag-nota">${nota}</p>` : ''}
     </div>
-    <div class="ag-lado">${chip(c.estatus, ESTATUS_CITA_ESTILO[c.estatus])}${botones.length ? `<div class="ag-botones">${botones.join('')}</div>` : ''}</div>
+    <div class="ag-estado">${chip(c.estatus, ESTATUS_CITA_ESTILO[c.estatus])}</div>
+    <div class="ag-botones">${botones.join('')}</div>
   </article>`;
 }
 
@@ -1995,7 +1999,8 @@ async function cargarReporteTutor() {
     reporteTutor = await api('/tutores/mi-reporte');
     const { resumen: r, periodo, sesiones } = reporteTutor;
     setText('rep-periodo', periodo.nombre);
-    pintarInformePeriodo(reporteTutor);
+    iniciarRangoInforme(reporteTutor.semestre || periodo);
+    cargarInformePeriodo();
     const minutos = sesiones.reduce((t, x) => t + Number(x.duracion_real_min || 0), 0);
     const conMinuta = sesiones.filter((x) => x.con_minuta).length;
     if ($('rep-resumen')) $('rep-resumen').innerHTML = [
@@ -2041,6 +2046,56 @@ function restaurarInforme() {
 
 const pct = (a, b) => (b ? Math.round((a / b) * 100) : 0);
 const RIESGO_ESTILO_INF = { 'CRÍTICO': 'bg-rose-100 text-rose-700', ALTO: 'bg-orange-100 text-orange-700', MEDIO: 'bg-amber-100 text-amber-800', BAJO: 'bg-emerald-100 text-emerald-800' };
+
+/* Informe del periodo: rango de fechas elegible */
+let informeRango = null;
+let semestreInforme = null;
+const ymdLocal = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+function iniciarRangoInforme(sem) {
+  semestreInforme = sem;
+  const d = $('inf-desde');
+  const h = $('inf-hasta');
+  if (!d) return;
+  [d, h].forEach((x) => { x.min = sem.inicio; x.max = sem.fin; });
+  if (!d.value) { d.value = sem.inicio; h.value = sem.fin; }
+}
+
+function presetInforme(v) {
+  const sem = semestreInforme;
+  if (!sem || v === 'custom') { $('inf-desde')?.focus(); return; }
+  const hoy = new Date(`${hoyLocal()}T12:00:00`);
+  let ini = sem.inicio;
+  let fin = sem.fin;
+  if (v === 'mes') { ini = ymdLocal(new Date(hoy.getFullYear(), hoy.getMonth(), 1)); fin = ymdLocal(new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0)); }
+  if (v === 'mes-ant') { ini = ymdLocal(new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1)); fin = ymdLocal(new Date(hoy.getFullYear(), hoy.getMonth(), 0)); }
+  if (v === '30') { const x = new Date(hoy); x.setDate(x.getDate() - 29); ini = ymdLocal(x); fin = hoyLocal(); }
+  $('inf-desde').value = ini < sem.inicio ? sem.inicio : ini;
+  $('inf-hasta').value = fin > sem.fin ? sem.fin : fin;
+  cargarInformePeriodo();
+}
+
+function cambioRangoInforme() {
+  if ($('inf-preset')) $('inf-preset').value = 'custom';
+  cargarInformePeriodo();
+}
+
+async function cargarInformePeriodo() {
+  const desde = $('inf-desde')?.value;
+  const hasta = $('inf-hasta')?.value;
+  if (!desde || !hasta) return;
+  if (desde > hasta) { toast('La fecha inicial debe ser anterior a la final.', 'error'); return; }
+  const fmt = (x) => partesCita({ fecha_hora_local: `${x}T00:00` }).larga;
+  const dias = Math.round((new Date(`${hasta}T12:00:00`) - new Date(`${desde}T12:00:00`)) / 86400000) + 1;
+  setText('inf-periodo-desc', `Del ${fmt(desde)} al ${fmt(hasta)} · ${dias} día${dias === 1 ? '' : 's'}`);
+  try {
+    if (reporteTutor && semestreInforme && desde === semestreInforme.inicio && hasta === semestreInforme.fin) informeRango = reporteTutor;
+    else informeRango = await api('/tutores/mi-reporte', { query: { desde, hasta } });
+    pintarInformePeriodo(informeRango);
+  } catch (err) {
+    $('inf-periodo-cuerpo').innerHTML = `<p class="pt-cargando text-rose-600">${escapeHtml(err.message)}</p>`;
+  }
+}
 
 function pintarInformePeriodo(rep) {
   const cont = $('inf-periodo-cuerpo');
@@ -2131,8 +2186,9 @@ function htmlInformePeriodo(rep) {
 
 async function imprimirInformePeriodo() {
   if (!reporteTutor) await cargarReporteTutor();
-  if (!reporteTutor?.informe) return toast('No se pudo cargar el informe.', 'error');
-  await imprimirHoja(htmlInformePeriodo(reporteTutor), `Informe del periodo ${reporteTutor.periodo.nombre}`);
+  const rep = informeRango || reporteTutor;
+  if (!rep?.informe) return toast('No se pudo cargar el informe.', 'error');
+  await imprimirHoja(htmlInformePeriodo(rep), `Informe tutoria ${rep.periodo.inicio} a ${rep.periodo.fin}`);
 }
 
 function htmlReporteSemestral(rep) {
@@ -2765,26 +2821,101 @@ function pintarCampanaAvisos() {
   }
 }
 
-/** Campana de la barra: abre todos los avisos vigentes en una ventana y los marca como vistos. */
-function verAvisosTutor() {
+/* ---- Ventanas de avisos (campana y cinta): diseño de tarjetas ---- */
+function iconoAviso(a) {
+  if (a.importante) return 'fa-star';
+  const t = normalizarTexto(`${a.categoria} ${a.titulo}`);
+  if (/canaliz/.test(t)) return 'fa-share-nodes';
+  if (/evalua|parcial|calific/.test(t)) return 'fa-clipboard-check';
+  if (/taller|curso|asesor|capacit/.test(t)) return 'fa-chalkboard-user';
+  if (/fecha|plazo|cierre|calendario/.test(t)) return 'fa-calendar-day';
+  return 'fa-bullhorn';
+}
+
+function haceRelativo(iso) {
+  if (!iso) return '';
+  const d = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+  if (d <= 0) return 'Hoy';
+  if (d === 1) return 'Ayer';
+  if (d < 7) return `Hace ${d} días`;
+  if (d < 30) { const w = Math.floor(d / 7); return `Hace ${w} semana${w === 1 ? '' : 's'}`; }
+  const m = Math.floor(d / 30);
+  return `Hace ${m} mes${m === 1 ? '' : 'es'}`;
+}
+
+function avisoCardHtml(a, nuevo) {
+  const fecha = a.fecha_publicacion || a.created_at;
+  return `<article class="aviso-card${a.importante ? ' importante' : ''}${nuevo ? ' nuevo' : ''}" data-importante="${a.importante ? 1 : 0}" data-nuevo="${nuevo ? 1 : 0}">
+    <span class="aviso-card-icono" aria-hidden="true"><i class="fa-solid ${iconoAviso(a)}"></i></span>
+    <div class="aviso-card-cuerpo">
+      <div class="aviso-card-meta">
+        <span class="aviso-cat">${escapeHtml(a.categoria || 'Aviso')}</span>
+        ${a.importante ? '<span class="aviso-pill imp"><i class="fa-solid fa-star"></i> Importante</span>' : ''}
+        ${nuevo ? '<span class="aviso-pill nuevo">Nuevo</span>' : ''}
+        <time datetime="${escapeHtml(fecha || '')}">${escapeHtml(haceRelativo(fecha))}</time>
+      </div>
+      <h4>${escapeHtml(a.titulo)}</h4>
+      <p>${escapeHtml(a.contenido)}</p>
+      <footer>${a.autor ? `<span class="aviso-autor">${escapeHtml(iniciales(a.autor))}</span>${escapeHtml(a.autor)} · ` : ''}${fecha ? escapeHtml(fmtFechaHora(fecha)) : ''}</footer>
+    </div>
+  </article>`;
+}
+
+function contenedorModalAviso() {
   let modal = $('modal-aviso');
   if (!modal) {
     modal = document.createElement('div');
     modal.id = 'modal-aviso';
-    modal.className = 'fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4';
+    modal.className = 'fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4';
     modal.setAttribute('role', 'dialog');
     modal.setAttribute('aria-modal', 'true');
-    modal.addEventListener('click', (e) => { if (e.target === modal) cerrarModal('modal-aviso'); });
+    modal.setAttribute('aria-labelledby', 'avisos-titulo');
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) cerrarModal('modal-aviso');
+      const f = e.target.closest('[data-filtro-aviso]');
+      if (f) filtrarAvisosPanel(f.dataset.filtroAviso);
+    });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !modal.classList.contains('hidden')) cerrarModal('modal-aviso'); });
     document.body.appendChild(modal);
   }
+  return modal;
+}
+
+function cabeceraAvisos(titulo, sub) {
+  return `<header class="avisos-cab">
+      <span class="avisos-cab-icono"><i class="fa-solid fa-bullhorn"></i></span>
+      <div class="min-w-0"><h3 id="avisos-titulo">${titulo}</h3><p>${sub}</p></div>
+      <button type="button" onclick="cerrarModal('modal-aviso')" aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button>
+    </header>`;
+}
+
+function filtrarAvisosPanel(f) {
+  const modal = $('modal-aviso');
+  modal.querySelectorAll('[data-filtro-aviso]').forEach((b) => { const on = b.dataset.filtroAviso === f; b.classList.toggle('activo', on); b.setAttribute('aria-pressed', String(on)); });
+  let visibles = 0;
+  modal.querySelectorAll('.aviso-card').forEach((c) => {
+    const ok = f === 'todos' || (f === 'importantes' && c.dataset.importante === '1') || (f === 'nuevos' && c.dataset.nuevo === '1');
+    c.classList.toggle('hidden', !ok);
+    if (ok) visibles += 1;
+  });
+  modal.querySelector('.avisos-sin')?.classList.toggle('hidden', visibles > 0);
+}
+
+/** Campana de la barra: abre todos los avisos vigentes en una ventana y los marca como vistos. */
+function verAvisosTutor() {
+  const modal = contenedorModalAviso();
+  const vistos = avisosVistos();
   const lista = [...avisosTutor].sort((a, b) => Number(Boolean(b.importante)) - Number(Boolean(a.importante)));
-  modal.innerHTML = `<div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-xl border border-slate-200 max-h-[85vh] overflow-y-auto">
-      <div class="flex justify-between items-center mb-4">
-        <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-bullhorn text-amber-500"></i> Avisos de la Coordinación</h3>
-        <button type="button" onclick="cerrarModal('modal-aviso')" class="text-slate-400 hover:text-slate-600" aria-label="Cerrar"><i class="fa-solid fa-xmark text-lg"></i></button>
+  const nuevos = lista.filter((a) => !vistos.has(firmaAviso(a))).length;
+  const imp = lista.filter((a) => a.importante).length;
+  const sub = lista.length ? `${plural(lista.length, 'aviso vigente', 'avisos vigentes')}${nuevos ? ` · ${plural(nuevos, 'nuevo', 'nuevos')}` : ''}` : 'Sin avisos por ahora';
+  const chipF = (k, etq, n) => `<button type="button" class="avisos-filtro${k === 'todos' ? ' activo' : ''}" data-filtro-aviso="${k}" aria-pressed="${k === 'todos'}">${etq}<span>${n}</span></button>`;
+  modal.innerHTML = `<div class="avisos-panel">
+      ${cabeceraAvisos('Avisos de la Coordinación', sub)}
+      ${lista.length > 1 ? `<div class="avisos-filtros">${chipF('todos', 'Todos', lista.length)}${imp ? chipF('importantes', 'Importantes', imp) : ''}${nuevos ? chipF('nuevos', 'Nuevos', nuevos) : ''}</div>` : ''}
+      <div class="avisos-lista">${lista.length ? lista.map((a) => avisoCardHtml(a, !vistos.has(firmaAviso(a)))).join('') : ''}
+        <div class="avisos-sin ${lista.length ? 'hidden' : ''}"><span><i class="fa-regular fa-bell-slash"></i></span>No hay avisos ${lista.length ? 'con este filtro' : 'publicados por la Coordinación'}.</div>
       </div>
-      <div class="space-y-3">${lista.length ? lista.map((a) => tarjetaAviso(a, { admin: false })).join('')
-        : '<p class="text-xs text-slate-400 text-center py-6">No hay avisos publicados por la Coordinación.</p>'}</div>
     </div>`;
   modal.classList.remove('hidden');
   marcarAvisosVistos(avisosTutor);
@@ -2816,7 +2947,8 @@ function montarTickerAvisos(avisos) {
       <button type="button" data-paso="-1" aria-label="Aviso anterior"><i class="fa-solid fa-chevron-up"></i></button>
       <span class="aviso-ticker-cuenta">1/${total}</span>
       <button type="button" data-paso="1" aria-label="Siguiente aviso"><i class="fa-solid fa-chevron-down"></i></button>
-    </div>` : ''}`;
+    </div>` : ''}
+    ${total > 1 ? '<span class="aviso-ticker-progreso" aria-hidden="true"><i></i></span>' : ''}`;
   cont.classList.toggle('con-importante', TICKER.lista[0].importante);
   if (!cont.dataset.conectado) {
     cont.dataset.conectado = '1';
@@ -2826,10 +2958,11 @@ function montarTickerAvisos(avisos) {
       const item = e.target.closest('.aviso-ticker-item');
       if (item) abrirAvisoModal(TICKER.lista[Number(item.dataset.i)]);
     });
-    cont.addEventListener('mouseenter', () => { TICKER.pausado = true; });
-    cont.addEventListener('mouseleave', () => { TICKER.pausado = false; });
-    cont.addEventListener('focusin', () => { TICKER.pausado = true; });
-    cont.addEventListener('focusout', () => { TICKER.pausado = false; });
+    const pausar = (v) => { TICKER.pausado = v; cont.classList.toggle('pausado', v); };
+    cont.addEventListener('mouseenter', () => pausar(true));
+    cont.addEventListener('mouseleave', () => pausar(false));
+    cont.addEventListener('focusin', () => pausar(true));
+    cont.addEventListener('focusout', () => pausar(false));
   }
   reiniciarTicker();
 }
@@ -2848,10 +2981,20 @@ function moverTicker(paso) {
   cont.classList.toggle('con-importante', Boolean(TICKER.lista[TICKER.i].importante));
   const cuenta = cont.querySelector('.aviso-ticker-cuenta');
   if (cuenta) cuenta.textContent = `${TICKER.i + 1}/${total}`;
+  reiniciarBarraTicker();
+}
+
+function reiniciarBarraTicker() {
+  const barra = $('aviso-ticker')?.querySelector('.aviso-ticker-progreso i');
+  if (!barra) return;
+  barra.style.animation = 'none';
+  void barra.offsetWidth;
+  barra.style.animation = '';
 }
 
 function reiniciarTicker() {
   clearInterval(TICKER.timer);
+  reiniciarBarraTicker();
   if (TICKER.lista.length < 2) return;
   TICKER.timer = setInterval(() => { if (!TICKER.pausado && !document.hidden) moverTicker(1); }, 6000);
 }
@@ -2859,26 +3002,15 @@ function reiniciarTicker() {
 /** Muestra un aviso completo en una ventana. */
 function abrirAvisoModal(a) {
   if (!a) return;
-  let modal = $('modal-aviso');
-  if (!modal) {
-    modal = document.createElement('div');
-    modal.id = 'modal-aviso';
-    modal.className = 'fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4';
-    modal.setAttribute('role', 'dialog');
-    modal.setAttribute('aria-modal', 'true');
-    modal.addEventListener('click', (e) => { if (e.target === modal) cerrarModal('modal-aviso'); });
-    document.body.appendChild(modal);
-  }
-  modal.innerHTML = `<div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-slate-200 max-h-[85vh] overflow-y-auto">
-      <div class="flex justify-between items-center mb-3">
-        <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-bullhorn text-amber-500"></i> Aviso de la Coordinación</h3>
-        <button type="button" onclick="cerrarModal('modal-aviso')" class="text-slate-400 hover:text-slate-600" aria-label="Cerrar"><i class="fa-solid fa-xmark text-lg"></i></button>
-      </div>
-      ${tarjetaAviso(a, { admin: false })}
-      <button type="button" onclick="cerrarModal('modal-aviso'); verAvisosTutor()" class="mt-4 w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 rounded-xl text-xs">Ver todos los avisos</button>
+  const modal = contenedorModalAviso();
+  const vistos = avisosVistos();
+  const nuevo = !vistos.has(firmaAviso(a));
+  modal.innerHTML = `<div class="avisos-panel chico">
+      ${cabeceraAvisos('Aviso de la Coordinación', escapeHtml(a.categoria || ''))}
+      <div class="avisos-lista">${avisoCardHtml(a, nuevo)}</div>
+      ${avisosTutor.length > 1 ? `<div class="avisos-pie"><button type="button" onclick="verAvisosTutor()">Ver todos los avisos (${avisosTutor.length}) <i class="fa-solid fa-arrow-right"></i></button></div>` : ''}
     </div>`;
   modal.classList.remove('hidden');
-  const vistos = avisosVistos();
   vistos.add(firmaAviso(a));
   try { localStorage.setItem(CLAVE_AVISOS_VISTOS, JSON.stringify([...vistos])); } catch (e) { /* sin almacenamiento */ }
   pintarCampanaAvisos();
@@ -3893,6 +4025,71 @@ function agregarAreaApoyo() {
   pintarAreasEditor();
 }
 
+/* "¿En qué puedo apoyarte?" como bloques editables (máx. 6) */
+const ENFOQUE_SUGERIDO = ['Planear tu carga académica', 'Recuperar asignaturas reprobadas', 'Técnicas de estudio y manejo del tiempo',
+  'Elegir especialidad o residencia profesional', 'Servicio social y titulación', 'Canalizarte a asesorías o apoyo psicológico'];
+let enfoqueEditor = [];
+
+function pintarEnfoqueEditor() {
+  const lista = $('mp-enfoque-lista');
+  if (!lista) return;
+  lista.innerHTML = enfoqueEditor.length ? enfoqueEditor.map((x, i) => `<li class="enfoque-bloque" data-i="${i}">
+      <span class="enfoque-num">${i + 1}</span>
+      <input type="text" class="enfoque-texto" value="${escapeHtml(x)}" maxlength="160" aria-label="Tema ${i + 1}">
+      <span class="enfoque-acciones">
+        <button type="button" data-mover="-1" ${i === 0 ? 'disabled' : ''} aria-label="Subir"><i class="fa-solid fa-arrow-up"></i></button>
+        <button type="button" data-mover="1" ${i === enfoqueEditor.length - 1 ? 'disabled' : ''} aria-label="Bajar"><i class="fa-solid fa-arrow-down"></i></button>
+        <button type="button" data-quitar class="quitar" aria-label="Quitar"><i class="fa-solid fa-xmark"></i></button>
+      </span></li>`).join('')
+    : '<li class="enfoque-vacio"><i class="fa-regular fa-lightbulb"></i> Aún no agregas temas. Escribe uno abajo o toca una sugerencia.</li>';
+  setText('mp-enfoque-cuenta', `${enfoqueEditor.length} / 6`);
+  const sug = ENFOQUE_SUGERIDO.filter((x) => !enfoqueEditor.some((e) => e.toLowerCase() === x.toLowerCase()));
+  $('mp-enfoque-sug').innerHTML = enfoqueEditor.length < 6 && sug.length
+    ? `<span>Sugerencias:</span>${sug.map((x) => `<button type="button" data-sug="${escapeHtml(x)}"><i class="fa-solid fa-plus"></i> ${escapeHtml(x)}</button>`).join('')}` : '';
+}
+
+function conectarEnfoqueEditor() {
+  const lista = $('mp-enfoque-lista');
+  if (!lista || lista.dataset.conectado) return;
+  lista.dataset.conectado = '1';
+  lista.addEventListener('input', (e) => {
+    const li = e.target.closest('[data-i]');
+    if (li && e.target.classList.contains('enfoque-texto')) enfoqueEditor[Number(li.dataset.i)] = e.target.value;
+  });
+  lista.addEventListener('click', (e) => {
+    const li = e.target.closest('[data-i]');
+    if (!li) return;
+    const i = Number(li.dataset.i);
+    const mover = e.target.closest('[data-mover]');
+    if (mover) {
+      const j = i + Number(mover.dataset.mover);
+      if (j < 0 || j >= enfoqueEditor.length) return;
+      [enfoqueEditor[i], enfoqueEditor[j]] = [enfoqueEditor[j], enfoqueEditor[i]];
+      pintarEnfoqueEditor();
+      lista.querySelector(`[data-i="${j}"] [data-mover="${mover.dataset.mover}"]`)?.focus();
+    } else if (e.target.closest('[data-quitar]')) {
+      enfoqueEditor.splice(i, 1);
+      pintarEnfoqueEditor();
+    }
+  });
+  $('mp-enfoque-nuevo').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); agregarEnfoque(); } });
+  $('mp-enfoque-sug').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-sug]');
+    if (b) agregarEnfoque(b.dataset.sug);
+  });
+}
+
+function agregarEnfoque(texto) {
+  const input = $('mp-enfoque-nuevo');
+  const v = String(texto ?? input.value).trim().replace(/\s+/g, ' ');
+  if (!v) return;
+  if (enfoqueEditor.length >= 6) return toast('Máximo 6 temas en "¿En qué puedo apoyarte?".', 'error');
+  if (enfoqueEditor.some((x) => x.toLowerCase() === v.toLowerCase())) { if (texto === undefined) input.value = ''; return; }
+  enfoqueEditor.push(v);
+  if (texto === undefined) input.value = '';
+  pintarEnfoqueEditor();
+}
+
 let perfilTutorActual = null;
 let fotoTutorPendiente; // undefined = sin cambios · null = quitar · dataURL = nueva
 
@@ -3922,7 +4119,9 @@ function abrirEditorPerfilTutor() {
   $('mp-anios').value = t.anios_experiencia ?? '';
   $('mp-frase').value = t.frase || '';
   $('mp-presentacion').value = t.presentacion || '';
-  $('mp-enfoque').value = (t.enfoque || []).join('\n');
+  enfoqueEditor = [...(t.enfoque || [])];
+  conectarEnfoqueEditor();
+  pintarEnfoqueEditor();
   areasEditor = [...(t.areas_apoyo || [])];
   $('mp-area-nueva').value = '';
   pintarAreasEditor();
@@ -3986,7 +4185,10 @@ function quitarFotoTutor() {
 async function guardarPerfilTutor(event) {
   event.preventDefault();
   const horarios = bloquesDesdeHoras(horasEditor);
-  const enfoque = $('mp-enfoque').value.split('\n').map((x) => x.trim()).filter(Boolean);
+  const pendiente = $('mp-enfoque-nuevo')?.value.trim();
+  if (pendiente && enfoqueEditor.length < 6 && !enfoqueEditor.some((x) => x.toLowerCase() === pendiente.toLowerCase())) enfoqueEditor.push(pendiente);
+  if ($('mp-enfoque-nuevo')) $('mp-enfoque-nuevo').value = '';
+  const enfoque = enfoqueEditor.map((x) => x.trim().replace(/\s+/g, ' ')).filter(Boolean);
   if (enfoque.length > 6) return toast('Máximo 6 elementos en "¿En qué puedo apoyarte?".', 'error');
   const body = {
     presentacion: $('mp-presentacion').value.trim(),
