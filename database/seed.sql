@@ -234,3 +234,6 @@ UPDATE asignaciones_tutoria SET origen = 'Elección del tutorado'
 
 -- Fichas de identificación (Anexo 6) de ejemplo (migración 007)
 \ir migracion_007_ficha_identificacion.sql
+
+-- Plantilla de 18 tutores con datos del semestre (ficticios)
+\ir datos_012_tutores_programa.sql

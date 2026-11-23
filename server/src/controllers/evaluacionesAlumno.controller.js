@@ -128,20 +128,47 @@ async function guardar(req, res) {
   });
 }
 
+/** Mínimo de respuestas para mostrar resultados de un tutor (protege el anonimato). */
+const MIN_RESPUESTAS = 3;
+const anonimizar = (textos) => textos.filter(Boolean).map((t) => String(t).trim()).filter(Boolean).sort(() => Math.random() - 0.5);
+
+/** Concentrado de ítems Likert sobre un conjunto de evaluaciones. */
+function concentrar(evals) {
+  const items = PREGUNTAS_ALUMNO.map((p) => {
+    const valores = evals.map((e) => Number(e.respuestas[p.clave])).filter((n) => n >= 1 && n <= 5);
+    const distribucion = Object.fromEntries(ESCALA.map((e) => [e.valor, valores.filter((x) => x === e.valor).length]));
+    const n = valores.length;
+    return {
+      ...p,
+      respuestas: n,
+      promedio: n ? redondear(valores.reduce((s, x) => s + x, 0) / n) : null,
+      distribucion,
+      pct_favorable: n ? redondear(((distribucion[1] + distribucion[2]) / n) * 100, 1) : null,
+    };
+  });
+  const total = (k) => items.reduce((s, i) => s + i.distribucion[k], 0);
+  const todas = items.reduce((s, i) => s + i.respuestas, 0);
+  const conDatos = items.filter((i) => i.promedio !== null);
+  return {
+    items,
+    promedio_general: conDatos.length ? redondear(conDatos.reduce((s, i) => s + i.promedio, 0) / conDatos.length) : null,
+    pct_favorable_general: todas ? redondear(((total(1) + total(2)) / todas) * 100, 1) : null,
+    distribucion_general: Object.fromEntries(ESCALA.map((e) => [e.valor, total(e.valor)])),
+  };
+}
+
 /**
- * GET /api/evaluaciones/alumnos/resumen?periodo=2026-2&tutor_id=1   (coordinador)
- * Resultados por tutor, por ítem y lista de respuestas individuales.
+ * GET /api/evaluaciones/alumnos/resumen?periodo=2026-2&tutor_id=   (coordinador)
+ * Resultados ANÓNIMOS: nunca se devuelve quién evaluó ni sus respuestas.
+ * Los resultados de un tutor solo se muestran con al menos MIN_RESPUESTAS evaluaciones.
  */
 async function resumen(req, res) {
   const periodo = periodoDe(req);
   const tutorId = req.query.tutor_id ? v.idPositivo(req.query.tutor_id, 'tutor_id') : null;
 
-  // Tutores con cuántos tutorados tienen y cuántos los evaluaron
   const { rows: tutores } = await db.query(
     `SELECT tu.id AS tutor_id,
             u.nombre || ' ' || u.apellidos AS nombre,
-            (SELECT array_remove(array_agg(DISTINCT a.grupo), NULL) FROM asignaciones_tutoria a
-              WHERE a.tutor_id = tu.id AND a.periodo_escolar = $1 AND a.estatus_asignacion = 'Activa') AS grupos,
             (SELECT count(*) FROM asignaciones_tutoria a
               WHERE a.tutor_id = tu.id AND a.periodo_escolar = $1 AND a.estatus_asignacion = 'Activa')::int AS tutorados
        FROM tutores tu
@@ -149,58 +176,30 @@ async function resumen(req, res) {
    ORDER BY u.apellidos`,
     [periodo]
   );
-
   const { rows: evals } = await db.query(
-    `SELECT e.id, e.tutor_id, e.respuestas, e.comentarios, e.fecha_envio,
-            ua.no_control_o_rfc AS no_control,
-            ua.apellidos || ' ' || ua.nombre AS alumno_nombre,
-            t.semestre, a.grupo,
-            ut.nombre || ' ' || ut.apellidos AS tutor_nombre
-       FROM evaluaciones_alumno e
-       JOIN tutorados t  ON t.id = e.tutorado_id
-       JOIN usuarios  ua ON ua.id = t.usuario_id
-       JOIN tutores   tu ON tu.id = e.tutor_id
-       JOIN usuarios  ut ON ut.id = tu.usuario_id
-  LEFT JOIN asignaciones_tutoria a ON a.tutorado_id = t.id AND a.periodo_escolar = e.periodo
-                                  AND a.tutor_id = e.tutor_id
-      WHERE e.periodo = $1
-   ORDER BY e.fecha_envio DESC`,
+    'SELECT tutor_id, respuestas, comentarios FROM evaluaciones_alumno WHERE periodo = $1',
     [periodo]
   );
 
-  // Resultados por tutor (siempre sobre todas las evaluaciones del periodo)
   const porTutor = tutores
     .filter((t) => t.tutorados > 0 || evals.some((e) => e.tutor_id === t.tutor_id))
     .map((t) => {
       const suyas = evals.filter((e) => e.tutor_id === t.tutor_id);
-      const proms = suyas.map((e) => promedioDe(e.respuestas)).filter((x) => x !== null);
-      const prom = proms.length ? proms.reduce((s, x) => s + x, 0) / proms.length : null;
+      const suficiente = suyas.length >= MIN_RESPUESTAS;
+      const c = suficiente ? concentrar(suyas) : null;
       return {
         ...t,
         respondidas: suyas.length,
         pct_participacion: t.tutorados ? redondear((suyas.length / t.tutorados) * 100, 1) : 0,
-        promedio: redondear(prom),
+        suficiente,
+        promedio: c ? c.promedio_general : null,
+        pct_favorable: c ? c.pct_favorable_general : null,
       };
     });
 
-  // Ítems y lista individual (filtrables por tutor)
   const filtradas = tutorId ? evals.filter((e) => e.tutor_id === tutorId) : evals;
-  const items = PREGUNTAS_ALUMNO.map((p) => {
-    const crudos = filtradas.map((e) => e.respuestas[p.clave]);
-    const noAplica = crudos.filter((x) => x !== undefined && x !== null && Number(x) === NO_APLICA).length;
-    const valores = crudos.map(Number).filter((n) => n >= 1 && n <= 5);
-    const distribucion = Object.fromEntries(ESCALA.map((e) => [e.valor, valores.filter((x) => x === e.valor).length]));
-    const n = valores.length;
-    return {
-      ...p,
-      respuestas: n,
-      no_aplica: noAplica,
-      promedio: n ? redondear(valores.reduce((s, x) => s + x, 0) / n) : null,
-      distribucion,
-      pct_favorable: n ? redondear(((distribucion[1] + distribucion[2]) / n) * 100, 1) : null,
-    };
-  });
-  const conDatos = items.filter((i) => i.promedio !== null);
+  const suficiente = filtradas.length >= MIN_RESPUESTAS;
+  const c = suficiente ? concentrar(filtradas) : null;
   const totalTutorados = tutorId
     ? porTutor.find((t) => t.tutor_id === tutorId)?.tutorados || 0
     : porTutor.reduce((s, t) => s + t.tutorados, 0);
@@ -208,58 +207,21 @@ async function resumen(req, res) {
   res.json({
     ok: true,
     periodo,
+    anonimo: true,
+    minimo_respuestas: MIN_RESPUESTAS,
     tutor_id: tutorId,
     escala: ESCALA,
-    secciones: SECCIONES_ALUMNO.map((s) => ({ id: s.id, titulo: s.titulo })),
+    suficiente,
     respondidas: filtradas.length,
     total_tutorados: totalTutorados,
     pct_participacion: totalTutorados ? redondear((filtradas.length / totalTutorados) * 100, 1) : 0,
-    promedio_general: conDatos.length
-      ? redondear(conDatos.reduce((s, i) => s + i.promedio, 0) / conDatos.length)
-      : null,
+    promedio_general: c ? c.promedio_general : null,
+    pct_favorable_general: c ? c.pct_favorable_general : null,
+    distribucion_general: c ? c.distribucion_general : null,
     por_tutor: porTutor,
-    items,
-    respuestas: filtradas.map((e) => ({
-      id: e.id,
-      tutor_id: e.tutor_id,
-      tutor_nombre: e.tutor_nombre,
-      no_control: e.no_control,
-      alumno_nombre: e.alumno_nombre,
-      semestre: e.semestre,
-      grupo: e.grupo,
-      fecha_envio: e.fecha_envio,
-      promedio: promedioDe(e.respuestas),
-      tiene_comentarios: Boolean(e.comentarios),
-    })),
+    items: c ? c.items : PREGUNTAS_ALUMNO.map((p) => ({ ...p, respuestas: 0, promedio: null, distribucion: null, pct_favorable: null })),
+    comentarios: suficiente ? anonimizar(filtradas.map((e) => e.comentarios)) : [],
   });
 }
 
-/**
- * GET /api/evaluaciones/alumnos/:id   (coordinador)
- * Respuestas completas de una evaluación.
- */
-async function detalle(req, res) {
-  const id = v.idPositivo(req.params.id, 'id');
-  const { rows } = await db.query(
-    `SELECT e.id, e.periodo, e.respuestas, e.comentarios, e.fecha_envio, e.updated_at,
-            ua.no_control_o_rfc AS no_control,
-            ua.apellidos || ' ' || ua.nombre AS alumno_nombre,
-            ut.nombre || ' ' || ut.apellidos AS tutor_nombre
-       FROM evaluaciones_alumno e
-       JOIN tutorados t  ON t.id = e.tutorado_id
-       JOIN usuarios  ua ON ua.id = t.usuario_id
-       JOIN tutores   tu ON tu.id = e.tutor_id
-       JOIN usuarios  ut ON ut.id = tu.usuario_id
-      WHERE e.id = $1`,
-    [id]
-  );
-  if (!rows[0]) throw notFound('Evaluación no encontrada');
-  res.json({
-    ok: true,
-    secciones: SECCIONES_ALUMNO,
-    escala: ESCALA_ALUMNO,
-    evaluacion: { ...rows[0], promedio: promedioDe(rows[0].respuestas) },
-  });
-}
-
-module.exports = { miEvaluacion, guardar, resumen, detalle };
+module.exports = { miEvaluacion, guardar, resumen };

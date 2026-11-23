@@ -84,9 +84,17 @@ async function guardar(req, res) {
   });
 }
 
+/** Mínimo de respuestas para mostrar resultados: con menos se podría deducir quién respondió qué. */
+const MIN_RESPUESTAS = 3;
+
+/** Mezcla los comentarios para que su orden no delate quién los escribió. */
+const anonimizar = (textos) => textos.filter(Boolean).map((t) => String(t).trim()).filter(Boolean).sort(() => Math.random() - 0.5);
+
 /**
  * GET /api/evaluaciones/resumen?periodo=2026-2   (coordinador)
- * Concentrado por pregunta (promedio, distribución, % favorable) y estatus por tutor.
+ * Resultados ANÓNIMOS: concentrado por pregunta y participación. La coordinación
+ * no puede ver las respuestas de un tutor en particular; los resultados solo se
+ * muestran cuando hay al menos MIN_RESPUESTAS evaluaciones en el periodo.
  */
 async function resumen(req, res) {
   const periodo = periodoDe(req);
@@ -94,91 +102,58 @@ async function resumen(req, res) {
   const { rows: tutores } = await db.query(
     `SELECT tu.id AS tutor_id,
             u.nombre || ' ' || u.apellidos AS nombre,
-            u.no_control_o_rfc AS rfc,
-            (SELECT array_remove(array_agg(DISTINCT a.grupo), NULL)
-               FROM asignaciones_tutoria a
-              WHERE a.tutor_id = tu.id AND a.periodo_escolar = $1 AND a.estatus_asignacion = 'Activa') AS grupos,
-            e.id AS evaluacion_id, e.fecha_envio, e.updated_at, e.comentarios,
-            ${CLAVES.map((k) => `e.${k}`).join(', ')}
+            (e.id IS NOT NULL) AS respondio
        FROM tutores tu
        JOIN usuarios u ON u.id = tu.usuario_id AND u.estado = 'activo'
   LEFT JOIN evaluaciones_tutor e ON e.tutor_id = tu.id AND e.periodo = $1
-   ORDER BY (e.id IS NULL), u.apellidos`,
+   ORDER BY u.apellidos`,
     [periodo]
   );
-
-  const respondidas = tutores.filter((t) => t.evaluacion_id);
+  const { rows: respuestas } = await db.query(
+    `SELECT ${COLUMNAS}, comentarios FROM evaluaciones_tutor WHERE periodo = $1`,
+    [periodo]
+  );
+  const n = respuestas.length;
+  const suficiente = n >= MIN_RESPUESTAS;
 
   const porPregunta = PREGUNTAS.map((p) => {
-    const valores = respondidas.map((t) => Number(t[p.clave]));
+    if (!suficiente) return { ...p, respuestas: n, promedio: null, distribucion: null, pct_favorable: null };
+    const valores = respuestas.map((t) => Number(t[p.clave]));
     const distribucion = Object.fromEntries(ESCALA.map((e) => [e.valor, valores.filter((x) => x === e.valor).length]));
-    const n = valores.length;
-    const promedio = n ? valores.reduce((s, x) => s + x, 0) / n : null;
     return {
       ...p,
       respuestas: n,
-      promedio: promedio === null ? null : Math.round(promedio * 100) / 100,
+      promedio: Math.round((valores.reduce((s, x) => s + x, 0) / n) * 100) / 100,
       distribucion,
       // % de tutores que respondió "Siempre" o "Casi siempre"
-      pct_favorable: n ? Math.round(((distribucion[1] + distribucion[2]) / n) * 1000) / 10 : null,
+      pct_favorable: Math.round(((distribucion[1] + distribucion[2]) / n) * 1000) / 10,
     };
   });
 
   const conPromedio = porPregunta.filter((p) => p.promedio !== null);
-  const promedioGeneral = conPromedio.length
-    ? Math.round((conPromedio.reduce((s, p) => s + p.promedio, 0) / conPromedio.length) * 100) / 100
-    : null;
+  const total = (k) => porPregunta.reduce((s, p) => s + (p.distribucion ? p.distribucion[k] : 0), 0);
+  const totalRespuestas = n * PREGUNTAS.length;
 
   res.json({
     ok: true,
     periodo,
+    anonimo: true,
+    minimo_respuestas: MIN_RESPUESTAS,
+    suficiente,
     escala: ESCALA,
     total_tutores: tutores.length,
-    respondidas: respondidas.length,
-    pct_participacion: tutores.length ? Math.round((respondidas.length / tutores.length) * 1000) / 10 : 0,
-    promedio_general: promedioGeneral,
+    respondidas: n,
+    pct_participacion: tutores.length ? Math.round((n / tutores.length) * 1000) / 10 : 0,
+    promedio_general: conPromedio.length
+      ? Math.round((conPromedio.reduce((s, p) => s + p.promedio, 0) / conPromedio.length) * 100) / 100
+      : null,
+    pct_favorable_general: suficiente ? Math.round(((total(1) + total(2)) / totalRespuestas) * 1000) / 10 : null,
+    distribucion_general: suficiente ? Object.fromEntries(ESCALA.map((e) => [e.valor, total(e.valor)])) : null,
     preguntas: porPregunta,
-    tutores: tutores.map((t) => ({
-      tutor_id: t.tutor_id,
-      nombre: t.nombre,
-      rfc: t.rfc,
-      grupos: t.grupos,
-      estatus: t.evaluacion_id ? 'Enviada' : 'Pendiente',
-      fecha_envio: t.fecha_envio,
-      promedio: t.evaluacion_id
-        ? Math.round((CLAVES.reduce((s, k) => s + Number(t[k]), 0) / CLAVES.length) * 100) / 100
-        : null,
-      tiene_comentarios: Boolean(t.comentarios),
-    })),
+    comentarios: suficiente ? anonimizar(respuestas.map((r) => r.comentarios)) : [],
+    // Solo participación (para recordar a quien falta), nunca sus respuestas
+    tutores: tutores.map((t) => ({ tutor_id: t.tutor_id, nombre: t.nombre, estatus: t.respondio ? 'Enviada' : 'Pendiente' })),
   });
 }
 
-/**
- * GET /api/evaluaciones/tutor/:tutorId?periodo=2026-2   (coordinador)
- * Respuestas individuales de un tutor.
- */
-async function detalleTutor(req, res) {
-  const tutorId = v.idPositivo(req.params.tutorId, 'tutorId');
-  const periodo = periodoDe(req);
-  const { rows } = await db.query(
-    `SELECT e.id, e.tutor_id, e.periodo, ${CLAVES.map((k) => `e.${k}`).join(', ')},
-            e.comentarios, e.fecha_envio, e.updated_at,
-            u.nombre || ' ' || u.apellidos AS tutor_nombre
-       FROM evaluaciones_tutor e
-       JOIN tutores tu ON tu.id = e.tutor_id
-       JOIN usuarios u ON u.id = tu.usuario_id
-      WHERE e.tutor_id = $1 AND e.periodo = $2`,
-    [tutorId, periodo]
-  );
-  if (!rows[0]) throw notFound('Este tutor aún no ha enviado su evaluación en el periodo.');
-  res.json({
-    ok: true,
-    periodo,
-    preguntas: PREGUNTAS,
-    escala: ESCALA,
-    tutor_nombre: rows[0].tutor_nombre,
-    evaluacion: formatear(rows[0]),
-  });
-}
-
-module.exports = { miEvaluacion, guardar, resumen, detalleTutor };
+module.exports = { miEvaluacion, guardar, resumen };

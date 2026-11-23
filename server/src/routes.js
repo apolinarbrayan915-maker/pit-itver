@@ -16,6 +16,7 @@ const avisos = require('./controllers/avisos.controller');
 const asignaciones = require('./controllers/asignaciones.controller');
 const tutores = require('./controllers/tutores.controller');
 const recomendador = require('./controllers/recomendador.controller');
+const reportes = require('./controllers/reportes.controller');
 const perfilTutorado = require('./controllers/perfilTutorado.controller');
 const fichas = require('./controllers/fichas.controller');
 
@@ -60,6 +61,7 @@ router.get('/tutorados/riesgo', requiereRol('coordinador', 'tutor'), tutorados.l
 router.post('/citas/reservar', requiereRol('alumno', 'tutor', 'coordinador'), citas.reservar);
 router.get('/citas/mias', requiereRol('alumno'), citas.misCitas);
 router.get('/citas/reporte-diario', requiereRol('tutor', 'coordinador'), citas.reporteDiario);
+router.get('/reportes/programa', requiereRol('coordinador'), reportes.programa);
 router.get('/citas/tutor/:tutorId', requiereRol('tutor', 'coordinador'), citas.agendaTutor);
 router.patch('/citas/:id/estatus', citas.cambiarEstatus);
 router.put('/citas/:id/minuta', requiereRol('tutor'), citas.guardarMinuta);
@@ -73,14 +75,12 @@ router.post('/canalizaciones/:id/seguimiento', requiereRol('tutor', 'coordinador
 router.get('/evaluaciones/mia', requiereRol('tutor'), evaluaciones.miEvaluacion);
 router.post('/evaluaciones', requiereRol('tutor'), evaluaciones.guardar);
 router.get('/evaluaciones/resumen', requiereRol('coordinador'), evaluaciones.resumen);
-router.get('/evaluaciones/tutor/:tutorId', requiereRol('coordinador'), evaluaciones.detalleTutor);
 
 // Evaluación del acompañamiento tutorial hecha por el tutorado (secciones 4 y 5).
 // CONFIDENCIAL: ninguna de estas rutas admite el rol "tutor".
 router.get('/evaluaciones/alumno/mia', requiereRol('alumno'), evaluacionesAlumno.miEvaluacion);
 router.post('/evaluaciones/alumno', requiereRol('alumno'), evaluacionesAlumno.guardar);
 router.get('/evaluaciones/alumnos/resumen', requiereRol('coordinador'), evaluacionesAlumno.resumen);
-router.get('/evaluaciones/alumnos/:id', requiereRol('coordinador'), evaluacionesAlumno.detalle);
 
 // Avisos: la coordinación los administra; solo los tutores los leen (los alumnos no)
 router.get('/avisos', requiereRol('tutor', 'coordinador'), avisos.listar);
