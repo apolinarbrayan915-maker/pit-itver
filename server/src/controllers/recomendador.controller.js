@@ -135,6 +135,8 @@ async function vincularPerfil(req, res) {
     if (identidad(usuario.nombre) !== identidad(perfil.nombre)) {
       throw conflict('El nombre del perfil académico no coincide con la cuenta institucional.');
     }
+    const { rows: existentes } = await client.query(
+      'SELECT id FROM tutores WHERE usuario_id = $1', [usuario.id]);
     const { rows } = await client.query(
       `INSERT INTO tutores (usuario_id, catalogo_materias_id, cubiculo, max_tutorados, acepta_tutorados)
        VALUES ($1, $2, $3, $4, true)
@@ -142,6 +144,15 @@ async function vincularPerfil(req, res) {
        WHERE tutores.catalogo_materias_id IS NULL OR tutores.catalogo_materias_id = EXCLUDED.catalogo_materias_id
        RETURNING id`, [usuario.id, perfil.id, cubiculo, cupo]);
     if (!rows[0]) throw conflict('La cuenta ya tiene otro perfil académico.');
+    if (!existentes.length && req.body.usar_horario_catalogo === true) {
+      await client.query(
+        `INSERT INTO tutor_horarios (tutor_id, dia_semana, hora_inicio, hora_fin)
+         SELECT $1, h.dia, h.inicio, h.fin
+           FROM altas_catalogo_pit p
+           CROSS JOIN LATERAL (VALUES (p.dia_1, p.inicio_1, p.fin_1),
+                                     (p.dia_2, p.inicio_2, p.fin_2)) AS h(dia, inicio, fin)
+          WHERE p.perfil_id = $2`, [rows[0].id, perfil.id]);
+    }
     return rows[0].id;
   });
   res.json({ ok: true, tutor_id: tutorId });

@@ -25,6 +25,7 @@
 \ir migracion_008_quitar_evaluacion_ux.sql
 \echo '== 013 · Vínculo de perfiles académicos'
 \ir migracion_013_catalogo_materias.sql
+\ir migracion_014_altas_catalogo_pit.sql
 
 \echo ''
 \echo '== Verificación: deben aparecer las 7 tablas con "ok"'
