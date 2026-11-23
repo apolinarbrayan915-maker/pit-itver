@@ -3678,7 +3678,14 @@ async function recomendarTutores(event) {
       sin_cupo: 'Por el momento no hay tutores con cupo para nuevas asignaciones.',
       sin_coincidencias: 'El directorio no encontró coincidencias en las áreas registradas de los tutores con cupo.',
     };
-    if (modo !== 'ranking' && modo !== 'directorio') {
+    const notaModo = $('buscador-modo-nota');
+    if (notaModo && ['ranking', 'fallback', 'directorio', 'sin_coincidencias'].includes(modo)) {
+      notaModo.innerHTML = (modo === 'ranking' || modo === 'fallback')
+        ? '<strong>Método usado en tu búsqueda:</strong> modelo de lenguaje Sentence-BERT con similitud coseno (ponderación 45/35/20 y umbral de 40 %).'
+        : '<strong>Método usado en tu búsqueda:</strong> coincidencia de palabras clave, porque el modelo de lenguaje no estuvo disponible en este momento.';
+    }
+    const esFallback = modo === 'fallback' && candidatos?.length;
+    if (modo !== 'ranking' && modo !== 'directorio' && !esFallback) {
       resultado.textContent = avisos[modo] || avisos.sin_catalogo;
       mostrarPerfilesAcademicos(resultado, perfiles_academicos);
       return;
@@ -3686,7 +3693,9 @@ async function recomendarTutores(event) {
     const porcentaje = n => `${Math.round(n * 100)} %`;
     const fuente = document.createElement('p');
     fuente.className = 'text-xs font-semibold text-slate-600';
-    fuente.textContent = modo === 'directorio' ? 'Afinidad por palabras clave · áreas y materias de cada tutor' : 'Afinidad semántica · Sentence-BERT';
+    fuente.textContent = modo === 'directorio' ? 'Afinidad por palabras clave · áreas y materias de cada tutor'
+      : esFallback ? 'Ningún perfil alcanzó el 40 % de afinidad. Este es el más cercano a tu duda; Coordinación también puede orientarte.'
+      : 'Afinidad semántica · Sentence-BERT + similitud coseno';
     resultado.replaceChildren(fuente, ...candidatos.map(c => {
       const tarjeta = document.createElement('div');
       tarjeta.className = 'rounded-lg border border-slate-200 bg-white p-3';
@@ -3707,6 +3716,12 @@ async function recomendarTutores(event) {
         verPerfilTutor(c.tutor_id);
       };
       tarjeta.append(titulo, detalle);
+      if (c.evidencias?.length) {
+        const evidencia = document.createElement('p');
+        evidencia.className = 'mt-1 text-xs text-slate-500';
+        evidencia.textContent = 'Lo más parecido en su perfil · ' + c.evidencias.join(' · ');
+        tarjeta.append(evidencia);
+      }
       if (c.materias_reportadas?.length) {
         const materias = document.createElement('p');
         materias.className = 'mt-1 text-xs text-slate-600';

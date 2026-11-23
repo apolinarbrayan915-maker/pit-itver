@@ -19,6 +19,14 @@ const config = {
     token: env.RECOMENDADOR_TOKEN,
     habilitado: Boolean(env.RECOMENDADOR_URL && env.RECOMENDADOR_TOKEN?.length >= 32),
   },
+  // Sentence-BERT por Hugging Face Inference (embeddings + similitud coseno en Node).
+  // Sin HF_TOKEN la lupa usa coincidencia de palabras clave.
+  semantico: {
+    token: env.HF_TOKEN,
+    modelo: env.HF_MODELO || 'sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2',
+    url: env.HF_URL || 'https://router.huggingface.co/hf-inference/models',
+    habilitado: Boolean(env.HF_TOKEN),
+  },
   corsOrigins: (env.CORS_ORIGIN || '')
     .split(',')
     .map((s) => s.trim())

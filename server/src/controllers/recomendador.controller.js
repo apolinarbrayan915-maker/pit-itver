@@ -4,7 +4,8 @@ const { badRequest, conflict, notFound } = require('../utils/errores');
 const v = require('../utils/validaciones');
 const db = require('../db');
 const { tutoresDisponibles } = require('./tutores.controller');
-const { recomendador } = require('../config');
+const { recomendador, semantico } = require('../config');
+const { recomendarSemantico, indexar } = require('../utils/semantico');
 const catalogo = require('../catalogoMaterias');
 
 const { url, token, habilitado } = recomendador;
@@ -66,7 +67,21 @@ async function recomendar(req, res) {
   const porCorreo = new Map(disponibles.map(t => [t.correo.toLowerCase(), t]));
   if (!porCorreo.size) return res.json({ ok: true, modo: 'sin_cupo', candidatos: [], perfiles_academicos });
   const directorio = () => res.json({ ...buscarEnDirectorio(duda, disponibles), perfiles_academicos });
-  if (!habilitado) return directorio();
+  if (!habilitado) {
+    if (!semantico.habilitado) return directorio();
+    try {
+      const r = await recomendarSemantico(duda, perfilesSemanticos(disponibles));
+      if (r.modo === 'ranking') {
+        return res.json({ ok: true, modo: 'ranking', motor: 'sentence-bert', candidatos: r.candidatos, perfiles_academicos });
+      }
+      // Fallback formativo: nadie alcanza τ; se muestra el perfil más cercano como orientación.
+      return res.json({ ok: true, modo: 'fallback', motor: 'sentence-bert',
+        candidatos: r.cercano ? [r.cercano] : [], perfiles_academicos });
+    } catch (err) {
+      console.warn('[semantico] Se usa el directorio:', err.message);
+      return directorio();
+    }
+  }
 
   let resultado;
   try {
@@ -103,6 +118,20 @@ async function recomendar(req, res) {
   if (modo === 'ranking' && !recomendados.length) return directorio();
   res.json({ ok: true, modo,
     candidatos: modo === 'ranking' ? recomendados : [], perfiles_academicos });
+}
+
+function perfilesSemanticos(tutores) {
+  return tutores.map((tutor) => {
+    const ref = materiasPorId.get(tutor.catalogo_materias_id) ?? materiasPorCorreo.get(tutor.correo.toLowerCase());
+    return { tutor, materias: ref?.materias ?? [] };
+  });
+}
+
+/** Coordinación: calcula y guarda los embeddings de todos los perfiles con cupo. */
+async function indexarSemantico(req, res) {
+  if (!semantico.habilitado) throw badRequest('Falta configurar HF_TOKEN en el servidor.');
+  const resumen = await indexar(perfilesSemanticos(await tutoresDisponibles()));
+  res.json({ ok: true, modelo: semantico.modelo, ...resumen });
 }
 
 async function listarCatalogoMaterias(req, res) {
@@ -170,4 +199,4 @@ async function confirmarAltas(req, res) {
   res.json({ ok: true, ...rows[0].resumen });
 }
 
-module.exports = { recomendar, listarCatalogoMaterias, vincularPerfil, confirmarAltas };
+module.exports = { recomendar, listarCatalogoMaterias, vincularPerfil, confirmarAltas, indexarSemantico };
