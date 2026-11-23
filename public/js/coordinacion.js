@@ -97,6 +97,113 @@ function pintarTutores() {
 
   $('tutores-lista').innerHTML = lista.length ? lista.map(filaTutorCoord).join('')
     : '<li class="m3-vacio"><span class="m3-icono tono-gris"><i class="fa-solid fa-magnifying-glass"></i></span>Ningún tutor coincide con la búsqueda.</li>';
+  paginar($('tutores-lista'), 5, 'tutores');
+  if (TT.abierto) abrirTutoradosTutor(TT.abierto);
+}
+
+/* Tutorados de un tutor: se despliegan dentro de su fila, sin mover la página. */
+function alternarTutoradosTutor(tutorId) {
+  const previo = TT.abierto;
+  cerrarTutoradosTutor();
+  if (previo !== tutorId) abrirTutoradosTutor(tutorId);
+}
+
+function cerrarTutoradosTutor() {
+  document.querySelectorAll('#tutores-lista .tt-detalle').forEach((d) => d.remove());
+  document.querySelectorAll('#tutores-lista [aria-expanded="true"]').forEach((b) => b.setAttribute('aria-expanded', 'false'));
+  document.querySelectorAll('#tutores-lista .tt-fila.abierta').forEach((li) => li.classList.remove('abierta'));
+  TT.abierto = null;
+}
+
+function abrirTutoradosTutor(tutorId) {
+  const li = document.querySelector(`#tutores-lista .tt-fila[data-tutor="${tutorId}"]`);
+  if (!li || !datosAsig) { TT.abierto = null; return; }
+  TT.abierto = tutorId;
+  li.classList.add('abierta');
+  $(`tt-ver-${tutorId}`)?.setAttribute('aria-expanded', 'true');
+  const suyos = datosAsig.tutorados.filter((x) => x.tutor_id === tutorId && x.asignacion_id)
+    .sort((a, b) => a.nombre_completo.localeCompare(b.nombre_completo));
+  const div = document.createElement('div');
+  div.className = 'tt-detalle';
+  div.innerHTML = suyos.length ? `<ul>${suyos.map((x) => `<li>
+      <span class="m3-avatar chico">${escapeHtml(iniciales(x.nombre_completo))}</span>
+      <span class="tt-det-nombre"><b>${escapeHtml(x.nombre_completo)}</b><small>${escapeHtml(x.no_control)} · ${x.semestre}° semestre</small></span>
+      ${etiquetaRiesgo(x.nivel_riesgo)}
+      <span class="tt-det-acc">
+        <button type="button" class="m3-btn texto chico" onclick="mostrarPerfilTutorado(${x.tutorado_id})">Perfil</button>
+        <button type="button" class="m3-btn texto chico" style="color:var(--t-rojo)" onclick='quitarDeGrupo(${x.asignacion_id}, ${escapeHtml(JSON.stringify(x.nombre_completo))})'>Retirar</button>
+      </span></li>`).join('')}</ul>`
+    : '<p class="tt-det-vacio">Este tutor aún no tiene tutorados.</p>';
+  li.appendChild(div);
+}
+
+/* =============================================================================
+ * PAGINACIÓN de listas y tablas largas (bloques de N con flechas y números).
+ * Se reaplica sola cada vez que la lista se vuelve a pintar.
+ * ============================================================================= */
+const PAG = {};
+
+function itemsPaginables(el) {
+  const hijos = [...el.children].filter((h) => !h.classList.contains('pag-fija'));
+  // Filas de "vacío" o "cargando" no se paginan.
+  if (hijos.length === 1 && (hijos[0].querySelector('td[colspan]') || /m3-vacio|pt-cargando/.test(hijos[0].className))) return [];
+  return hijos;
+}
+
+function paginar(el, tam, clave = el?.id) {
+  if (!el) return;
+  const st = PAG[clave] || (PAG[clave] = { pagina: 1, total: -1 });
+  st.el = el; st.tam = tam;
+  if (!st.observador) {
+    st.observador = new MutationObserver(() => aplicarPagina(clave, true));
+    st.observador.observe(el, { childList: true });
+  }
+  aplicarPagina(clave, true);
+}
+
+function aplicarPagina(clave, recalcular) {
+  const st = PAG[clave];
+  const items = itemsPaginables(st.el);
+  if (recalcular && items.length !== st.total) st.pagina = 1; // otra búsqueda o filtro: volver al inicio
+  st.total = items.length;
+  const paginas = Math.max(1, Math.ceil(items.length / st.tam));
+  st.pagina = Math.min(Math.max(1, st.pagina), paginas);
+  const ini = (st.pagina - 1) * st.tam;
+  items.forEach((it, i) => it.classList.toggle('pag-oculta', i < ini || i >= ini + st.tam));
+
+  const ancla = st.el.closest('.overflow-x-auto') || st.el.closest('table') || st.el;
+  let nav = ancla.nextElementSibling?.classList.contains('paginador') ? ancla.nextElementSibling : null;
+  if (!nav) {
+    nav = document.createElement('nav');
+    nav.className = 'paginador';
+    nav.setAttribute('aria-label', 'Páginas');
+    ancla.after(nav);
+  }
+  if (paginas <= 1) { nav.hidden = true; nav.innerHTML = ''; return; }
+  nav.hidden = false;
+  const p = st.pagina;
+  const numeros = [];
+  for (let n = 1; n <= paginas; n += 1) {
+    if (paginas <= 7 || n === 1 || n === paginas || Math.abs(n - p) <= 1) numeros.push(n);
+    else if (numeros[numeros.length - 1] !== '…') numeros.push('…');
+  }
+  nav.innerHTML = `<span class="pag-info">${ini + 1}–${Math.min(ini + st.tam, items.length)} de ${items.length}</span>
+    <span class="pag-botones">
+      <button type="button" class="pag-flecha" onclick="irPagina('${clave}', ${p - 1})" ${p === 1 ? 'disabled' : ''} aria-label="Página anterior"><i class="fa-solid fa-chevron-left"></i></button>
+      ${numeros.map((n) => (n === '…' ? '<span class="pag-puntos">…</span>'
+        : `<button type="button" class="pag-num${n === p ? ' activo' : ''}" onclick="irPagina('${clave}', ${n})" ${n === p ? 'aria-current="page"' : ''}>${n}</button>`)).join('')}
+      <button type="button" class="pag-flecha" onclick="irPagina('${clave}', ${p + 1})" ${p === paginas ? 'disabled' : ''} aria-label="Página siguiente"><i class="fa-solid fa-chevron-right"></i></button>
+    </span>`;
+}
+
+function irPagina(clave, n) {
+  const st = PAG[clave];
+  if (!st) return;
+  st.pagina = n;
+  aplicarPagina(clave, false);
+  // Si el inicio de la lista quedó fuera de la vista, regresar a él (solo hacia arriba).
+  const cab = (st.el.closest('table') || st.el).getBoundingClientRect();
+  if (cab.top < 70) (st.el.closest('table') || st.el).scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function filaTutorCoord(t) {
@@ -105,7 +212,7 @@ function filaTutorCoord(t) {
   const diplomado = /Diplomado/i.test(t.formacion_tutorial || '');
   const cub = t.cubiculo ? (/^cub/i.test(t.cubiculo) ? t.cubiculo : `Cubículo ${t.cubiculo}`).replace(', Edificio', ' · Edif.') : 'Sin cubículo';
   const nombre = escapeHtml(t.nombre);
-  return `<li class="tt-fila${t.acepta_tutorados ? '' : ' apagada'}">
+  return `<li class="tt-fila${t.acepta_tutorados ? '' : ' apagada'}" data-tutor="${t.tutor_id}">
     <div class="tt-quien">
       <span class="m3-avatar ${t.acepta_tutorados ? 'tono-azul' : 'tono-gris'}">${escapeHtml(iniciales(t.nombre))}</span>
       <div class="min-w-0">
@@ -134,7 +241,7 @@ function filaTutorCoord(t) {
     </label>
     <div class="tt-acciones">
       <button type="button" class="m3-btn-icono" onclick="verPerfilTutor(${t.tutor_id})" title="Ver perfil" aria-label="Ver perfil de ${nombre}"><i class="fa-regular fa-id-card"></i></button>
-      <button type="button" class="m3-btn tonal chico" onclick="verTutoradosDe(${t.tutor_id})" ${t.total_tutorados ? '' : 'disabled'}><i class="fa-solid fa-users"></i> ${t.total_tutorados}</button>
+      <button type="button" class="m3-btn tonal chico" id="tt-ver-${t.tutor_id}" onclick="alternarTutoradosTutor(${t.tutor_id})" aria-expanded="false" title="Ver sus tutorados" ${t.total_tutorados ? '' : 'disabled'}><i class="fa-solid fa-users"></i> ${t.total_tutorados}<i class="fa-solid fa-chevron-down tt-flecha"></i></button>
     </div>
   </li>`;
 }
@@ -258,6 +365,7 @@ function pintarInformeCoord(rep) {
         <td class="cen">${x.evaluacion_pit ? '<i class="fa-solid fa-circle-check text-emerald-600" title="Enviada"></i>' : '<span class="text-amber-700 font-semibold">Pendiente</span>'}</td>
         <td class="num capitalize">${fechaCortaInf(x.ultima_sesion)}</td>
       </tr>`).join('')}</tbody></table></div>`;
+  paginar(document.querySelector('#cinf-cuerpo .cr-tabla tbody'), 10, 'rep-periodo');
 }
 
 function resaltarSinSesion() {
@@ -319,6 +427,7 @@ function pintarSemestralCoord(rep) {
     <div class="overflow-x-auto"><table class="tabla-compacta cr-tabla">
       <thead><tr><th>Tutor(a)</th><th>Cobertura</th><th class="der">Sesiones</th><th class="der">Tiempo</th><th class="der">Con minuta</th><th class="cen">Canal.</th><th class="cen">Eval. PIT</th><th>Estado</th></tr></thead>
       <tbody>${filas}</tbody></table></div>`;
+  paginar(document.querySelector('#csem-cuerpo .cr-tabla tbody'), 10, 'rep-semestral');
 }
 
 function htmlInformeProgramaHoja(rep, titulo, semestral) {
@@ -678,10 +787,11 @@ document.addEventListener('DOMContentLoaded', () => {
   if (PAGINA !== 'coordinacion' || !Sesion.usuario) return;
   limpiarFormAviso();
   cargarReportesCoord();
+  ['tbody-riesgo', 'tbody-asig-integrantes', 'tbody-canalizaciones', 'tbody-fichas'].forEach((id) => paginar($(id), 10));
 });
 
 Object.assign(window, {
-  irAReporte, nuevoAvisoDesdeInicio, filtrarTutores, pintarTutores, pasoCupo,
+  irAReporte, nuevoAvisoDesdeInicio, filtrarTutores, pintarTutores, pasoCupo, alternarTutoradosTutor, irPagina,
   presetInformeCoord, cambioRangoCoord, imprimirInformeCoord, imprimirSemestralCoord, resaltarSinSesion,
   cambiarVistaEvaluacion, cargarEvaluacionesCoord, ordenarEval, filtrarEvalTutor,
   elegirCategoriaAviso, previaAviso, nuevoAviso, limpiarFormAviso, editarAviso, filtrarAvisosCoord, cargarAvisosCoord,
