@@ -249,18 +249,24 @@ function filaReferenciaCoord(p) {
 function abrirAltaPerfil(id) {
   const p = datosAsig?.perfiles_materias?.find(perfil => perfil.id === id);
   if (!p) return;
+  const alta = p.alta_propuesta;
+  const dias = ['', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
+  const bloque = i => `${dias[alta['dia_' + i]]} ${alta['inicio_' + i].slice(0, 5)}–${alta['fin_' + i].slice(0, 5)}`;
   modalSimple('modal-alta-perfil', 'Dar de alta a ' + p.nombre, `
     <form id="tt-alta-form" class="space-y-3">
       <p class="text-sm">Usa la cuenta institucional del docente. El cupo y el cubículo se aplican al crear un alta nueva.</p>
       <label class="block text-sm">Correo institucional
-        <input name="correo" type="email" required class="block w-full rounded-lg border p-2">
+        <input name="correo" type="email" required value="${escapeHtml(alta?.correo || '')}" class="block w-full rounded-lg border p-2">
       </label>
       <label class="block text-sm">Cupo autorizado
-        <input name="cupo" type="number" min="1" max="60" required class="block w-full rounded-lg border p-2">
+        <input name="cupo" type="number" min="1" max="60" required value="${escapeHtml(alta?.cupo ?? '')}" class="block w-full rounded-lg border p-2">
       </label>
       <label class="block text-sm">Cubículo confirmado (opcional)
-        <input name="cubiculo" maxlength="40" class="block w-full rounded-lg border p-2">
+        <input name="cubiculo" maxlength="40" value="${escapeHtml(alta?.cubiculo || '')}" class="block w-full rounded-lg border p-2">
       </label>
+      ${alta ? `<label class="block text-sm"><input name="horario" type="checkbox">
+        Aplicar bloques para el alta nueva · ${escapeHtml(bloque(1))} · ${escapeHtml(bloque(2))}
+      </label>` : ''}
       <p id="tt-alta-estado" class="text-sm" role="status"></p>
       <button type="submit" class="m3-btn lleno">Confirmar alta</button>
     </form>`);
@@ -275,7 +281,10 @@ function abrirAltaPerfil(id) {
     estado.textContent = 'Guardando…';
     try {
       await api('/tutores/catalogo-materias/' + encodeURIComponent(id) + '/vinculo', {
-        method: 'PUT', body: Object.fromEntries(valores),
+        method: 'PUT', body: {
+          correo: valores.get('correo'), cupo: valores.get('cupo'), cubiculo: valores.get('cubiculo'),
+          usar_horario_catalogo: valores.has('horario'),
+        },
       });
       cerrarModal('modal-alta-perfil');
       toast('Docente vinculado al PIT.');

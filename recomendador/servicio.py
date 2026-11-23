@@ -1,6 +1,8 @@
 """Servicio privado de inferencia para PIT. El catálogo se monta fuera de Git."""
 import json
 import os
+import re
+import unicodedata
 from contextlib import asynccontextmanager
 from pathlib import Path
 from secrets import compare_digest
@@ -15,6 +17,13 @@ from modulo_tutorias.paso2_matcher import MotorSemantico
 from modulo_tutorias.paso3_classifier import Clasificador
 
 
+def identidad(nombre: str) -> str:
+    nombre = ''.join(c for c in unicodedata.normalize("NFD", nombre.casefold())
+                     if not unicodedata.combining(c))
+    palabras = re.findall(r"[a-z]+", nombre)
+    return " ".join(sorted(p for p in palabras if p not in {"dra", "dr", "mtra", "mtro", "ing"}))
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     token = os.environ["RECOMENDADOR_TOKEN"].encode()
@@ -24,8 +33,11 @@ async def lifespan(app: FastAPI):
     config.DIR_CACHE = data / "cache"
     catalogo = json.loads((data / "tutores.json").read_text(encoding="utf-8"))
     fuente = Path(__file__).with_name("catalogo_materias.json")
-    materias = {p["correo_pit"]: p["materias"] for p in
-                json.loads(fuente.read_text(encoding="utf-8"))["perfiles"] if p["correo_pit"]}
+    perfiles = json.loads(fuente.read_text(encoding="utf-8"))["perfiles"]
+    materias = {p["correo_pit"]: p["materias"] for p in perfiles if p["correo_pit"]}
+    por_nombre = {}
+    for perfil in perfiles:
+        por_nombre.setdefault(identidad(perfil["nombre"]), []).append(perfil["materias"])
     cvs, tutores = {}, {}
     for tutor in catalogo:
         tid = tutor["id"].strip().lower()
@@ -34,7 +46,8 @@ async def lifespan(app: FastAPI):
             raise ValueError("Ruta fuera de cvs o identificador repetido en tutores.json")
         cv = procesar_cv(ruta, tid, tutor["nombre"])
         if cv.fragmentos():
-            cv.materias_reportadas = materias.get(tid, [])
+            coincidencias = por_nombre.get(identidad(tutor["nombre"]), [])
+            cv.materias_reportadas = materias.get(tid, coincidencias[0] if len(coincidencias) == 1 else [])
             cvs[tid] = cv
             tutores[tid] = dict(tutor, id=tid, capacidad=1, tutorados_actuales=0,
                                correo="", horario=[], cubiculo="")

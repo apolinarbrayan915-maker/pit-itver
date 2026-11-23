@@ -64,9 +64,12 @@ async function panorama(req, res) {
 
   const tutoresPorCorreo = new Map(tutores.map(t => [t.correo.toLowerCase(), t.tutor_id]));
   const tutoresPorPerfil = new Map(tutores.map(t => [t.catalogo_materias_id, t.tutor_id]));
+  const { rows: altas } = await db.query('SELECT * FROM altas_catalogo_pit');
+  const altasPorPerfil = new Map(altas.map(a => [a.perfil_id, a]));
   const perfiles_materias = catalogoMaterias.perfiles.map(({ correo_pit, ...perfil }) => ({
     ...perfil,
     tutor_id: tutoresPorPerfil.get(perfil.id) ?? tutoresPorCorreo.get(correo_pit) ?? null,
+    alta_propuesta: altasPorPerfil.get(perfil.id) ?? null,
   }));
   res.json({
     ok: true,

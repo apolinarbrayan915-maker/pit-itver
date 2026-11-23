@@ -449,3 +449,4 @@ COMMIT;
 -- =============================================================================
 \ir migracion_012_sesiones_seguridad.sql
 \ir migracion_013_catalogo_materias.sql
+\ir migracion_014_altas_catalogo_pit.sql
