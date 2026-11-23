@@ -3785,11 +3785,7 @@ async function cargarDirectorioTutores() {
       api('/tutores/mi-solicitud').catch(() => ({ solicitud: null })),
     ]);
     directorioTutores = tutores;
-    const recomendador = $('recomendador-tutores');
-    if (recomendador) {
-      recomendador.hidden = !recomendador_habilitado;
-      $('recomendador-form').onsubmit = recomendarTutores;
-    }
+    configurarBuscadorTutor(recomendador_habilitado);
     estadoCambio = { ventana, solicitud: sol.solicitud };
     const mio = tutores.find((t) => t.es_mi_tutor);
     $('tutores-mi-tutor').innerHTML = mio
@@ -3803,6 +3799,45 @@ async function cargarDirectorioTutores() {
   } catch (err) {
     cont.innerHTML = `<p class="text-xs text-rose-600 text-center py-8 col-span-full">${escapeHtml(err.message)}</p>`;
   }
+}
+
+function mostrarBuscadorTutor(abrir, origen) {
+  const panel = $('recomendador-tutores');
+  const boton = $('recomendador-boton');
+  panel.hidden = !abrir;
+  boton.setAttribute('aria-expanded', String(abrir));
+  boton.setAttribute('aria-label', abrir ? 'Cerrar buscador de tutorías' : 'Abrir buscador de tutorías');
+  if (abrir) {
+    panel.origen = origen;
+    $('recomendador-duda').focus();
+  } else {
+    (panel.origen?.getClientRects().length ? panel.origen : boton).focus();
+  }
+}
+
+function configurarBuscadorTutor(habilitado) {
+  const widget = $('recomendador-widget');
+  if (!widget) return;
+  const boton = $('recomendador-boton');
+  const atajo = $('recomendador-atajo');
+  const panel = $('recomendador-tutores');
+  widget.hidden = atajo.hidden = !habilitado;
+  if (!habilitado) {
+    panel.hidden = true;
+    boton.setAttribute('aria-expanded', 'false');
+    boton.setAttribute('aria-label', 'Abrir buscador de tutorías');
+    return;
+  }
+  boton.onclick = () => mostrarBuscadorTutor(panel.hidden, boton);
+  atajo.onclick = () => mostrarBuscadorTutor(true, atajo);
+  $('recomendador-cerrar').onclick = () => mostrarBuscadorTutor(false);
+  widget.onkeydown = event => {
+    if (event.key === 'Escape' && !panel.hidden) {
+      event.stopPropagation();
+      mostrarBuscadorTutor(false);
+    }
+  };
+  $('recomendador-form').onsubmit = recomendarTutores;
 }
 
 async function recomendarTutores(event) {
@@ -3837,7 +3872,10 @@ async function recomendarTutores(event) {
       perfil.className = 'mt-2 text-xs font-bold text-tecnmGreen underline';
       perfil.type = 'button';
       perfil.textContent = 'Ver perfil y disponibilidad';
-      perfil.onclick = () => verPerfilTutor(c.tutor_id);
+      perfil.onclick = () => {
+        mostrarBuscadorTutor(false);
+        verPerfilTutor(c.tutor_id);
+      };
       tarjeta.append(titulo, detalle, perfil);
       return tarjeta;
     }));
