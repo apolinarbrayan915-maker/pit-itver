@@ -3,8 +3,10 @@
 const { badRequest } = require('../utils/errores');
 const { tutoresDisponibles } = require('./tutores.controller');
 const { recomendador } = require('../config');
+const catalogo = require('../../../recomendador/catalogo_materias.json');
 
 const { url, token, habilitado } = recomendador;
+const materiasPorCorreo = new Map(catalogo.perfiles.filter(p => p.correo_pit).map(p => [p.correo_pit, p]));
 const palabrasGenerales = new Set('como cual duda ayuda ayudar necesito quiero para sobre tengo puedo buscar porque donde alguien usar hacer del los las una uno por con mis nos que'.split(' '));
 
 function palabras(texto) {
@@ -18,11 +20,15 @@ function buscarEnDirectorio(duda, tutores) {
   for (const tutor of tutores) {
     const areas = [...new Set([...(tutor.areas_apoyo || []), tutor.especialidad].filter(Boolean))];
     const coincidencias = areas.filter(area => palabras(area).some(p => consulta.has(p)));
-    if (coincidencias.length) candidatos.push({
+    const referencia = materiasPorCorreo.get(tutor.correo.toLowerCase());
+    const materias = (referencia?.materias ?? []).filter(materia => palabras(materia).some(p => consulta.has(p)));
+    if (coincidencias.length || materias.length) candidatos.push({
       tutor_id: tutor.tutor_id, nombre: tutor.nombre, areas: coincidencias,
+      materias_reportadas: materias, ficha_materias: materias.length ? referencia.fichas[0] : null,
     });
   }
-  candidatos.sort((a, b) => b.areas.length - a.areas.length || a.nombre.localeCompare(b.nombre, 'es'));
+  candidatos.sort((a, b) => b.areas.length - a.areas.length ||
+    b.materias_reportadas.length - a.materias_reportadas.length || a.nombre.localeCompare(b.nombre, 'es'));
   return { ok: true, modo: candidatos.length ? 'directorio' : 'sin_coincidencias', candidatos: candidatos.slice(0, 3) };
 }
 
@@ -75,4 +81,13 @@ async function recomendar(req, res) {
     candidatos: modo === 'ranking' ? recomendados : [] });
 }
 
-module.exports = { recomendar };
+function listarCatalogoMaterias(req, res) {
+  res.set('Cache-Control', 'no-store');
+  res.json({ ok: true, fuente: catalogo.fuente, fecha: catalogo.fecha,
+    perfiles: catalogo.perfiles.map(({ correo_pit, ...perfil }) => ({
+      ...perfil, vinculado: Boolean(correo_pit),
+    })),
+  });
+}
+
+module.exports = { recomendar, listarCatalogoMaterias };

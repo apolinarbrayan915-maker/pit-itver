@@ -1,0 +1,1379 @@
+{
+  "fuente": "MisProfesores · materias reportadas por estudiantes",
+  "fecha": "2026-11-23",
+  "perfiles": [
+    {
+      "id": "mp-23319",
+      "nombre": "Abelardo Rodríguez León",
+      "materias": [
+        "CAD",
+        "Cómputo distribuido",
+        "Cómputo paralelo",
+        "Concurrencia con GPUs en videojuegos",
+        "GPU",
+        "GPU Videojuegos",
+        "Graficacion",
+        "Introduccion a la programacion",
+        "Lenguaje C y Programación Paralela",
+        "Programación lenguaje C/ Programación MPI",
+        "Tópicos avanzados de programación"
+      ],
+      "temas": [
+        "Cómputo paralelo y distribuido",
+        "Gráficos, interacción y UX",
+        "Programación y algoritmos"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_23319",
+        "https://misprofesores.com/profesores/_185614"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-63244",
+      "nombre": "Agustin Colina Sanchez",
+      "materias": [
+        "Electricidad",
+        "Ing de sistemas",
+        "Ingeniería en sistemas",
+        "Investigacion de operaciones",
+        "Investigación de Operaciones I",
+        "Sistemas de manufactura",
+        "Sistemas de Manufactura/Manufactura Esbelta"
+      ],
+      "temas": [
+        "Matemáticas y simulación"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_63244"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-170362",
+      "nombre": "Alberth Hammel Dammel",
+      "materias": [
+        "Inteligencia artificial"
+      ],
+      "temas": [
+        "IA y análisis de datos"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_170362"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-169796",
+      "nombre": "Alexander Fausting",
+      "materias": [
+        "Computo de alto desempeño",
+        "Estructuras de datos",
+        "Exterminación de bacterias microscópicas en diamantes",
+        "Gestion de proyectos de software",
+        "Gráficacion",
+        "Lenguajes y automatas 1",
+        "Programación básica",
+        "Sistemas operativos",
+        "Web"
+      ],
+      "temas": [
+        "Desarrollo web y móvil",
+        "Gráficos, interacción y UX",
+        "Ingeniería de software y proyectos",
+        "Lenguajes y compiladores",
+        "Programación y algoritmos",
+        "Sistemas operativos e infraestructura"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_169796"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-63162",
+      "nombre": "Amanda Caracas Capetillo",
+      "materias": [
+        "Álgebra lineal",
+        "Algebra lineal y autocad",
+        "Álgebra Linesa y Autocad",
+        "Aseguramiento de la Calidad",
+        "AutoCad",
+        "AutoCAD/Álgebra Lineal",
+        "Dibujo asistido por computadora y Algebra lineal",
+        "Dibujo Mecanico",
+        "Dibujo Por Computadora",
+        "Liderazgo",
+        "Probabilidad y Estadistica"
+      ],
+      "temas": [
+        "Matemáticas y simulación"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_63162"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-172286",
+      "nombre": "Arturo Rendón",
+      "materias": [
+        "Gestión de proyectos",
+        "Sistemas de información",
+        "Taller de SO",
+        "Taller SO"
+      ],
+      "temas": [
+        "Ingeniería de software y proyectos"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_172286"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-181170",
+      "nombre": "Berenice Lagunes Padilla",
+      "materias": [
+        "Taller de Ética"
+      ],
+      "temas": [
+        "Investigación y formación transversal"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_181170"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-66356",
+      "nombre": "Carlos Lagunes",
+      "materias": [
+        "Matemáticas discreta",
+        "Matemáticas discretas",
+        "Matemáticas V"
+      ],
+      "temas": [
+        "Matemáticas y simulación"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_66356"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-59309",
+      "nombre": "Carlos Ley Borraz",
+      "materias": [
+        "Cultura empresarial",
+        "Fund. ing. de soft",
+        "Fund. Ing. Software",
+        "Fundamentos de ingeniería de software",
+        "Gestion de Proyectos de Software",
+        "Gestión de Proyectos de Sw",
+        "Gestion de SW",
+        "Ingeniería de software",
+        "Taller de investigación I"
+      ],
+      "temas": [
+        "Ingeniería de software y proyectos",
+        "Investigación y formación transversal"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_59309"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-66355",
+      "nombre": "Carlos Olmos",
+      "materias": [
+        "Estructura de Datos I",
+        "Programación II (Lenguaje C++)"
+      ],
+      "temas": [
+        "Programación y algoritmos"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_66355"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-44715",
+      "nombre": "Claudio Yepez Sosa",
+      "materias": [
+        "Álgebra lineal",
+        "Mat aplicadas a la Administración"
+      ],
+      "temas": [
+        "Matemáticas y simulación"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_44715"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-55388",
+      "nombre": "Daniela Hernandez Barrios",
+      "materias": [
+        "Fnd de programacion",
+        "Fund. De Programación",
+        "Fundamentos de Investigacion",
+        "Fundamentos de la programación",
+        "Fundamentos de programación",
+        "Sistemas operativos"
+      ],
+      "temas": [
+        "Programación y algoritmos",
+        "Sistemas operativos e infraestructura"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_55388"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-169325",
+      "nombre": "David Leon",
+      "materias": [
+        "Sexo",
+        "Sexo 24/7"
+      ],
+      "temas": [],
+      "fichas": [
+        "https://misprofesores.com/profesores/_169325"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-14748",
+      "nombre": "Delio Coss Camilo",
+      "materias": [
+        "Administración de bases de datos",
+        "Bases de datos",
+        "Fundamentos de programación",
+        "Prog Web",
+        "Programación orientada a objetos",
+        "Programación web",
+        "TBD",
+        "Web"
+      ],
+      "temas": [
+        "Bases de datos",
+        "Desarrollo web y móvil",
+        "Programación y algoritmos"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_14748"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-16505",
+      "nombre": "Eduardo Trujillo Jiménez",
+      "materias": [
+        "Bases de datos",
+        "Diseño de BD y BDD",
+        "Ensamblador",
+        "Estructuras de datos",
+        "Taller",
+        "Taller de Base de Datos/Base de Datos Distribuidas",
+        "Taller de bases de datos",
+        "Tec de Bases de Datos 1, 2 y 3",
+        "Tec de BD 1,2 y 3",
+        "Tecnologias de Base de Datos I/II/III"
+      ],
+      "temas": [
+        "Bases de datos",
+        "Cómputo paralelo y distribuido",
+        "Programación y algoritmos"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_16505"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-92553",
+      "nombre": "Efrén Mendoza Chaparro",
+      "materias": [
+        "Algoritmos y lenguaje de programación",
+        "Fundamentos de programación",
+        "Lenguaje de Interfaz",
+        "Lenguajes de Interfaz",
+        "Programación",
+        "Programación Avanzada",
+        "Programación básica",
+        "Programación y métodos numéricos",
+        "Tutorias"
+      ],
+      "temas": [
+        "Investigación y formación transversal",
+        "Matemáticas y simulación",
+        "Programación y algoritmos"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_92553"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-17475",
+      "nombre": "Elisa Cano",
+      "materias": [
+        "Algoritmos y programación",
+        "Comutacion",
+        "Fund. invest",
+        "Fundamentos de investigacion",
+        "Programación",
+        "Programación básica",
+        "Programación orientada a objetos",
+        "Taller de informática administrativa 1"
+      ],
+      "temas": [
+        "Programación y algoritmos"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_17475"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-135869",
+      "nombre": "Enrique Soto Andrade",
+      "materias": [
+        "Bases de datos",
+        "Lenguajes y Autómatas 2",
+        "Taller de bases de datos"
+      ],
+      "temas": [
+        "Bases de datos",
+        "Lenguajes y compiladores"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_135869"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-181193",
+      "nombre": "Erick López Sánchez",
+      "materias": [
+        "Fisica"
+      ],
+      "temas": [],
+      "fichas": [
+        "https://misprofesores.com/profesores/_181193"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-16319",
+      "nombre": "Esteban Mendoza",
+      "materias": [
+        "Fundamentos de programación",
+        "Programación",
+        "Programación básica",
+        "Sistemas operativos"
+      ],
+      "temas": [
+        "Programación y algoritmos",
+        "Sistemas operativos e infraestructura"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_16319"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-14749",
+      "nombre": "Evaristo Pacheco",
+      "materias": [
+        "Administración de bases de datos",
+        "Bases de datos",
+        "Progra Web",
+        "Programación Web",
+        "Programación Web y Base de Datos",
+        "Redes móviles",
+        "Seguridad en Redes",
+        "Taller & Administración de BD",
+        "Taller de bases de datos",
+        "Taller de BD,Admon de BD,Prograweb",
+        "Web"
+      ],
+      "temas": [
+        "Bases de datos",
+        "Desarrollo web y móvil",
+        "Programación y algoritmos",
+        "Redes y servicios"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_14749"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-16316",
+      "nombre": "Ezequiel Piña Ortiz",
+      "materias": [
+        "Bases de datos",
+        "Fundamentos de bases de datos",
+        "Historia de mexico y el mundo",
+        "Matematicas discretas",
+        "Métodos numericos",
+        "Prob. estadística",
+        "Probabilidad",
+        "Probabilidad y estadística",
+        "Taller de bases de datos"
+      ],
+      "temas": [
+        "Bases de datos",
+        "Matemáticas y simulación"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_16316"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-45487",
+      "nombre": "Felipe Verdalet Guzman",
+      "materias": [
+        "Banda ancha",
+        "Fund de telecom",
+        "Fundamentos de ingeniería de software",
+        "Fundamentos de Telecomunicaciones",
+        "Ing. de Software",
+        "Programacion 1",
+        "Programación básica",
+        "Programación Web",
+        "Redes",
+        "Redes y telecomunicaciones",
+        "Varias de Redes"
+      ],
+      "temas": [
+        "Desarrollo web y móvil",
+        "Ingeniería de software y proyectos",
+        "Programación y algoritmos",
+        "Redes y servicios"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_45487"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-142898",
+      "nombre": "Gabriel Antonio Sanchez Ortiz",
+      "materias": [
+        "Conmutacion",
+        "Conmutación/redes",
+        "Telecomunicaciones"
+      ],
+      "temas": [
+        "Redes y servicios"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_142898"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-26308",
+      "nombre": "Gabriel Cedeño Collins",
+      "materias": [
+        "Administracion de archivos",
+        "Desarrollo de Pro. De Software",
+        "Fundamentos de Ing. de Software",
+        "Fundamentos de ingeniería de software",
+        "Planeacion y modelado",
+        "Programación"
+      ],
+      "temas": [
+        "Ingeniería de software y proyectos",
+        "Programación y algoritmos"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_26308"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-16504",
+      "nombre": "Gaby Clavel",
+      "materias": [
+        "Automatas",
+        "Automatas; programacion en tiempo real",
+        "Fundamentos de Investigacion",
+        "Lenguajes y autómatas 1",
+        "Mate Discretas",
+        "Matematicas discretas",
+        "Pesima",
+        "Progra",
+        "Programación 1",
+        "Teoria de la Computación"
+      ],
+      "temas": [
+        "Lenguajes y compiladores",
+        "Matemáticas y simulación",
+        "Programación y algoritmos"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_16504"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-16622",
+      "nombre": "Gerardo Ortiz Quiroz",
+      "materias": [
+        "Álgebra lineal",
+        "Algoritmo",
+        "Algoritmos",
+        "Algoritmos y Programación",
+        "Estructuras de datos",
+        "Fundamentos de programación",
+        "Programación básica",
+        "Software de Aplicación Ejecutiva",
+        "Tópicos avanzados de programación"
+      ],
+      "temas": [
+        "Matemáticas y simulación",
+        "Programación y algoritmos"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_16622"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-16540",
+      "nombre": "Héctor Andrade Gómez",
+      "materias": [
+        "Arquitectura Orientada a Servicios (SOA)",
+        "Arquitecturas Orientadas a Servicios",
+        "Automatas",
+        "Ingeniería de Software",
+        "Prog. Lógica y Funcional",
+        "Programación",
+        "Programación Lógica y Funcional",
+        "Programación orientada a objetos",
+        "Prolog",
+        "Residencias Profesionales",
+        "Tópicos d programación, Autómatas, Prolog, Residencias"
+      ],
+      "temas": [
+        "Arquitectura, hardware y sistemas embebidos",
+        "Ingeniería de software y proyectos",
+        "Investigación y formación transversal",
+        "Lenguajes y compiladores",
+        "Programación y algoritmos"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_16540"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-44769",
+      "nombre": "Héctor Pérez Ortíz",
+      "materias": [
+        "Calculo",
+        "Cálculo diferencial",
+        "Cálculo integral",
+        "FBD",
+        "Fundamentos de telecomunicacion",
+        "Probabilidad y estadística",
+        "Simulacion"
+      ],
+      "temas": [
+        "Matemáticas y simulación",
+        "Redes y servicios"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_44769"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-112349",
+      "nombre": "J. Manuel Miranda Villagrán",
+      "materias": [
+        "Matematias"
+      ],
+      "temas": [],
+      "fichas": [
+        "https://misprofesores.com/profesores/_112349"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-106017",
+      "nombre": "Jaír Alayon",
+      "materias": [
+        "Cálculo diferencial , Integral",
+        "Cálculo integral",
+        "Ecuaciones diferenciales",
+        "Spring"
+      ],
+      "temas": [
+        "Matemáticas y simulación"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_106017"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-18506",
+      "nombre": "Jesus Cruzado",
+      "materias": [
+        "Administración de bases de datos",
+        "Bases de datos",
+        "Diseño de Base de Datos",
+        "FDB",
+        "Fundamentos bases datos",
+        "Fundamentos de bases de datos",
+        "Fundamentos de Bases de Datos I y II",
+        "Ing. De Software",
+        "Ingeniería de Software",
+        "Taller de bases de datos"
+      ],
+      "temas": [
+        "Bases de datos",
+        "Ingeniería de software y proyectos"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_18506"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-29302",
+      "nombre": "Jesus Fabian Rosales Vega",
+      "materias": [
+        "Cómputo distribuido",
+        "Tópicos avanzados de programación",
+        "Ubuntu distribuido"
+      ],
+      "temas": [
+        "Cómputo paralelo y distribuido",
+        "Programación y algoritmos"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_29302"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-108164",
+      "nombre": "Jesus Roque Martinez",
+      "materias": [
+        "Cálculo integral",
+        "Ecuaciones diferenciales"
+      ],
+      "temas": [
+        "Matemáticas y simulación"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_108164"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-40244",
+      "nombre": "Jorge Estudillo Ramirez",
+      "materias": [
+        "Fundamentos de prog., tópicos de prog",
+        "Fundamentos de programación",
+        "Lenguajes y autómatas",
+        "Lenguajes y Autómatas 1",
+        "Lenguajes y Autómatas I",
+        "Programación orientada a objetos",
+        "Tópicos avanzados de programación"
+      ],
+      "temas": [
+        "Lenguajes y compiladores",
+        "Programación y algoritmos"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_40244"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-107452",
+      "nombre": "Jose Guadalupe Garcia Ramirez",
+      "materias": [
+        "Metodos Numericos"
+      ],
+      "temas": [
+        "Matemáticas y simulación"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_107452"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-84176",
+      "nombre": "Jose Ramon Beltran Guzman",
+      "materias": [
+        "Sistemas operativos",
+        "Taller de investigación"
+      ],
+      "temas": [
+        "Investigación y formación transversal",
+        "Sistemas operativos e infraestructura"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_84176"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-167809",
+      "nombre": "Juan Manuel Bucio Ballado",
+      "materias": [
+        "Sistemas de generación de energía",
+        "Tutoria"
+      ],
+      "temas": [
+        "Investigación y formación transversal"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_167809"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-131082",
+      "nombre": "Karina Gómez Cantarell",
+      "materias": [
+        "Ing. De sistemas",
+        "Ingeniería de sistemas"
+      ],
+      "temas": [],
+      "fichas": [
+        "https://misprofesores.com/profesores/_131082"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-32038",
+      "nombre": "Karla Gabriela Peralta Madrigal",
+      "materias": [
+        "Algoritmos y Lenguaje de programación",
+        "Cultura empresarial",
+        "Fundamentos de programación",
+        "Fundamentos, POO, Estructura, Topicos",
+        "Lenguajes y autómatas",
+        "Programación",
+        "Programación orientada a objetos",
+        "Sistemas operativos",
+        "Tópicos avanzados de programación"
+      ],
+      "temas": [
+        "Lenguajes y compiladores",
+        "Programación y algoritmos",
+        "Sistemas operativos e infraestructura"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_32038"
+      ],
+      "correo_pit": "karla.pm@veracruz.tecnm.mx"
+    },
+    {
+      "id": "mp-16623",
+      "nombre": "Leonardo Lezama",
+      "materias": [
+        "CISCO",
+        "Configuración de redes",
+        "Conmutacion",
+        "Conmutación y enrutamiento de redes de datos",
+        "Ingeniere en redes",
+        "Manejo de Redes en el conalep",
+        "Redes",
+        "Redes de computadoras",
+        "Taller de sistemas operativos",
+        "Telecom/Cisco",
+        "Telecomunicaciones"
+      ],
+      "temas": [
+        "Arquitectura, hardware y sistemas embebidos",
+        "Redes y servicios",
+        "Sistemas operativos e infraestructura"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_16623"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-109622",
+      "nombre": "Liliana Rangel Renteria",
+      "materias": [
+        "Fisica moderna",
+        "Lenguajes de interfaz",
+        "Lenguajes e interfaz",
+        "Principios"
+      ],
+      "temas": [],
+      "fichas": [
+        "https://misprofesores.com/profesores/_109622"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-16539",
+      "nombre": "Lizbeth Sánchez Ferrer",
+      "materias": [
+        "Administración de redes",
+        "Fund. Telecom",
+        "Fund. Telecomunicaciones",
+        "Fundamentos de Telecomuicaciónes",
+        "Fundamentos de Telecomunicaciones",
+        "Redes",
+        "Redes de computadoras"
+      ],
+      "temas": [
+        "Arquitectura, hardware y sistemas embebidos",
+        "Redes y servicios"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_16539"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-183695",
+      "nombre": "Luis Antonio Cocoletzi",
+      "materias": [
+        "Estructuras de datos"
+      ],
+      "temas": [
+        "Programación y algoritmos"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_183695"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-16842",
+      "nombre": "Luis Bernardo Ballesteros Barradas",
+      "materias": [
+        "Autómatas I",
+        "Estructuras de datos",
+        "Sistemas concurrentes",
+        "Sistemas operativos",
+        "Talle de sistemas",
+        "Taller de sistemas operativos",
+        "Taller de SO",
+        "TSAP"
+      ],
+      "temas": [
+        "Cómputo paralelo y distribuido",
+        "Lenguajes y compiladores",
+        "Programación y algoritmos",
+        "Sistemas operativos e infraestructura"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_16842"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-16678",
+      "nombre": "Luis Reyes Rivera",
+      "materias": [
+        "Admon servicios de computo",
+        "Fundamentos de inv",
+        "Intruduccion a la ing. sistemas",
+        "Prog",
+        "Progra",
+        "Programación",
+        "Programacion I"
+      ],
+      "temas": [
+        "Programación y algoritmos"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_16678",
+        "https://misprofesores.com/profesores/_16964"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-74707",
+      "nombre": "Luis Rivera Lozano",
+      "materias": [
+        "Fundamentos de programación",
+        "Programación lógica y funcional",
+        "Prolog"
+      ],
+      "temas": [
+        "Programación y algoritmos"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_74707"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-16529",
+      "nombre": "Marco Romo Medina",
+      "materias": [
+        "Algoritmos y programacion",
+        "CAD",
+        "Computo de alto desempeño",
+        "Cómputo paralelo",
+        "Programación",
+        "Programación Avanzada",
+        "Programación básica",
+        "Programacion visual",
+        "Simulación"
+      ],
+      "temas": [
+        "Cómputo paralelo y distribuido",
+        "Matemáticas y simulación",
+        "Programación y algoritmos"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_16529"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-16545",
+      "nombre": "Margarita Ostos",
+      "materias": [
+        "Etica",
+        "La que siempre da ella",
+        "Residencias",
+        "Seminari",
+        "Seminario de desarrollo de royectos de investigacion",
+        "Seminario de etica",
+        "Taller de investigacion1"
+      ],
+      "temas": [
+        "Investigación y formación transversal"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_16545"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-19867",
+      "nombre": "María Dolores Castro Valdés",
+      "materias": [
+        "Estática",
+        "Fisica",
+        "Física General",
+        "Fisica general mecatronica",
+        "Mecánica de los materiales",
+        "Mecánica de materiales",
+        "Taller de investigación II"
+      ],
+      "temas": [
+        "Investigación y formación transversal"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_19867"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-16630",
+      "nombre": "Marta Martinez",
+      "materias": [
+        "Autómatas II",
+        "L&a ii",
+        "Lenguajes y autómatas 2",
+        "Lenguajes y Autómatas II",
+        "Progra de sistemas",
+        "Sist operativos",
+        "Sistemas operativos",
+        "Taller de Administración",
+        "Taller de investigación I"
+      ],
+      "temas": [
+        "Investigación y formación transversal",
+        "Lenguajes y compiladores",
+        "Sistemas operativos e infraestructura"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_16630"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-16506",
+      "nombre": "Martinez San German",
+      "materias": [
+        "Administración de bases de datos",
+        "Admon BD y Taller de BD",
+        "Bases de datos",
+        "Bases de Datos Avanzadas/Modelado de Bases de Datos",
+        "Fundamentos de bases de datos",
+        "Programacion Web",
+        "Taller de bases de datos"
+      ],
+      "temas": [
+        "Bases de datos",
+        "Desarrollo web y móvil",
+        "Programación y algoritmos"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_16506"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-93933",
+      "nombre": "Miguel Ángel Pérez Cabada",
+      "materias": [
+        "Concurrencia con GPU",
+        "GPU de Videojuegos",
+        "Introducción a la Robótica Móvil",
+        "Sistemas operativos",
+        "Sistemas Operativos para Robots"
+      ],
+      "temas": [
+        "Cómputo paralelo y distribuido",
+        "Desarrollo web y móvil",
+        "Gráficos, interacción y UX",
+        "Sistemas operativos e infraestructura"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_93933"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-185770",
+      "nombre": "Monserrat Ferrari",
+      "materias": [
+        "Fundamentos de programación",
+        "Programación Orientada"
+      ],
+      "temas": [
+        "Programación y algoritmos"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_185770"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-38788",
+      "nombre": "Noemí del Carmen Tenorio Prieto",
+      "materias": [
+        "Comportamiento Humano en las Organizaciones",
+        "Cultura empresarial",
+        "Desarrollo sustentable",
+        "Taller de investigación I",
+        "Taller de investigación II"
+      ],
+      "temas": [
+        "Investigación y formación transversal"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_38788"
+      ],
+      "correo_pit": "noemi.tp@veracruz.tecnm.mx"
+    },
+    {
+      "id": "mp-16317",
+      "nombre": "Ofelia Giraldi",
+      "materias": [
+        "Autómatas I",
+        "Leng y aut I",
+        "Lenguajes y autómatas",
+        "Lenguajes y Autómatas 1",
+        "Lenguajes y Automatas 1 y 2",
+        "Lenguajes y Automatas 2",
+        "Lenguajes y Autómatas I",
+        "LyA 1",
+        "LyA I"
+      ],
+      "temas": [
+        "Lenguajes y compiladores"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_16317"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-16291",
+      "nombre": "Patricia Horta Rosado",
+      "materias": [
+        "Dis estruc de algoritmo",
+        "Fundamentos de programación",
+        "IA",
+        "Intelif",
+        "Inteligencia artificial",
+        "Programación",
+        "Redes",
+        "Redes de Computadoras",
+        "Sistemas operativos",
+        "Taller de sistemas operativos",
+        "Teoría de la computación"
+      ],
+      "temas": [
+        "Arquitectura, hardware y sistemas embebidos",
+        "IA y análisis de datos",
+        "Programación y algoritmos",
+        "Redes y servicios",
+        "Sistemas operativos e infraestructura"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_16291"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-16686",
+      "nombre": "Rafael Córdoba del Valle",
+      "materias": [
+        "Algoritmos y Lenguajes de Programación",
+        "Algoritmos y Programación",
+        "Estructura 1 y 2",
+        "Estructura de datos i",
+        "Estructuras de datos",
+        "Estructuras de datos I",
+        "Fundamentos de ingeniería de software",
+        "Fundamentos de programación",
+        "Ingeniería de software",
+        "Programación básica",
+        "Programacion estructurada",
+        "Programación orientada a objetos",
+        "S.O",
+        "Taller de investigación I"
+      ],
+      "temas": [
+        "Ingeniería de software y proyectos",
+        "Investigación y formación transversal",
+        "Programación y algoritmos"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_103461",
+        "https://misprofesores.com/profesores/_16686",
+        "https://misprofesores.com/profesores/_16685"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-16538",
+      "nombre": "Rafael Rivera",
+      "materias": [
+        "Graficación",
+        "IA, Tópicos, Graficación",
+        "Inteligencia artificial",
+        "Programación I (Lenguaje C)",
+        "Residencias Profesionales",
+        "TAP y Graficación",
+        "Todas las de SIstemas",
+        "Topicos",
+        "Tópicos avanzados de programación",
+        "Topicos Avanzados en Programación",
+        "Topicos Avanzados Programacion",
+        "Tópicos, POO, Graficación"
+      ],
+      "temas": [
+        "Gráficos, interacción y UX",
+        "IA y análisis de datos",
+        "Investigación y formación transversal",
+        "Programación y algoritmos"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_16538"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-109923",
+      "nombre": "Raúl Hector Trujillo Jimenez",
+      "materias": [
+        "Administración de bases de datos",
+        "Bases de datos",
+        "Fund. Prog",
+        "Programación básica",
+        "Taller de bases de datos"
+      ],
+      "temas": [
+        "Bases de datos",
+        "Programación y algoritmos"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_109923"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-92038",
+      "nombre": "Reynaldo Guitiérrez Avendaño",
+      "materias": [
+        "Gestión de Proyectos de Software"
+      ],
+      "temas": [
+        "Ingeniería de software y proyectos"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_92038"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-16677",
+      "nombre": "Ricardo Rodríguez de la Lanza",
+      "materias": [
+        "Administración de bases de datos",
+        "Algoritmos",
+        "Analisis de Sistemas",
+        "Cultura empresarial",
+        "FEPI",
+        "Fundamentos de bases de datos",
+        "Fundamentos de programación",
+        "Gestión de proyectos",
+        "Ing. de Software",
+        "Programacion estructurada",
+        "Taller de Investigación ll"
+      ],
+      "temas": [
+        "Bases de datos",
+        "Ingeniería de software y proyectos",
+        "Investigación y formación transversal",
+        "Programación y algoritmos"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_16677"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-21402",
+      "nombre": "Rocio Gonzalez Contreras",
+      "materias": [
+        "Algoritmos y programación",
+        "Fundamentos de Telecomunicaciones",
+        "Redes",
+        "Redes De Computadoras",
+        "Redes y análisis de datos",
+        "Redes y Telecomunicaciones",
+        "T. Telecomunicaciones / Redes",
+        "Telecom",
+        "Telecom/Redes",
+        "Teoria de las telecomunicaciones"
+      ],
+      "temas": [
+        "Arquitectura, hardware y sistemas embebidos",
+        "Programación y algoritmos",
+        "Redes y servicios"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_21402"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-43176",
+      "nombre": "Rodolfo Senties",
+      "materias": [
+        "Fundamentos de investigacion",
+        "Taller de etica",
+        "Taller de investigación I",
+        "Taller de investigación II"
+      ],
+      "temas": [
+        "Investigación y formación transversal"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_43176"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-16507",
+      "nombre": "Senen Juarez Tinoco",
+      "materias": [
+        "Estructura de Base de Datos",
+        "Estructuras de datos",
+        "Fundamentos de ingenieria en software",
+        "Ingeniería del softwae",
+        "Poo/tap",
+        "Programación orientada a objetos",
+        "Taller de investigación I"
+      ],
+      "temas": [
+        "Bases de datos",
+        "Investigación y formación transversal",
+        "Programación y algoritmos"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_16507"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-189176",
+      "nombre": "Sergio Rios",
+      "materias": [
+        "Fund.Telecom",
+        "Sistemas de información"
+      ],
+      "temas": [],
+      "fichas": [
+        "https://misprofesores.com/profesores/_189176"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-79156",
+      "nombre": "Sidney René Toledo Martínez",
+      "materias": [
+        "Programación Lócia y Funcional",
+        "Taller de Sistemas"
+      ],
+      "temas": [
+        "Programación y algoritmos"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_79156"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-17096",
+      "nombre": "Victor Cruz",
+      "materias": [
+        "DESI"
+      ],
+      "temas": [],
+      "fichas": [
+        "https://misprofesores.com/profesores/_17096"
+      ],
+      "correo_pit": null
+    },
+    {
+      "id": "mp-180044",
+      "nombre": "Violeta del Rocío Hernández Campos",
+      "materias": [
+        "Procesos administrativos",
+        "Taller de Ética"
+      ],
+      "temas": [
+        "Investigación y formación transversal"
+      ],
+      "fichas": [
+        "https://misprofesores.com/profesores/_180044",
+        "https://misprofesores.com/profesores/_180043"
+      ],
+      "correo_pit": null
+    }
+  ]
+}

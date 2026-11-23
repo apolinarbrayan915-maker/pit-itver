@@ -166,6 +166,9 @@ class Clasificador:
             # 1. Semántico global: top 3 general
             top3 = np.partition(fr, -min(3, len(fr)))[-min(3, len(fr)):] if len(fr) else [0.0]
             s_sem = float(np.mean(top3))
+            fr_cv = fr[secs != "materias_reportadas"]
+            k_cv = min(3, len(fr_cv))
+            s_sem_cv = float(np.mean(np.partition(fr_cv, -k_cv)[-k_cv:])) if k_cv else 0.0
 
             # 2. Proyectos: top 2 de la sección 'proyectos'
             m_proj = (secs == "proyectos")
@@ -174,14 +177,14 @@ class Clasificador:
                 top2_p = np.partition(fp, -min(2, len(fp)))[-min(2, len(fp)):]
                 s_proj = float(np.mean(top2_p))
             else:
-                s_proj = s_sem * 0.7  # Si no tiene sección proyectos, penalización moderada
+                s_proj = s_sem_cv * 0.7  # Penalización basada solo en el CV
 
             # 3. Certificaciones: top 1 de la sección 'certificaciones'
             m_cert = (secs == "certificaciones")
             if m_cert.any():
                 s_cert = float(np.max(fr[m_cert]))
             else:
-                s_cert = s_sem * 0.6  # Penalización si no cuenta con certificados afines
+                s_cert = s_sem_cv * 0.6  # Penalización basada solo en el CV
 
             out[tid] = {"sem": s_sem, "proj": s_proj, "cert": s_cert}
         return out
