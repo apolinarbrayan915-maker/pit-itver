@@ -1,5 +1,8 @@
 # Plataforma Web de Tutorías Institucionales · ITVER (TecNM)
 
+> **Instalación local rápida:** sigue [INSTRUCCIONES.md](INSTRUCCIONES.md) (`INSTALAR.bat` y después `INICIAR.bat`).
+> El resto de este documento describe la instalación manual anterior.
+
 El módulo opcional de búsqueda semántica se integra en **Mi tutor(a)**.
 [Configuración del servicio y prueba local](recomendador/README.md).
 

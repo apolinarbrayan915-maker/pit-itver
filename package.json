@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node server/src/server.js",
     "dev": "node --watch server/src/server.js",
-    "migrar": "node scripts/migrar.js"
+    "migrar": "node scripts/migrar.js",
+    "instalar": "node scripts/instalar-local.js"
   },
   "engines": {
     "node": "22.x"
