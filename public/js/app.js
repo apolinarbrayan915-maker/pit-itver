@@ -3780,11 +3780,16 @@ async function cargarDirectorioTutores() {
   const cont = $('lista-tutores');
   if (!cont) return;
   try {
-    const [{ tutores, ventana_cambio: ventana }, sol] = await Promise.all([
+    const [{ tutores, ventana_cambio: ventana, recomendador_habilitado }, sol] = await Promise.all([
       api('/tutores/disponibles'),
       api('/tutores/mi-solicitud').catch(() => ({ solicitud: null })),
     ]);
     directorioTutores = tutores;
+    const recomendador = $('recomendador-tutores');
+    if (recomendador) {
+      recomendador.hidden = !recomendador_habilitado;
+      $('recomendador-form').onsubmit = recomendarTutores;
+    }
     estadoCambio = { ventana, solicitud: sol.solicitud };
     const mio = tutores.find((t) => t.es_mi_tutor);
     $('tutores-mi-tutor').innerHTML = mio
@@ -3797,6 +3802,49 @@ async function cargarDirectorioTutores() {
     pintarHorarioTutorEnCita();
   } catch (err) {
     cont.innerHTML = `<p class="text-xs text-rose-600 text-center py-8 col-span-full">${escapeHtml(err.message)}</p>`;
+  }
+}
+
+async function recomendarTutores(event) {
+  event.preventDefault();
+  const boton = event.currentTarget.querySelector('button');
+  const resultado = $('recomendador-resultado');
+  boton.disabled = true;
+  resultado.textContent = 'Buscando afinidad con tu duda…';
+  try {
+    const { modo, candidatos } = await api('/tutores/recomendar', {
+      method: 'POST', body: { duda: $('recomendador-duda').value },
+    });
+    const avisos = {
+      fallback: 'Ningún perfil alcanzó el umbral de afinidad. Puedes consultar el directorio o pedir orientación a Coordinación.',
+      sin_catalogo: 'Aún no hay CV indexados para los tutores con cupo. Puedes consultar el directorio.',
+      sin_cupo: 'Por el momento no hay tutores con cupo para nuevas asignaciones.',
+    };
+    if (modo !== 'ranking') {
+      resultado.textContent = avisos[modo] || avisos.sin_catalogo;
+      return;
+    }
+    const porcentaje = n => `${Math.round(n * 100)} %`;
+    resultado.replaceChildren(...candidatos.map(c => {
+      const tarjeta = document.createElement('div');
+      tarjeta.className = 'rounded-lg border border-slate-200 bg-white p-3';
+      const titulo = document.createElement('strong');
+      titulo.textContent = `${c.nombre} · ${porcentaje(c.score)} de afinidad`;
+      const detalle = document.createElement('p');
+      detalle.className = 'text-xs text-slate-600';
+      detalle.textContent = `Tema ${porcentaje(c.sem)} · Proyectos ${porcentaje(c.proj)} · Certificaciones ${porcentaje(c.cert)}`;
+      const perfil = document.createElement('button');
+      perfil.className = 'mt-2 text-xs font-bold text-tecnmGreen underline';
+      perfil.type = 'button';
+      perfil.textContent = 'Ver perfil y disponibilidad';
+      perfil.onclick = () => verPerfilTutor(c.tutor_id);
+      tarjeta.append(titulo, detalle, perfil);
+      return tarjeta;
+    }));
+  } catch (err) {
+    resultado.textContent = err.message;
+  } finally {
+    boton.disabled = false;
   }
 }
 

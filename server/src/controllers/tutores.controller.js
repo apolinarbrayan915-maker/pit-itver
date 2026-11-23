@@ -70,7 +70,21 @@ async function directorio(req, res) {
   const tutores = rows.map((t) => completar(t, actual?.tutor_id));
   // El tutor actual primero, luego los que tienen lugar
   tutores.sort((a, b) => (b.es_mi_tutor - a.es_mi_tutor) || (b.disponible - a.disponible));
-  res.json({ ok: true, periodo: config.periodoActual, mi_tutor_id: actual?.tutor_id || null, ventana_cambio: ventanaActual(), tutores });
+  res.json({ ok: true, periodo: config.periodoActual, mi_tutor_id: actual?.tutor_id || null,
+    ventana_cambio: ventanaActual(), recomendador_habilitado: config.recomendador.habilitado, tutores });
+}
+
+async function tutoresDisponibles() {
+  const { rows } = await db.query(
+    `SELECT tu.id AS tutor_id, u.nombre || ' ' || u.apellidos AS nombre, u.correo_institucional AS correo
+       FROM tutores tu JOIN usuarios u ON u.id = tu.usuario_id AND u.estado = 'activo'
+      WHERE tu.acepta_tutorados AND tu.max_tutorados > (
+        SELECT count(*) FROM asignaciones_tutoria a
+        WHERE a.tutor_id = tu.id AND a.periodo_escolar = $1 AND a.estatus_asignacion = 'Activa'
+      )`,
+    [config.periodoActual]
+  );
+  return rows;
 }
 
 /**
@@ -600,6 +614,7 @@ async function resolverSolicitud(req, res) {
 }
 
 module.exports = {
+  tutoresDisponibles,
   miSolicitud, solicitarCambio, cancelarSolicitud, listarSolicitudes, resolverSolicitud,
   miReporte,
   directorio, elegir, disponibilidad, miPerfil, guardarMiPerfil, actualizarCupo,

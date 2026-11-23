@@ -15,6 +15,7 @@ const evaluacionesAlumno = require('./controllers/evaluacionesAlumno.controller'
 const avisos = require('./controllers/avisos.controller');
 const asignaciones = require('./controllers/asignaciones.controller');
 const tutores = require('./controllers/tutores.controller');
+const recomendador = require('./controllers/recomendador.controller');
 const perfilTutorado = require('./controllers/perfilTutorado.controller');
 const fichas = require('./controllers/fichas.controller');
 
@@ -93,6 +94,12 @@ router.patch('/asignaciones/:id/finalizar', requiereRol('coordinador'), asignaci
 
 // Tutores: directorio y elección por el tutorado, horario de atención y cupo
 router.get('/tutores/disponibles', requiereRol('alumno', 'coordinador'), tutores.directorio);
+router.post('/tutores/recomendar', requiereRol('alumno'), rateLimit({
+  windowMs: 60_000,
+  limit: 8,
+  keyGenerator: req => String(req.user.id),
+  message: { ok: false, error: 'Espera un minuto antes de enviar otra consulta.' },
+}), recomendador.recomendar);
 router.post('/tutores/elegir', requiereRol('alumno'), tutores.elegir);
 router.get('/tutores/mi-solicitud', requiereRol('alumno'), tutores.miSolicitud);
 router.post('/tutores/solicitar-cambio', requiereRol('alumno'), tutores.solicitarCambio);

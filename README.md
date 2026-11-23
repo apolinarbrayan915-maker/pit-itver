@@ -1,5 +1,8 @@
 # Plataforma Web de Tutorías Institucionales · ITVER (TecNM)
 
+El módulo opcional de búsqueda semántica se integra en **Mi tutor(a)**.
+[Configuración del servicio y prueba local](recomendador/README.md).
+
 Programa Institucional de Tutorías (PIT) — Ingeniería en Sistemas Computacionales.
 Stack: **PostgreSQL 13+ · Node.js 18+ (Express 5 + pg) · HTML/Tailwind/JS (prototipos MIG TecNM)**.
 

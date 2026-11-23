@@ -12,6 +12,11 @@ const config = {
   dominio: (env.DOMINIO_INSTITUCIONAL || 'veracruz.tecnm.mx').toLowerCase(),
   periodoActual: env.PERIODO_ACTUAL || '2026-2',
   tz: env.TZ_INSTITUCIONAL || 'America/Mexico_City',
+  recomendador: {
+    url: env.RECOMENDADOR_URL,
+    token: env.RECOMENDADOR_TOKEN,
+    habilitado: Boolean(env.RECOMENDADOR_URL && env.RECOMENDADOR_TOKEN?.length >= 32),
+  },
   corsOrigins: (env.CORS_ORIGIN || '')
     .split(',')
     .map((s) => s.trim())
