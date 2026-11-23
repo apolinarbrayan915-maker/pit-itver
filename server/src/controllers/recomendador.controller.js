@@ -158,4 +158,10 @@ async function vincularPerfil(req, res) {
   res.json({ ok: true, tutor_id: tutorId });
 }
 
-module.exports = { recomendar, listarCatalogoMaterias, vincularPerfil };
+async function confirmarAltas(req, res) {
+  const { rows } = await db.query('SELECT confirmar_altas_catalogo_pit() AS resumen');
+  res.set('Cache-Control', 'no-store');
+  res.json({ ok: true, ...rows[0].resumen });
+}
+
+module.exports = { recomendar, listarCatalogoMaterias, vincularPerfil, confirmarAltas };

@@ -159,6 +159,10 @@
 
             <section class="m3-card panel-tutor">
                 <div id="tt-resumen" class="pt-resumen"></div>
+                <div class="flex flex-wrap items-center gap-3">
+                    <button id="tt-confirmar-altas" type="button" class="m3-btn tonal chico" onclick="confirmarAltasCatalogo()">Confirmar altas del lote</button>
+                    <span id="tt-confirmar-altas-estado" class="text-xs" role="status"></span>
+                </div>
                 <div class="tt-barra">
                     <label class="m3-buscar"><i class="fa-solid fa-magnifying-glass"></i><input type="search" id="tt-buscar" placeholder="Buscar profesor, materia o cubículo" aria-label="Buscar profesor, materia o cubículo" oninput="pintarTutores()"></label>
                     <div class="m3-chips" id="tt-filtros" role="group" aria-label="Filtrar tutores"></div>
