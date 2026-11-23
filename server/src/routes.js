@@ -94,7 +94,7 @@ router.patch('/asignaciones/:id/finalizar', requiereRol('coordinador'), asignaci
 
 // Tutores: directorio y elección por el tutorado, horario de atención y cupo
 router.get('/tutores/disponibles', requiereRol('alumno', 'coordinador'), tutores.directorio);
-router.post('/tutores/recomendar', requiereRol('alumno'), rateLimit({
+router.post('/tutores/recomendar', requiereRol('alumno', 'tutor', 'coordinador'), rateLimit({
   windowMs: 60_000,
   limit: 8,
   keyGenerator: req => String(req.user.id),
