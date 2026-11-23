@@ -2,7 +2,7 @@
 
 El botón circular con lupa abre el buscador en las sesiones de alumno, tutor y Coordinación. El atajo en **Mi tutor(a)** abre el mismo panel.
 
-En **Coordinación → Tutores**, el panel **Catálogo de materias de Sistemas** permite buscar los perfiles de referencia por nombre, materia o tema antes de consultar los tutores inscritos.
+En **Coordinación → Tutores**, la lista reúne a los tutores inscritos y a los perfiles del catálogo por vincular. El buscador encuentra nombres, materias, temas y cubículos. Los perfiles vinculados aparecen en una sola fila con sus materias y controles de tutoría.
 
 La ruta `GET /api/tutores/catalogo-materias` permite a Coordinación consultar 69 perfiles de referencia con materias reportadas por estudiantes y sus fuentes. Las dos entradas vinculadas por correo a tutores existentes aportan coincidencias al directorio si hay cupo. El servicio Python incorpora sus materias a la afinidad general de perfiles con CV indexado. Proyectos y certificaciones siguen usando los fragmentos del CV. Las entradas sin vínculo sirven para revisión y el catálogo no crea cuentas ni asignaciones.
 

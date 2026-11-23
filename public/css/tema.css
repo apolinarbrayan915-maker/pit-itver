@@ -1247,6 +1247,7 @@ html.dark .aviso-pill.imp { background: #4a3b12; color: #fcd34d; }
 .tt-fila { padding: .6rem .9rem; border: 1px solid var(--m3-contorno); border-radius: .9rem; background: var(--m3-superficie); transition: border-color .12s, box-shadow .12s; }
 .tt-fila:hover { border-color: var(--m3-contorno-fuerte); box-shadow: 0 6px 18px -14px rgba(24, 57, 106, .5); }
 .tt-fila.apagada { background: var(--m3-superficie-2); }
+.tt-fila.tt-referencia { display: block; }
 .tt-fila.apagada .tt-quien b { color: var(--m3-texto-2); }
 .tt-quien { display: flex; align-items: center; gap: .7rem; min-width: 0; }
 .tt-quien b { display: block; font-size: .8rem; font-weight: 700; color: var(--m3-texto); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
