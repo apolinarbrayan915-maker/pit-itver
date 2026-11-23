@@ -90,26 +90,25 @@ function fechaLegible(local, duracionMin = 60) {
   };
 }
 
-/**
- * Correo para el tutor: "Tienes una nueva cita de tutoría".
- * @param {object} c  cita con datos del tutor y del tutorado
- * @param {string} urlApp  dirección pública de la plataforma
- */
-function correoNuevaCita(c, urlApp) {
-  const { fecha, hora } = fechaLegible(c.fecha_hora_local, c.duracion_min);
-  const lugar = c.modalidad === 'Línea' ? 'En línea (envía el enlace al tutorado)' : `Presencial${c.tutor_cubiculo ? ` · ${c.tutor_cubiculo}` : ''}`;
-  const prueba = env.CORREO_PRUEBAS
-    ? `<tr><td style="padding:10px 32px;background:#fff7e0;color:#7a5600;font-size:12px;border-bottom:1px solid #f1e2b3;">
-         <strong>Modo de prueba:</strong> este correo iba dirigido a ${esc(c.tutor_correo)}.</td></tr>`
-    : '';
-  const fila = (etq, val) => `<tr>
+const fila = (etq, val) => `<tr>
       <td style="padding:9px 0;color:#6b7280;font-size:13px;width:120px;vertical-align:top;">${etq}</td>
       <td style="padding:9px 0;color:#111827;font-size:14px;font-weight:600;vertical-align:top;">${val}</td></tr>`;
 
-  const html = `<!doctype html>
-<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Nueva cita de tutoría</title></head>
+/**
+ * Plantilla común de los correos de citas (encabezado con logos, tarjeta de fecha y pie institucional).
+ * @param {{ titulo: string, etiqueta: string, color?: {fondo: string, texto: string}, preheader: string,
+ *           saludoHtml: string, fecha: string, hora: string, filas: string, notaHtml: string, dirigidoA?: string }} o
+ */
+function plantillaCita(o) {
+  const color = o.color || { fondo: '#e3ecfa', texto: '#1b396a' };
+  const prueba = env.CORREO_PRUEBAS && o.dirigidoA
+    ? `<tr><td style="padding:10px 32px;background:#fff7e0;color:#7a5600;font-size:12px;border-bottom:1px solid #f1e2b3;">
+         <strong>Modo de prueba:</strong> este correo iba dirigido a ${esc(o.dirigidoA)}.</td></tr>`
+    : '';
+  return `<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(o.titulo)}</title></head>
 <body style="margin:0;padding:0;background:#eef2f7;font-family:Arial,Helvetica,sans-serif;">
-  <span style="display:none;max-height:0;overflow:hidden;">${esc(c.tutorado_nombre_corto)} agendó una tutoría el ${esc(fecha)}, ${esc(hora)}.</span>
+  <span style="display:none;max-height:0;overflow:hidden;">${esc(o.preheader)}</span>
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eef2f7;padding:24px 12px;">
     <tr><td align="center">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #dde3ec;">
@@ -128,30 +127,25 @@ function correoNuevaCita(c, urlApp) {
         </td></tr>
         ${prueba}
         <tr><td style="padding:30px 32px 8px;">
-          <p style="margin:0 0 6px;display:inline-block;background:#e3ecfa;color:#1b396a;font-size:11px;font-weight:bold;padding:4px 10px;border-radius:999px;">NUEVA CITA</p>
-          <h1 style="margin:10px 0 8px;color:#111827;font-size:22px;line-height:1.3;">Tienes una cita de tutoría</h1>
-          <p style="margin:0;color:#374151;font-size:14px;line-height:1.6;">Hola, ${esc(c.tutor_nombre)}.<br>
-            <strong>${esc(c.tutorado_nombre_corto)}</strong> agendó una sesión de tutoría contigo. Estos son los datos:</p>
+          <p style="margin:0 0 6px;display:inline-block;background:${color.fondo};color:${color.texto};font-size:11px;font-weight:bold;padding:4px 10px;border-radius:999px;">${esc(o.etiqueta)}</p>
+          <h1 style="margin:10px 0 8px;color:#111827;font-size:22px;line-height:1.3;">${esc(o.titulo)}</h1>
+          <p style="margin:0;color:#374151;font-size:14px;line-height:1.6;">${o.saludoHtml}</p>
         </td></tr>
         <tr><td style="padding:16px 32px 4px;">
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f7f9fc;border:1px solid #e3e8f0;border-radius:12px;">
             <tr><td style="padding:18px 20px 6px;">
-              <p style="margin:0;color:#1b396a;font-size:18px;font-weight:bold;">${esc(fecha)}</p>
-              <p style="margin:2px 0 0;color:#374151;font-size:15px;">${esc(hora)}</p>
+              <p style="margin:0;color:#1b396a;font-size:18px;font-weight:bold;">${esc(o.fecha)}</p>
+              <p style="margin:2px 0 0;color:#374151;font-size:15px;">${esc(o.hora)}</p>
             </td></tr>
             <tr><td style="padding:6px 20px 14px;">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #e3e8f0;">
-                ${fila('Tutorado', `${esc(c.tutorado_nombre_corto)}<br><span style="font-weight:400;color:#6b7280;font-size:13px;">No. de control ${esc(c.no_control)} · ${esc(c.carrera || '')}${c.semestre ? `, ${esc(c.semestre)}° semestre` : ''}</span>`)}
-                ${fila('Modalidad', esc(lugar))}
-                ${fila('Tipo', esc(c.tipo))}
-                ${fila('Motivo', `<span style="font-weight:400;">${esc(c.motivo)}</span>`)}
-                ${c.tutorado_correo ? fila('Contacto', `<a href="mailto:${esc(c.tutorado_correo)}" style="color:#1b396a;">${esc(c.tutorado_correo)}</a>`) : ''}
+                ${o.filas}
               </table>
             </td></tr>
           </table>
         </td></tr>
         <tr><td style="padding:20px 32px 28px;">
-          <p style="margin:0;color:#6b7280;font-size:12px;line-height:1.6;">La cita queda <strong>pendiente</strong> hasta que la confirmes en la plataforma. Si no puedes atenderla, cancélala ahí mismo para que el tutorado elija otro horario.</p>
+          <p style="margin:0;color:#6b7280;font-size:12px;line-height:1.6;">${o.notaHtml}</p>
         </td></tr>
         <tr><td style="background:#611232;padding:16px 32px;">
           <p style="margin:0;color:#f3dbe3;font-size:11px;line-height:1.6;">Correo automático de la Plataforma de Tutorías del ITVER. No respondas a este mensaje.<br>Calz. Miguel Ángel de Quevedo 2779, Formando Hogar, Veracruz, Ver.</p>
@@ -160,6 +154,32 @@ function correoNuevaCita(c, urlApp) {
     </td></tr>
   </table>
 </body></html>`;
+}
+
+/**
+ * Correo para el tutor: "Tienes una nueva cita de tutoría" (la agendó el tutorado).
+ * @param {object} c  cita con datos del tutor y del tutorado
+ */
+function correoNuevaCita(c) {
+  const { fecha, hora } = fechaLegible(c.fecha_hora_local, c.duracion_min);
+  const lugar = c.modalidad === 'Línea' ? 'En línea (envía el enlace al tutorado)' : `Presencial${c.tutor_cubiculo ? ` · ${c.tutor_cubiculo}` : ''}`;
+  const html = plantillaCita({
+    titulo: 'Tienes una cita de tutoría',
+    etiqueta: 'NUEVA CITA',
+    preheader: `${c.tutorado_nombre_corto} agendó una tutoría el ${fecha}, ${hora}.`,
+    saludoHtml: `Hola, ${esc(c.tutor_nombre)}.<br>
+            <strong>${esc(c.tutorado_nombre_corto)}</strong> agendó una sesión de tutoría contigo. Estos son los datos:`,
+    fecha, hora,
+    filas: [
+      fila('Tutorado', `${esc(c.tutorado_nombre_corto)}<br><span style="font-weight:400;color:#6b7280;font-size:13px;">No. de control ${esc(c.no_control)} · ${esc(c.carrera || '')}${c.semestre ? `, ${esc(c.semestre)}° semestre` : ''}</span>`),
+      fila('Modalidad', esc(lugar)),
+      fila('Tipo', esc(c.tipo)),
+      fila('Motivo', `<span style="font-weight:400;">${esc(c.motivo)}</span>`),
+      c.tutorado_correo ? fila('Contacto', `<a href="mailto:${esc(c.tutorado_correo)}" style="color:#1b396a;">${esc(c.tutorado_correo)}</a>`) : '',
+    ].join(''),
+    notaHtml: 'La cita queda <strong>pendiente</strong> hasta que la confirmes en la plataforma. Si no puedes atenderla, cancélala ahí mismo para que el tutorado elija otro horario.',
+    dirigidoA: c.tutor_correo,
+  });
 
   const texto = [
     'Tienes una nueva cita de tutoría',
@@ -179,4 +199,51 @@ function correoNuevaCita(c, urlApp) {
   return { asunto: `Nueva cita de tutoría: ${fecha}, ${hora}`, html, texto };
 }
 
-module.exports = { enviarCorreo, correoNuevaCita, configurado, fechaLegible };
+/**
+ * Correo para el tutorado: "Tu tutor(a) te agendó una cita" (la agendó el tutor; queda confirmada).
+ * @param {object} c  cita con datos del tutor y del tutorado
+ */
+function correoCitaParaTutorado(c) {
+  const { fecha, hora } = fechaLegible(c.fecha_hora_local, c.duracion_min);
+  const cub = c.tutor_cubiculo ? (/^cub/i.test(c.tutor_cubiculo) ? c.tutor_cubiculo : `Cubículo ${c.tutor_cubiculo}`) : '';
+  const lugar = c.modalidad === 'Línea' ? 'En línea (tu tutor(a) te enviará el enlace)' : `Presencial${cub ? ` · ${cub}` : ''}`;
+  const html = plantillaCita({
+    titulo: 'Tu tutor(a) te agendó una cita',
+    etiqueta: 'CITA CONFIRMADA',
+    color: { fondo: '#dcf5e6', texto: '#146c3a' },
+    preheader: `${c.tutor_nombre} agendó una tutoría contigo el ${fecha}, ${hora}.`,
+    saludoHtml: `Hola, ${esc(c.tutorado_nombre_corto)}.<br>
+            Tu tutor(a) <strong>${esc(c.tutor_nombre)}</strong> agendó una sesión de tutoría contigo y ya está <strong>confirmada</strong>. Estos son los datos:`,
+    fecha, hora,
+    filas: [
+      fila('Tutor(a)', `${esc(c.tutor_nombre)}${c.tutor_departamento ? `<br><span style="font-weight:400;color:#6b7280;font-size:13px;">${esc(c.tutor_departamento)}</span>` : ''}`),
+      fila('Lugar', esc(lugar)),
+      fila('Tipo', esc(c.tipo)),
+      fila('Motivo', `<span style="font-weight:400;">${esc(c.motivo)}</span>`),
+      c.tutor_correo ? fila('Contacto', `<a href="mailto:${esc(c.tutor_correo)}" style="color:#1b396a;">${esc(c.tutor_correo)}</a>`) : '',
+    ].join(''),
+    notaHtml: 'Llega puntual y lleva tus dudas o materiales. Si no puedes asistir, avísale a tu tutor(a) o cancela la cita desde <strong>Mis citas</strong> en la plataforma para liberar el horario.',
+    dirigidoA: c.tutorado_correo,
+  });
+
+  const texto = [
+    'Tu tutor(a) te agendó una cita de tutoría',
+    '',
+    `Hola, ${c.tutorado_nombre_corto}.`,
+    `${c.tutor_nombre} agendó una sesión de tutoría contigo. La cita ya está confirmada.`,
+    '',
+    `Fecha: ${fecha}`,
+    `Hora: ${hora}`,
+    `Lugar: ${lugar}`,
+    `Tipo: ${c.tipo}`,
+    `Motivo: ${c.motivo}`,
+    c.tutor_correo ? `Contacto: ${c.tutor_correo}` : '',
+    '',
+    'Si no puedes asistir, avísale a tu tutor(a) o cancela la cita desde Mis citas en la plataforma.',
+    env.CORREO_PRUEBAS ? `\n(Modo de prueba: este correo iba dirigido a ${c.tutorado_correo}.)` : '',
+  ].join('\n');
+
+  return { asunto: `Tienes una cita de tutoría: ${fecha}, ${hora}`, html, texto };
+}
+
+module.exports = { enviarCorreo, correoNuevaCita, correoCitaParaTutorado, configurado, fechaLegible };

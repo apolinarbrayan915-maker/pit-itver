@@ -1443,9 +1443,9 @@ async function enviarCitaTutor(event) {
 
   await conBotonOcupado(event.target.querySelector('button[type="submit"]'), 'Guardando…', async () => {
     try {
-      await api('/citas/reservar', { method: 'POST', body });
+      const r = await api('/citas/reservar', { method: 'POST', body });
       window.closeModalCita();
-      toast('Cita registrada y confirmada en tu agenda.');
+      toast(`Cita registrada y confirmada en tu agenda.${r.correo?.enviado ? ' Le avisamos al tutorado por correo.' : ''}`);
       await Promise.all([cargarAgendaTutor(), cargarMetricasDashboard(), cargarReporteTutor(), cargarReporteDiario()]);
     } catch (err) {
       toast(err.message, 'error');

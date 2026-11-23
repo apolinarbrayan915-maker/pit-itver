@@ -6,7 +6,7 @@ const { badRequest, forbidden, notFound, conflict } = require('../utils/errores'
 const v = require('../utils/validaciones');
 const { dentroDeHorario } = require('./tutores.controller');
 const { diaDeClases } = require('../utils/calendarioEscolar');
-const { enviarCorreo, correoNuevaCita } = require('../utils/correo');
+const { enviarCorreo, correoNuevaCita, correoCitaParaTutorado } = require('../utils/correo');
 
 // Horario de atención tutorial (hora local del ITVER)
 const HORA_INICIO = 7;   // 07:00
@@ -182,33 +182,49 @@ async function reservar(req, res) {
     return completa[0];
   });
 
-  // Aviso por correo al tutor cuando la agenda el tutorado (no detiene la reserva si falla)
+  // Aviso por correo: al tutor si la agenda el tutorado; al tutorado si la agenda el tutor
+  // (cita individual). No detiene la reserva si falla.
   let correo = null;
   if (rol === 'alumno') correo = await notificarTutorNuevaCita(cita, req);
+  else if (cita.tutorado_id) correo = await notificarTutoradoNuevaCita(cita);
 
   res.status(201).json({ ok: true, mensaje: 'Cita registrada correctamente.', cita, correo });
 }
 
+/** Correos de tutor y tutorado de una cita. */
+async function contactosCita(citaId) {
+  const { rows } = await db.query(
+    `SELECT ut.correo_institucional AS tutor_correo, ua.correo_institucional AS tutorado_correo,
+            ua.nombre || ' ' || ua.apellidos AS tutorado_nombre_corto
+       FROM citas_tutorias c
+       JOIN tutores tu ON tu.id = c.tutor_id
+       JOIN usuarios ut ON ut.id = tu.usuario_id
+  LEFT JOIN tutorados t ON t.id = c.tutorado_id
+  LEFT JOIN usuarios ua ON ua.id = t.usuario_id
+      WHERE c.id = $1`,
+    [citaId]
+  );
+  return rows[0] || {};
+}
+
 /** Manda al tutor el correo "Tienes una cita de tutoría". Devuelve { enviado, ... }. */
-async function notificarTutorNuevaCita(cita, req) {
+async function notificarTutorNuevaCita(cita) {
   try {
-    const { rows } = await db.query(
-      `SELECT ut.correo_institucional AS tutor_correo, ua.correo_institucional AS tutorado_correo,
-              ua.nombre || ' ' || ua.apellidos AS tutorado_nombre_corto
-         FROM citas_tutorias c
-         JOIN tutores tu ON tu.id = c.tutor_id
-         JOIN usuarios ut ON ut.id = tu.usuario_id
-    LEFT JOIN tutorados t ON t.id = c.tutorado_id
-    LEFT JOIN usuarios ua ON ua.id = t.usuario_id
-        WHERE c.id = $1`,
-      [cita.id]
-    );
-    const datos = { ...cita, ...rows[0] };
-    const urlApp = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
-    const msg = correoNuevaCita(datos, urlApp);
-    return await enviarCorreo({ para: datos.tutor_correo, ...msg });
+    const datos = { ...cita, ...(await contactosCita(cita.id)) };
+    return await enviarCorreo({ para: datos.tutor_correo, ...correoNuevaCita(datos) });
   } catch (err) {
     console.error('[correo] Error al preparar el aviso de cita:', err.message);
+    return { enviado: false, motivo: 'error' };
+  }
+}
+
+/** Manda al tutorado el correo "Tu tutor(a) te agendó una cita". Devuelve { enviado, ... }. */
+async function notificarTutoradoNuevaCita(cita) {
+  try {
+    const datos = { ...cita, ...(await contactosCita(cita.id)) };
+    return await enviarCorreo({ para: datos.tutorado_correo, ...correoCitaParaTutorado(datos) });
+  } catch (err) {
+    console.error('[correo] Error al preparar el aviso al tutorado:', err.message);
     return { enviado: false, motivo: 'error' };
   }
 }
