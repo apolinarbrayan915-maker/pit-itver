@@ -109,7 +109,7 @@ function pintarTutores() {
 
   const filas = lista.map(t => filaTutorCoord(t, materiasPorTutor.get(t.tutor_id)));
   if (TT.filtro === 'todos' || TT.filtro === 'referencia') {
-    filas.push(...referencias.filter(p => coincide([p.nombre, p.cubiculo_demo, ...p.materias, ...p.temas])).map(filaReferenciaCoord));
+    filas.push(...referencias.filter(p => coincide([p.nombre, ...p.materias, ...p.temas])).map(filaReferenciaCoord));
   }
   $('tutores-lista').innerHTML = filas.length ? filas.join('')
     : '<li class="m3-vacio"><span class="m3-icono tono-gris"><i class="fa-solid fa-magnifying-glass"></i></span>Ningún perfil coincide con la búsqueda.</li>';
@@ -239,11 +239,55 @@ function filaReferenciaCoord(p) {
       <div class="min-w-0">
         <b>${escapeHtml(p.nombre)}</b>
         <span class="tt-meta">Perfil académico · Sin alta como tutor</span>
-        ${p.cubiculo_demo ? `<span class="tt-meta">Cubículo simulado ${escapeHtml(p.cubiculo_demo)}</span>` : ''}
         ${detalleMateriasCoord(p)}
+        <button type="button" class="m3-btn texto chico" onclick="abrirAltaPerfil('${escapeHtml(p.id)}')">Dar de alta como tutor</button>
       </div>
     </div>
   </li>`;
+}
+
+function abrirAltaPerfil(id) {
+  const p = datosAsig?.perfiles_materias?.find(perfil => perfil.id === id);
+  if (!p) return;
+  modalSimple('modal-alta-perfil', 'Dar de alta a ' + p.nombre, `
+    <form id="tt-alta-form" class="space-y-3">
+      <p class="text-sm">Usa la cuenta institucional del docente. El cupo y el cubículo se aplican al crear un alta nueva.</p>
+      <label class="block text-sm">Correo institucional
+        <input name="correo" type="email" required class="block w-full rounded-lg border p-2">
+      </label>
+      <label class="block text-sm">Cupo autorizado
+        <input name="cupo" type="number" min="1" max="60" required class="block w-full rounded-lg border p-2">
+      </label>
+      <label class="block text-sm">Cubículo confirmado (opcional)
+        <input name="cubiculo" maxlength="40" class="block w-full rounded-lg border p-2">
+      </label>
+      <p id="tt-alta-estado" class="text-sm" role="status"></p>
+      <button type="submit" class="m3-btn lleno">Confirmar alta</button>
+    </form>`);
+  const form = $('tt-alta-form');
+  form.elements.correo.focus();
+  form.onsubmit = async event => {
+    event.preventDefault();
+    const boton = form.querySelector('button[type="submit"]');
+    const estado = $('tt-alta-estado');
+    const valores = new FormData(form);
+    boton.disabled = true;
+    estado.textContent = 'Guardando…';
+    try {
+      await api('/tutores/catalogo-materias/' + encodeURIComponent(id) + '/vinculo', {
+        method: 'PUT', body: Object.fromEntries(valores),
+      });
+      cerrarModal('modal-alta-perfil');
+      toast('Docente vinculado al PIT.');
+      TT.filtro = 'inscritos';
+      $('tt-buscar').value = p.nombre;
+      await cargarAsignaciones();
+    } catch (err) {
+      estado.textContent = err.message;
+    } finally {
+      boton.disabled = false;
+    }
+  };
 }
 
 function filaTutorCoord(t, materias) {
@@ -832,6 +876,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 Object.assign(window, {
+  abrirAltaPerfil,
   irAReporte, nuevoAvisoDesdeInicio, filtrarTutores, pintarTutores, pasoCupo, alternarTutoradosTutor, irPagina,
   presetInformeCoord, cambioRangoCoord, imprimirInformeCoord, imprimirSemestralCoord, resaltarSinSesion,
   cambiarVistaEvaluacion, cargarEvaluacionesCoord, ordenarEval, filtrarEvalTutor,

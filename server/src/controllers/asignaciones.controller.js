@@ -27,6 +27,7 @@ async function panorama(req, res) {
             u.nombre || ' ' || u.apellidos AS nombre,
             u.no_control_o_rfc AS rfc,
             u.correo_institucional AS correo,
+            tu.catalogo_materias_id,
             tu.cubiculo, tu.formacion_tutorial, tu.max_tutorados, tu.acepta_tutorados,
             (SELECT count(*) FROM tutor_horarios h WHERE h.tutor_id = tu.id)::int AS bloques_horario,
             COALESCE((SELECT json_agg(g ORDER BY g.grupo)
@@ -62,9 +63,10 @@ async function panorama(req, res) {
   );
 
   const tutoresPorCorreo = new Map(tutores.map(t => [t.correo.toLowerCase(), t.tutor_id]));
+  const tutoresPorPerfil = new Map(tutores.map(t => [t.catalogo_materias_id, t.tutor_id]));
   const perfiles_materias = catalogoMaterias.perfiles.map(({ correo_pit, ...perfil }) => ({
     ...perfil,
-    tutor_id: tutoresPorCorreo.get(correo_pit) ?? null,
+    tutor_id: tutoresPorPerfil.get(perfil.id) ?? tutoresPorCorreo.get(correo_pit) ?? null,
   }));
   res.json({
     ok: true,

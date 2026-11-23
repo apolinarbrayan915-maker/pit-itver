@@ -23,6 +23,8 @@
 \ir migracion_007_ficha_identificacion.sql
 \echo '== 008 · Retiro de la evaluación de satisfacción UX'
 \ir migracion_008_quitar_evaluacion_ux.sql
+\echo '== 013 · Vínculo de perfiles académicos'
+\ir migracion_013_catalogo_materias.sql
 
 \echo ''
 \echo '== Verificación: deben aparecer las 7 tablas con "ok"'
