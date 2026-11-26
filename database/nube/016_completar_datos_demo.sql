@@ -8,9 +8,9 @@
 SET search_path = pit;
 
 -- Número pseudoaleatorio estable a partir de un texto (mismo resultado en cada instalación).
-CREATE FUNCTION pg_temp.h(t text, sal text, n int) RETURNS int LANGUAGE sql IMMUTABLE AS
+CREATE OR REPLACE FUNCTION pg_temp.h(t text, sal text, n int) RETURNS int LANGUAGE sql IMMUTABLE AS
 $$ SELECT ((('x' || substr(md5(t || sal), 1, 8))::bit(32)::bigint % n) + 1)::int $$;
-CREATE FUNCTION pg_temp.pick(t text, sal text, arr text[]) RETURNS text LANGUAGE sql IMMUTABLE AS
+CREATE OR REPLACE FUNCTION pg_temp.pick(t text, sal text, arr text[]) RETURNS text LANGUAGE sql IMMUTABLE AS
 $$ SELECT arr[pg_temp.h(t, sal, array_length(arr, 1))] $$;
 
 -- =============================================================================
