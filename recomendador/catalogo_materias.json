@@ -237,10 +237,7 @@
     {
       "id": "mp-169325",
       "nombre": "David Leon",
-      "materias": [
-        "Sexo",
-        "Sexo 24/7"
-      ],
+      "materias": [],
       "temas": [],
       "fichas": [
         "https://misprofesores.com/profesores/_169325"
@@ -257,7 +254,6 @@
         "Prog Web",
         "Programación orientada a objetos",
         "Programación web",
-        "TBD",
         "Web"
       ],
       "temas": [

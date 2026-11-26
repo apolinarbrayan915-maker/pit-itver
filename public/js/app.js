@@ -2924,7 +2924,8 @@ function personaCardHtml(p) {
   const foto = p.foto
     ? `<img src="${escapeHtml(p.foto)}" alt="Fotografía de ${escapeHtml(nombre)}" class="w-full h-full object-cover">`
     : `<span class="text-4xl font-extrabold text-tecnmGreen">${escapeHtml(iniciales(nombre))}</span>`;
-  const dato = (etq, val) => `<div class="flex gap-2"><dt class="font-bold text-slate-700 w-24 shrink-0 text-right">${etq}:</dt><dd class="text-slate-600">${val ? escapeHtml(val) : '<span class="text-slate-300">—</span>'}</dd></div>`;
+  // Solo se muestran los datos registrados: sin renglones vacíos con guiones.
+  const dato = (etq, val) => (val ? `<div class="flex gap-2"><dt class="font-bold text-slate-700 w-24 shrink-0 text-right">${etq}:</dt><dd class="text-slate-600">${escapeHtml(val)}</dd></div>` : '');
   const lista = (items, vacio) => items.length
     ? `<ul class="space-y-1.5">${items.map((x) => `<li class="flex gap-2"><i class="fa-solid fa-circle text-[6px] mt-1.5 text-slate-700"></i><span class="min-w-0" style="overflow-wrap:anywhere">${escapeHtml(x)}</span></li>`).join('')}</ul>`
     : `<p class="text-slate-400 italic">${vacio}</p>`;
@@ -3348,7 +3349,8 @@ function tutorPersonaHtml(t) {
   const foto = t.foto
     ? `<img src="${escapeHtml(t.foto)}" alt="Fotografía de ${escapeHtml(t.nombre)}" class="w-full h-full object-cover">`
     : `<span class="text-4xl font-extrabold text-tecnmGreen">${escapeHtml(iniciales(t.nombre))}</span>`;
-  const dato = (etq, val) => `<div class="flex gap-2"><dt class="font-bold text-slate-700 w-24 shrink-0 text-right">${etq}:</dt><dd class="text-slate-600">${val ? escapeHtml(val) : '<span class="text-slate-300">—</span>'}</dd></div>`;
+  // Solo se muestran los datos registrados: sin renglones vacíos con guiones.
+  const dato = (etq, val) => (val ? `<div class="flex gap-2"><dt class="font-bold text-slate-700 w-24 shrink-0 text-right">${etq}:</dt><dd class="text-slate-600">${escapeHtml(val)}</dd></div>` : '');
   const lista = (items) => items.length
     ? `<ul class="space-y-1.5">${items.map((x) => `<li class="flex gap-2"><i class="fa-solid fa-circle-check mt-0.5 text-tecnmGreen"></i><span>${escapeHtml(x)}</span></li>`).join('')}</ul>`
     : '<p class="text-slate-400 italic">Sin registrar</p>';
@@ -3368,7 +3370,7 @@ function tutorPersonaHtml(t) {
       </dl>
     </div>
     <div class="md:col-span-2 flex flex-col gap-4">
-      <p class="text-center text-base font-semibold italic text-slate-800" style="overflow-wrap:anywhere">${t.frase ? `“${escapeHtml(t.frase)}”` : '<span class="text-slate-300 not-italic text-xs">Sin frase personal</span>'}</p>
+      ${t.frase ? `<p class="text-center text-base font-semibold italic text-slate-800" style="overflow-wrap:anywhere">“${escapeHtml(t.frase)}”</p>` : ''}
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div><h4 class="text-sm font-extrabold text-slate-800 mb-2">¿En qué puedo apoyarte?</h4>${lista(t.enfoque || [])}</div>
         <div><h4 class="text-sm font-extrabold text-slate-800 mb-2">Áreas de apoyo</h4>
